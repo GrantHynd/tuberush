@@ -50,9 +50,8 @@ jobs:
           echo "$HOME/.maestro/bin" >> $GITHUB_PATH
 
       - name: Prebuild iOS
-        # --no-interactive prevents prompts
         # --clean ensures fresh native project
-        run: npx expo prebuild --platform ios --clean --no-interactive
+        run: npx expo prebuild --platform ios --clean
 
       - name: Build iOS App
         run: |
