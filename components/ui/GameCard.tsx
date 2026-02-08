@@ -1,14 +1,17 @@
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Colors, TFL, Typography, Layout, Spacing } from '@/constants/theme';
+import { IconSymbol } from '@/components/ui/icon-symbol';
 
 interface GameCardProps {
     id: string;
     title: string;
     description: string;
     icon: string;
-    isPremium: boolean;
-    isLocked: boolean;
+    isPremium?: boolean;
+    isLocked?: boolean;
+    color?: string; // Accent color
     onPress?: () => void;
 }
 
@@ -19,6 +22,7 @@ export function GameCard({
     icon,
     isPremium,
     isLocked,
+    color = TFL.black,
     onPress
 }: GameCardProps) {
     const router = useRouter();
@@ -35,27 +39,31 @@ export function GameCard({
         <TouchableOpacity
             style={[styles.card, isLocked && styles.cardLocked]}
             onPress={handlePress}
-            disabled={isLocked}
+            activeOpacity={0.7}
         >
-            <View style={styles.iconContainer}>
-                <Text style={styles.icon}>{icon}</Text>
-            </View>
+            <View style={[styles.accent, { backgroundColor: color }]} />
 
-            <View style={styles.content}>
+            <View style={styles.contentContainer}>
                 <View style={styles.header}>
                     <Text style={styles.title}>{title}</Text>
-                    {isPremium && (
-                        <View style={styles.premiumBadge}>
-                            <Text style={styles.premiumText}>PRO</Text>
+                    {isLocked && (
+                        <View style={styles.lockedIcon}>
+                             <IconSymbol name="lock.fill" size={16} color={Colors.light.icon} />
                         </View>
                     )}
                 </View>
 
                 <Text style={styles.description}>{description}</Text>
 
-                {isLocked && (
-                    <Text style={styles.lockedText}>🔒 Premium membership required</Text>
+                {isPremium && (
+                    <View style={styles.premiumTag}>
+                        <Text style={[styles.premiumText, { color: color }]}>PREMIUM</Text>
+                    </View>
                 )}
+            </View>
+
+            <View style={styles.iconContainer}>
+                 <Text style={styles.emoji}>{icon}</Text>
             </View>
         </TouchableOpacity>
     );
@@ -64,64 +72,68 @@ export function GameCard({
 const styles = StyleSheet.create({
     card: {
         flexDirection: 'row',
-        backgroundColor: '#fff',
-        borderRadius: 12,
-        padding: 16,
-        marginBottom: 12,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
+        backgroundColor: Colors.light.background,
+        borderRadius: Layout.borderRadius.md,
+        marginBottom: Spacing.md,
+        overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: Colors.light.border,
+        ...Layout.shadow.sm,
+        minHeight: 100,
     },
     cardLocked: {
-        opacity: 0.6,
+        opacity: 0.8,
+        backgroundColor: TFL.grey.light,
     },
-    iconContainer: {
-        width: 60,
-        height: 60,
-        borderRadius: 30,
-        backgroundColor: '#f0f0f0',
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginRight: 16,
+    accent: {
+        width: 6,
+        height: '100%',
     },
-    icon: {
-        fontSize: 32,
-    },
-    content: {
+    contentContainer: {
         flex: 1,
+        padding: Spacing.md,
+        justifyContent: 'center',
     },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 4,
+        marginBottom: Spacing.xs,
+        gap: Spacing.xs,
+    },
+    lockedIcon: {
+        marginLeft: Spacing.xs,
     },
     title: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#2c3e50',
-        marginRight: 8,
+        ...Typography.h3,
+        fontSize: 20,
     },
-    premiumBadge: {
-        backgroundColor: '#f39c12',
-        paddingHorizontal: 8,
+    description: {
+        ...Typography.body,
+        fontSize: 14,
+        color: Colors.light.icon,
+    },
+    premiumTag: {
+        marginTop: Spacing.sm,
+        alignSelf: 'flex-start',
+        paddingHorizontal: 6,
         paddingVertical: 2,
+        backgroundColor: Colors.light.background,
+        borderWidth: 1,
+        borderColor: Colors.light.border,
         borderRadius: 4,
     },
     premiumText: {
-        color: '#fff',
         fontSize: 10,
         fontWeight: 'bold',
+        letterSpacing: 1,
     },
-    description: {
-        fontSize: 14,
-        color: '#7f8c8d',
-        marginBottom: 4,
+    iconContainer: {
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingRight: Spacing.md,
+        width: 60,
     },
-    lockedText: {
-        fontSize: 12,
-        color: '#e74c3c',
-        fontStyle: 'italic',
-    },
+    emoji: {
+        fontSize: 32,
+    }
 });

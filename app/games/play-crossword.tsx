@@ -1,6 +1,7 @@
 import { Crossword } from '@/components/games/Crossword';
 import { useAuthStore } from '@/stores/auth-store';
 import { useGameStore } from '@/stores/game-store';
+import { Colors } from '@/constants/theme';
 import type { CrosswordState, GameState } from '@/types/game';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -20,15 +21,12 @@ export default function PlayCrossword() {
 
     useEffect(() => {
         if (!user) {
-            Alert.alert('Error', 'You must be logged in to play', [
-                { text: 'OK', onPress: () => router.back() }
-            ]);
             return;
         }
 
         // Check premium status
         if (!user.isPremium) {
-            Alert.alert(
+             Alert.alert(
                 'Premium Required',
                 'Crossword puzzles are only available for premium members.',
                 [
@@ -122,14 +120,14 @@ export default function PlayCrossword() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#fff',
+        backgroundColor: Colors.light.background,
     },
     actions: {
         padding: 20,
         gap: 10,
     },
     button: {
-        backgroundColor: '#3498db',
+        backgroundColor: Colors.light.tint,
         paddingVertical: 15,
         borderRadius: 10,
         alignItems: 'center',
@@ -142,10 +140,10 @@ const styles = StyleSheet.create({
     buttonSecondary: {
         backgroundColor: 'transparent',
         borderWidth: 2,
-        borderColor: '#3498db',
+        borderColor: Colors.light.tint,
     },
     buttonTextSecondary: {
-        color: '#3498db',
+        color: Colors.light.tint,
         fontSize: 16,
         fontWeight: 'bold',
     },

@@ -11,6 +11,7 @@ interface AuthState {
     signOut: () => Promise<void>;
     checkSession: () => Promise<void>;
     refreshPremiumStatus: () => Promise<void>;
+    updateProfile: (updates: Partial<User>) => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -28,15 +29,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             throw error;
         }
 
-        if (data.user) {
-            // Create profile
-            await supabase.from('profiles').insert({
-                id: data.user.id,
-                email: data.user.email,
-                is_premium: false,
-            });
+        // Profile creation is handled by trigger in DB, but we might need to fetch it or wait
+        // The trigger creates with default values.
 
-            set({
+        if (data.user) {
+             set({
                 user: {
                     id: data.user.id,
                     email: data.user.email!,
@@ -72,6 +69,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                     isPremium: profile?.is_premium || false,
                     subscriptionId: profile?.subscription_id,
                     subscriptionStatus: profile?.subscription_status,
+                    borough: profile?.borough,
                 },
                 session: data.session,
             });
@@ -103,6 +101,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                     isPremium: profile?.is_premium || false,
                     subscriptionId: profile?.subscription_id,
                     subscriptionStatus: profile?.subscription_status,
+                    borough: profile?.borough,
                 },
                 session,
                 loading: false,
@@ -129,8 +128,30 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                     isPremium: profile.is_premium,
                     subscriptionId: profile.subscription_id,
                     subscriptionStatus: profile.subscription_status,
+                    borough: profile.borough,
                 },
             });
         }
+    },
+
+    updateProfile: async (updates: Partial<User>) => {
+        const user = get().user;
+        if (!user) return;
+
+        // Map camelCase to snake_case if needed
+        const dbUpdates: any = {};
+        if (updates.borough !== undefined) dbUpdates.borough = updates.borough;
+        // Add other fields as needed
+
+        if (Object.keys(dbUpdates).length === 0) return;
+
+        const { error } = await supabase
+            .from('profiles')
+            .update(dbUpdates)
+            .eq('id', user.id);
+
+        if (error) throw error;
+
+        set({ user: { ...user, ...updates } });
     },
 }));

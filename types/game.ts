@@ -1,4 +1,6 @@
-export type GameType = 'tictactoe' | 'crossword';
+import { Borough } from '../constants/Boroughs';
+
+export type GameType = 'connections' | 'crossword';
 
 export interface User {
     id: string;
@@ -6,14 +8,23 @@ export interface User {
     isPremium: boolean;
     subscriptionId?: string;
     subscriptionStatus?: 'active' | 'canceled' | 'past_due';
+    borough?: Borough;
 }
 
-export interface TicTacToeState {
-    board: (string | null)[];
-    currentPlayer: 'X' | 'O';
-    winner: string | null;
-    isDraw: boolean;
-    moveHistory: number[];
+export interface ConnectionsGroup {
+    id: string;
+    category: string;
+    items: string[];
+    color: string; // Hex code for group color
+}
+
+export interface ConnectionsState {
+    completedGroups: string[]; // IDs of found groups
+    mistakesRemaining: number;
+    history: string[][]; // Array of previous guesses (arrays of item strings)
+    startTime: number;
+    endTime: number | null;
+    status: 'playing' | 'won' | 'lost';
 }
 
 export interface CrosswordState {
@@ -36,7 +47,7 @@ export interface GameState {
     id: string;
     userId: string;
     gameType: GameType;
-    state: TicTacToeState | CrosswordState;
+    state: ConnectionsState | CrosswordState;
     lastUpdated: string;
     syncStatus: 'synced' | 'pending' | 'conflict';
     version: number;
@@ -49,4 +60,14 @@ export interface SyncOperation {
     data: any;
     timestamp: string;
     retryCount: number;
+}
+
+export interface LeaderboardEntry {
+    id: string;
+    userId: string;
+    borough: Borough;
+    score: number; // Time taken in seconds (lower is better)
+    date: string; // YYYY-MM-DD
+    gameType: GameType;
+    created_at: string;
 }
