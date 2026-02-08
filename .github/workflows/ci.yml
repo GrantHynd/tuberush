@@ -53,60 +53,10 @@ jobs:
         # --clean ensures fresh native project
         run: npx expo prebuild --platform ios --clean
 
-      - name: Build iOS App
-        run: |
-          cd ios
-          # Find the workspace
-          # We need to find the workspace inside the ios folder
-          WORKSPACE=$(find . -maxdepth 1 -name "*.xcworkspace" | head -n 1)
-
-          if [ -z "$WORKSPACE" ]; then
-            echo "Error: No .xcworkspace found"
-            ls -R
-            exit 1
-          fi
-
-          # Hardcode scheme to match app.json name/slug (tuberush-v2 usually becomes tuberushv2)
-          # Automated detection picked up dependencies (EXConstants) previously
-          SCHEME="tuberushv2"
-
-          echo "Building Workspace: $WORKSPACE with Scheme: $SCHEME"
-
-          # List available schemes for debugging
-          xcodebuild -workspace "$WORKSPACE" -list
-
-          # Build for Simulator
-          # -derivedDataPath creates a build folder in the current directory
-          # Adding -quiet to reduce noise, remove if deep debugging needed
-          xcodebuild -workspace "$WORKSPACE" \
-            -scheme "$SCHEME" \
-            -configuration Debug \
-            -sdk iphonesimulator \
-            -destination 'platform=iOS Simulator,name=iPhone 16' \
-            -derivedDataPath build \
-            CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO
-
-      - name: Boot Simulator
-        run: |
-          # Boot iPhone 16 if not already booted
-          xcrun simctl boot "iPhone 16" || true
-
-          # Wait for simulator to be ready
-          # This command waits for the simulator to finish booting
-          xcrun simctl bootstatus "iPhone 16"
-
-      - name: Install App on Simulator
-        run: |
-          # Find the built .app
-          APP_PATH=$(find ios/build/Build/Products/Debug-iphonesimulator -name "*.app" | head -n 1)
-
-          if [ -z "$APP_PATH" ]; then
-            echo "Error: No .app found in build directory"
-            exit 1
-          fi
-
-          echo "Installing App from: $APP_PATH"
-          xcrun simctl install booted "$APP_PATH"
+      - name: Build and Install iOS App
+        # Use Expo CLI to build and install the app on the simulator
+        # --no-bundler prevents starting the Metro server
+        run: npx expo run:ios --platform ios --device "iPhone 16" --configuration Debug --no-bundler
 
       - name: Run Maestro Flow
         # Run the flow defined in .maestro/flow.yaml
