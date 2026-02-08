@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email TEXT NOT NULL,
   is_premium BOOLEAN DEFAULT FALSE,
+  stripe_customer_id TEXT,
   subscription_id TEXT,
   subscription_status TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
