@@ -1,0 +1,11 @@
+appId: com.tuberush.v2 # REPLACE WITH YOUR APP ID (e.g. host.exp.exponent for Expo Go)
+---
+- launchApp:
+    clearState: true
+- assertVisible: "TubeRush"
+- assertVisible: "Mind the Gap. Play the Game."
+- tapOn: "Connections"
+- assertVisible: "Sign In / Register"
+- tapOn: "Sign In / Register"
+- assertVisible: "Sign In"
+- tapOn: "Back" # Assuming back button or gesture
