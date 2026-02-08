@@ -65,14 +65,9 @@ jobs:
             exit 1
           fi
 
-          # Detect scheme using xcodebuild -list -json
-          # We use python3 to parse the JSON output and get the first scheme
-          SCHEME=$(xcodebuild -workspace "$WORKSPACE" -list -json | python3 -c "import sys, json; data = json.load(sys.stdin); print(data['workspace']['schemes'][0] if 'workspace' in data else data['project']['schemes'][0])")
-
-          if [ -z "$SCHEME" ]; then
-            echo "Error: Could not detect scheme"
-            exit 1
-          fi
+          # Hardcode scheme to match app.json name/slug (tuberush-v2 usually becomes tuberushv2)
+          # Automated detection picked up dependencies (EXConstants) previously
+          SCHEME="tuberushv2"
 
           echo "Building Workspace: $WORKSPACE with Scheme: $SCHEME"
 
