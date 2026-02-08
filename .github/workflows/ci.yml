@@ -71,10 +71,55 @@ jobs:
         # --clean ensures fresh native project
         run: npx expo prebuild --platform ios --clean
 
-      - name: Build and Install iOS App
-        # Use Expo CLI to build and install the app on the simulator
-        # --no-bundler prevents starting the Metro server
-        run: npx expo run:ios --device "iPhone 16" --configuration Debug --no-bundler
+      - name: Build iOS App
+        run: |
+          cd ios
+          # Find the workspace
+          WORKSPACE=$(find . -maxdepth 1 -name "*.xcworkspace" | head -n 1)
+
+          if [ -z "$WORKSPACE" ]; then
+            echo "Error: No .xcworkspace found"
+            ls -R
+            exit 1
+          fi
+
+          SCHEME="tuberushv2"
+          echo "Building Workspace: $WORKSPACE with Scheme: $SCHEME"
+
+          # Optimization Flags:
+          # - ONLY_ACTIVE_ARCH=YES: Build only for the simulator arch (arm64 on M1 runners)
+          # - DEBUG_INFORMATION_FORMAT=dwarf: Skip dSYM generation (faster link)
+          # - COMPILER_INDEX_STORE_ENABLE=NO: Disable indexing (saves time)
+
+          xcodebuild -workspace "$WORKSPACE" \
+            -scheme "$SCHEME" \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'platform=iOS Simulator,name=iPhone 16' \
+            -derivedDataPath build \
+            ONLY_ACTIVE_ARCH=YES \
+            DEBUG_INFORMATION_FORMAT=dwarf \
+            COMPILER_INDEX_STORE_ENABLE=NO \
+            CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO \
+            -quiet
+
+      - name: Boot Simulator
+        run: |
+          xcrun simctl boot "iPhone 16" || true
+          xcrun simctl bootstatus "iPhone 16"
+
+      - name: Install App on Simulator
+        run: |
+          # Find the built .app
+          APP_PATH=$(find ios/build/Build/Products/Debug-iphonesimulator -name "*.app" | head -n 1)
+
+          if [ -z "$APP_PATH" ]; then
+            echo "Error: No .app found in build directory"
+            exit 1
+          fi
+
+          echo "Installing App from: $APP_PATH"
+          xcrun simctl install booted "$APP_PATH"
 
       - name: Run Maestro Flow
         # Run the flow defined in .maestro/flow.yaml
