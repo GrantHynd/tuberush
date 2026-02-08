@@ -123,4 +123,7 @@ jobs:
 
       - name: Run Maestro Flow
         # Run the flow defined in .maestro/flow.yaml
+        # Increase driver timeout for CI environment
+        env:
+          MAESTRO_DRIVER_STARTUP_TIMEOUT: 120000
         run: maestro test .maestro/flow.yaml
