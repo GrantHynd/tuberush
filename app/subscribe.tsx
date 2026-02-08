@@ -1,4 +1,6 @@
+import { supabase } from '@/lib/supabase-client';
 import { useAuthStore } from '@/stores/auth-store';
+import { useStripe } from '@stripe/stripe-react-native';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
@@ -20,6 +22,7 @@ export default function SubscribeScreen() {
     const router = useRouter();
     const { user, refreshPremiumStatus } = useAuthStore();
     const [loading, setLoading] = useState(false);
+    const { initPaymentSheet, presentPaymentSheet } = useStripe();
 
     const handleSubscribe = async () => {
         if (!user) {
@@ -30,27 +33,56 @@ export default function SubscribeScreen() {
 
         setLoading(true);
         try {
-            // TODO: Integrate Stripe Payment Sheet
-            // For now, simulate successful subscription
-            Alert.alert(
-                'Demo Mode',
-                'This is a demo. In production, Stripe payment would be processed here.',
-                [
-                    {
-                        text: 'Simulate Success',
-                        onPress: async () => {
-                            // Simulate successful payment
-                            // In production, this would be updated via Stripe webhook
-                            await new Promise(resolve => setTimeout(resolve, 1000));
-                            await refreshPremiumStatus();
-                            Alert.alert('Success', 'Premium membership activated!', [
-                                { text: 'OK', onPress: () => router.back() }
-                            ]);
-                        },
-                    },
-                    { text: 'Cancel', style: 'cancel' },
-                ]
-            );
+            // 1. Fetch params from backend
+            const { data, error } = await supabase.functions.invoke('create-payment-sheet');
+
+            if (error) {
+                console.error('Function error:', error);
+                throw new Error(error.message || 'Failed to initialize payment');
+            }
+
+            if (!data) {
+                throw new Error('No data returned from payment service');
+            }
+
+            const { paymentIntent, ephemeralKey, customer } = data;
+
+            if (!paymentIntent || !ephemeralKey || !customer) {
+                throw new Error('Invalid payment data');
+            }
+
+            // 2. Initialize Payment Sheet
+            const { error: initError } = await initPaymentSheet({
+                merchantDisplayName: 'TubeRush',
+                customerId: customer,
+                customerEphemeralKeySecret: ephemeralKey,
+                paymentIntentClientSecret: paymentIntent,
+                defaultBillingDetails: {
+                    name: 'TubeRush User',
+                },
+            });
+
+            if (initError) {
+                console.error('Init error:', initError);
+                throw new Error(initError.message);
+            }
+
+            // 3. Present Payment Sheet
+            const { error: paymentError } = await presentPaymentSheet();
+
+            if (paymentError) {
+                if (paymentError.code === 'Canceled') {
+                    // User canceled, do nothing
+                    return;
+                }
+                throw new Error(paymentError.message);
+            }
+
+            // 4. Success
+            await refreshPremiumStatus();
+            Alert.alert('Success', 'Premium membership activated!', [
+                { text: 'OK', onPress: () => router.back() }
+            ]);
         } catch (error: any) {
             Alert.alert('Error', error.message || 'Subscription failed');
         } finally {
