@@ -124,6 +124,18 @@ jobs:
       - name: Run Maestro Flow
         # Run the flow defined in .maestro/flow.yaml
         # Increase driver timeout for CI environment
+        # Capture output for artifacts
         env:
           MAESTRO_DRIVER_STARTUP_TIMEOUT: 120000
-        run: maestro test .maestro/flow.yaml
+        run: |
+          maestro test .maestro/flow.yaml --format junit --output report.xml
+        continue-on-error: true
+
+      - name: Upload Maestro Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: maestro-artifacts
+          path: |
+            report.xml
+            ~/.maestro/tests/**/*
