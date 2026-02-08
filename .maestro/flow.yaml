@@ -1,11 +1,22 @@
-appId: com.tuberush.v2 # REPLACE WITH YOUR APP ID (e.g. host.exp.exponent for Expo Go)
+appId: com.tuberush.v2
 ---
 - launchApp:
     clearState: true
 - assertVisible: "TubeRush"
 - assertVisible: "Mind the Gap. Play the Game."
+# Find and tap on Connections game
+- scrollUntilVisible:
+    element: "Connections"
+    direction: DOWN
 - tapOn: "Connections"
-- assertVisible: "Sign In / Register"
-- tapOn: "Sign In / Register"
+# Verify Auth Screen appears (Game Guard)
+- assertVisible: "Welcome back!"
 - assertVisible: "Sign In"
-- tapOn: "Back" # Assuming back button or gesture
+# Dismiss Auth Modal (Swipe Down from top)
+- swipe:
+    start: 50%, 10%
+    end: 50%, 90%
+    duration: 400
+# Verify we are back on Home
+- assertVisible: "TubeRush"
+- assertVisible: "Daily Challenges"

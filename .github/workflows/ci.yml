@@ -1,0 +1,114 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  unit-test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      - run: npm ci
+      - run: npm test
+
+  e2e-test:
+    name: E2E Tests (iOS)
+    runs-on: macos-latest
+    timeout-minutes: 45
+    env:
+      EXPO_PUBLIC_SUPABASE_URL: "https://example.supabase.co"
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: "mock-key"
+      EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY: "mock-key"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Install Maestro
+        run: |
+          curl -Ls "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> $GITHUB_PATH
+
+      - name: Prebuild iOS
+        # --no-interactive prevents prompts
+        # --clean ensures fresh native project
+        run: npx expo prebuild --platform ios --clean --no-interactive
+
+      - name: Build iOS App
+        run: |
+          cd ios
+          # Find the workspace
+          # We need to find the workspace inside the ios folder
+          WORKSPACE=$(find . -maxdepth 1 -name "*.xcworkspace" | head -n 1)
+
+          if [ -z "$WORKSPACE" ]; then
+            echo "Error: No .xcworkspace found"
+            exit 1
+          fi
+
+          # Detect scheme using xcodebuild -list -json
+          # We use python3 to parse the JSON output and get the first scheme
+          SCHEME=$(xcodebuild -workspace "$WORKSPACE" -list -json | python3 -c "import sys, json; data = json.load(sys.stdin); print(data['workspace']['schemes'][0] if 'workspace' in data else data['project']['schemes'][0])")
+
+          if [ -z "$SCHEME" ]; then
+            echo "Error: Could not detect scheme"
+            exit 1
+          fi
+
+          echo "Building Workspace: $WORKSPACE with Scheme: $SCHEME"
+
+          # Build for Simulator
+          # -derivedDataPath creates a build folder in the current directory
+          xcodebuild -workspace "$WORKSPACE" \
+            -scheme "$SCHEME" \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'platform=iOS Simulator,name=iPhone 15' \
+            -derivedDataPath build \
+            CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO
+
+      - name: Boot Simulator
+        run: |
+          # Boot iPhone 15 if not already booted
+          xcrun simctl boot "iPhone 15" || true
+
+          # Wait for simulator to be ready
+          # This command waits for the simulator to finish booting
+          xcrun simctl bootstatus "iPhone 15"
+
+      - name: Install App on Simulator
+        run: |
+          # Find the built .app
+          APP_PATH=$(find ios/build/Build/Products/Debug-iphonesimulator -name "*.app" | head -n 1)
+
+          if [ -z "$APP_PATH" ]; then
+            echo "Error: No .app found in build directory"
+            exit 1
+          fi
+
+          echo "Installing App from: $APP_PATH"
+          xcrun simctl install booted "$APP_PATH"
+
+      - name: Run Maestro Flow
+        # Run the flow defined in .maestro/flow.yaml
+        run: maestro test .maestro/flow.yaml
