@@ -56,7 +56,7 @@ jobs:
       - name: Build and Install iOS App
         # Use Expo CLI to build and install the app on the simulator
         # --no-bundler prevents starting the Metro server
-        run: npx expo run:ios --platform ios --device "iPhone 16" --configuration Debug --no-bundler
+        run: npx expo run:ios --device "iPhone 16" --configuration Debug --no-bundler
 
       - name: Run Maestro Flow
         # Run the flow defined in .maestro/flow.yaml
