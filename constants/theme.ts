@@ -1,53 +1,117 @@
 /**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
+ * Theme configuration for the app.
+ * Light mode only, TFL inspired minimalist design.
  */
 
-import { Platform } from 'react-native';
-
-const tintColorLight = '#0a7ea4';
-const tintColorDark = '#fff';
-
-export const Colors = {
-  light: {
-    text: '#11181C',
-    background: '#fff',
-    tint: tintColorLight,
-    icon: '#687076',
-    tabIconDefault: '#687076',
-    tabIconSelected: tintColorLight,
-  },
-  dark: {
-    text: '#ECEDEE',
-    background: '#151718',
-    tint: tintColorDark,
-    icon: '#9BA1A6',
-    tabIconDefault: '#9BA1A6',
-    tabIconSelected: tintColorDark,
+export const TFL = {
+  red: '#E32017', // Central
+  blue: '#003688', // Piccadilly
+  green: '#00782A', // District
+  yellow: '#FFD300', // Circle
+  black: '#111111', // Northern
+  white: '#FFFFFF',
+  grey: {
+    light: '#F9FAFB',
+    medium: '#D1D5DB',
+    dark: '#4B5563',
   },
 };
 
-export const Fonts = Platform.select({
-  ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
-    sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
-    serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
-    rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
-    mono: 'ui-monospace',
+export const Colors = {
+  light: {
+    text: '#111111',
+    background: '#FFFFFF',
+    tint: TFL.blue,
+    icon: '#6B7280',
+    tabIconDefault: '#9CA3AF',
+    tabIconSelected: TFL.blue,
+    card: TFL.grey.light,
+    border: '#E5E7EB',
+    error: TFL.red,
+    success: TFL.green,
+    warning: TFL.yellow,
   },
-  default: {
-    sans: 'normal',
-    serif: 'serif',
-    rounded: 'normal',
-    mono: 'monospace',
+  dark: { // Keeping same as light to force light theme
+    text: '#111111',
+    background: '#FFFFFF',
+    tint: TFL.blue,
+    icon: '#6B7280',
+    tabIconDefault: '#9CA3AF',
+    tabIconSelected: TFL.blue,
+    card: TFL.grey.light,
+    border: '#E5E7EB',
+    error: TFL.red,
+    success: TFL.green,
+    warning: TFL.yellow,
   },
-  web: {
-    sans: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
-    serif: "Georgia, 'Times New Roman', serif",
-    rounded: "'SF Pro Rounded', 'Hiragino Maru Gothic ProN', Meiryo, 'MS PGothic', sans-serif",
-    mono: "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
+};
+
+export const Typography = {
+  h1: {
+    fontSize: 32,
+    fontWeight: '700' as const,
+    color: Colors.light.text,
+    letterSpacing: -0.5,
   },
-});
+  h2: {
+    fontSize: 24,
+    fontWeight: '600' as const,
+    color: Colors.light.text,
+    letterSpacing: -0.5,
+  },
+  h3: {
+    fontSize: 20,
+    fontWeight: '600' as const,
+    color: Colors.light.text,
+  },
+  body: {
+    fontSize: 16,
+    lineHeight: 24,
+    color: Colors.light.text,
+  },
+  caption: {
+    fontSize: 14,
+    color: TFL.grey.dark,
+  },
+  label: {
+    fontSize: 12,
+    fontWeight: '500' as const,
+    textTransform: 'uppercase' as const,
+    letterSpacing: 1,
+    color: TFL.grey.dark,
+  },
+};
+
+export const Spacing = {
+  xs: 4,
+  sm: 8,
+  md: 16,
+  lg: 24,
+  xl: 32,
+  xxl: 48,
+};
+
+export const Layout = {
+  borderRadius: {
+    sm: 4,
+    md: 8,
+    lg: 12,
+    xl: 24,
+  },
+  shadow: {
+    sm: {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.05,
+      shadowRadius: 2,
+      elevation: 2,
+    },
+    md: {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.1,
+      shadowRadius: 12,
+      elevation: 4,
+    },
+  },
+};

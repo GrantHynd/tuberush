@@ -1,17 +1,21 @@
+import { TFL } from './theme';
+
 export const GAMES = {
-    tictactoe: {
-        id: 'tictactoe',
-        name: 'Tic Tac Toe',
-        description: 'Classic 3x3 grid game',
+    connections: {
+        id: 'connections',
+        name: 'Connections',
+        description: 'Find groups of 4 related items',
         isPremium: false,
-        icon: '⭕',
+        icon: '🔗',
+        color: TFL.red, // Central Line
     },
     crossword: {
         id: 'crossword',
         name: 'Crossword Puzzle',
-        description: 'Premium crossword challenges',
+        description: 'Daily premium crossword',
         isPremium: true,
         icon: '📝',
+        color: TFL.blue, // Piccadilly Line
     },
 } as const;
 

@@ -1,18 +1,17 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import { DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
 
-import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAuthStore } from '@/stores/auth-store';
+import { Colors } from '@/constants/theme';
 
 export const unstable_settings = {
   anchor: '(tabs)',
 };
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
   const checkSession = useAuthStore(state => state.checkSession);
 
   useEffect(() => {
@@ -21,15 +20,28 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
+    <ThemeProvider value={DefaultTheme}>
+      <Stack
+        screenOptions={{
+          headerStyle: {
+            backgroundColor: Colors.light.background,
+          },
+          headerTintColor: Colors.light.text,
+          headerTitleStyle: {
+            fontWeight: '600',
+            color: Colors.light.text,
+          },
+          contentStyle: {
+            backgroundColor: Colors.light.background,
+          },
+        }}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="auth" options={{ presentation: 'modal', title: 'Sign In' }} />
         <Stack.Screen name="subscribe" options={{ presentation: 'modal', title: 'Subscribe' }} />
-        <Stack.Screen name="games/play-tictactoe" options={{ title: 'Tic Tac Toe' }} />
+        <Stack.Screen name="games/play-connections" options={{ title: 'Connections' }} />
         <Stack.Screen name="games/play-crossword" options={{ title: 'Crossword' }} />
       </Stack>
-      <StatusBar style="auto" />
+      <StatusBar style="dark" />
     </ThemeProvider>
   );
 }

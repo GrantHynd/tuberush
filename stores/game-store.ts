@@ -1,14 +1,14 @@
-import { offlineSyncManager, type SyncStatus } from '@/lib/offline-sync-manager';
-import type { GameState, GameType } from '@/types/game';
+import { offlineSyncManager, SyncStatus } from '@/lib/offline-sync-manager';
+import { GameState, GameType, ConnectionsState, CrosswordState } from '@/types/game';
 import { create } from 'zustand';
 
 interface GameStoreState {
     currentGame: GameState | null;
     gameHistory: GameState[];
     syncStatus: SyncStatus;
-    loadGame: (gameId: string, userId: string) => Promise<void>;
+    loadGame: (gameId: string, userId: string) => Promise<GameState | null>;
     saveGame: (gameState: GameState) => Promise<void>;
-    createNewGame: (userId: string, gameType: GameType) => GameState;
+    createNewGame: (userId: string, gameType: GameType, gameId?: string) => GameState;
     deleteGame: (gameId: string) => Promise<void>;
     syncNow: () => Promise<void>;
 }
@@ -22,28 +22,33 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
         const gameState = await offlineSyncManager.loadGameState(gameId, userId);
         if (gameState) {
             set({ currentGame: gameState });
+            return gameState;
         }
+        return null;
     },
 
     saveGame: async (gameState: GameState) => {
-        await offlineSyncManager.saveGameState(gameState);
+        // Optimistic update
         set({ currentGame: gameState });
+        await offlineSyncManager.saveGameState(gameState);
     },
 
-    createNewGame: (userId: string, gameType: GameType) => {
-        const gameId = `${gameType}_${userId}_${Date.now()}`;
+    createNewGame: (userId: string, gameType: GameType, gameId?: string) => {
+        const id = gameId || `${gameType}_${userId}_${Date.now()}`;
 
-        let initialState: any;
-        if (gameType === 'tictactoe') {
+        let initialState: ConnectionsState | CrosswordState;
+
+        if (gameType === 'connections') {
             initialState = {
-                board: Array(9).fill(null),
-                currentPlayer: 'X',
-                winner: null,
-                isDraw: false,
-                moveHistory: [],
+                completedGroups: [],
+                mistakesRemaining: 4,
+                history: [],
+                startTime: Date.now(),
+                endTime: null,
+                status: 'playing',
             };
         } else {
-            // Crossword - will be populated with actual puzzle data
+            // Crossword
             initialState = {
                 grid: [],
                 clues: { across: {}, down: {} },
@@ -53,7 +58,7 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
         }
 
         const newGame: GameState = {
-            id: gameId,
+            id,
             userId,
             gameType,
             state: initialState,
