@@ -140,10 +140,12 @@ class OfflineSyncManager {
 
         this.notifyListeners({ status: 'syncing', message: `Syncing ${queue.length} changes...` });
 
+        const operationsToRemove: string[] = [];
+
         for (const operation of queue) {
             try {
                 await this.processSyncOperation(operation);
-                await StorageManager.removeFromSyncQueue(operation.id);
+                operationsToRemove.push(operation.id);
             } catch (error) {
                 console.error('Failed to process sync operation:', error);
                 // Increment retry count
@@ -152,9 +154,13 @@ class OfflineSyncManager {
                 // If too many retries, skip for now
                 if (operation.retryCount > 3) {
                     console.error('Operation failed after 3 retries, removing from queue:', operation);
-                    await StorageManager.removeFromSyncQueue(operation.id);
+                    operationsToRemove.push(operation.id);
                 }
             }
+        }
+
+        if (operationsToRemove.length > 0) {
+            await StorageManager.removeFromSyncQueueBatch(operationsToRemove);
         }
 
         await StorageManager.updateLastSyncTimestamp();
