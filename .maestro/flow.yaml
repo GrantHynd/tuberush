@@ -4,19 +4,26 @@ appId: com.tuberush.v2
     clearState: true
 - assertVisible: "TubeRush"
 - assertVisible: "Mind the Gap. Play the Game."
+# Verify we are logged out
+- assertVisible: "Sign In / Register"
+
 # Find and tap on Connections game
 - scrollUntilVisible:
     element: "Connections"
     direction: DOWN
 - tapOn: "Connections"
+
 # Verify Auth Screen appears (Game Guard)
-- assertVisible: "Welcome back!"
-- assertVisible: "Sign In"
-# Dismiss Auth Modal (Swipe Down from top)
+- assertVisible: "Sign In" # Header title
+- assertVisible: "Welcome back!" # Subtitle
+
+# Dismiss Auth Modal (Swipe Down)
+# Starting at 20% to avoid status bar, ending at 80% to ensure threshold cross
 - swipe:
-    start: 50%, 10%
-    end: 50%, 90%
+    start: 50%, 20%
+    end: 50%, 80%
     duration: 400
+
 # Verify we are back on Home
-- assertVisible: "TubeRush"
 - assertVisible: "Daily Challenges"
+- assertVisible: "Sign In / Register"
