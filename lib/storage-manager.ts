@@ -108,12 +108,20 @@ export class StorageManager {
      * Remove specific operation from sync queue
      */
     static async removeFromSyncQueue(operationId: string): Promise<void> {
+        await this.removeFromSyncQueueBatch([operationId]);
+    }
+
+    /**
+     * Remove multiple operations from sync queue in a single batch
+     */
+    static async removeFromSyncQueueBatch(operationIds: string[]): Promise<void> {
         try {
             const queue = await this.getSyncQueue();
-            const filtered = queue.filter(op => op.id !== operationId);
+            const idSet = new Set(operationIds);
+            const filtered = queue.filter(op => !idSet.has(op.id));
             await AsyncStorage.setItem(STORAGE_KEYS.SYNC_QUEUE, JSON.stringify(filtered));
         } catch (error) {
-            console.error('Error removing from sync queue:', error);
+            console.error('Error removing from sync queue batch:', error);
             throw error;
         }
     }
