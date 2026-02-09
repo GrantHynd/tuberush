@@ -129,7 +129,6 @@ jobs:
           MAESTRO_DRIVER_STARTUP_TIMEOUT: 120000
         run: |
           maestro test .maestro/flow.yaml --format junit --output report.xml
-        continue-on-error: true
 
       - name: Upload Maestro Artifacts
         if: always()
