@@ -9,9 +9,9 @@ import {
     Platform,
     UIManager
 } from 'react-native';
-import { ConnectionsState, ConnectionsPuzzle } from '@/types/game'; // Adjust path if needed
-import { Colors, TFL, Typography, Spacing, Layout } from '@/constants/theme';
-import { IconSymbol } from '@/components/ui/icon-symbol';
+import { ConnectionsState } from '@/types/game';
+import { ConnectionsPuzzle } from '@/constants/ConnectionsData';
+import { Colors, Typography, Spacing, Layout } from '@/constants/theme';
 
 if (Platform.OS === 'android') {
     if (UIManager.setLayoutAnimationEnabledExperimental) {
@@ -124,7 +124,11 @@ export function Connections({ gameState, puzzle, onSubmitGuess }: ConnectionsPro
     return (
         <View style={styles.container}>
             {/* Header / Mistakes */}
-            <View style={styles.mistakesContainer}>
+            <View
+                style={styles.mistakesContainer}
+                accessible={true}
+                accessibilityLabel={`Mistakes remaining: ${gameState.mistakesRemaining}`}
+            >
                 <Text style={styles.mistakesText}>Mistakes remaining:</Text>
                 <View style={styles.dotsContainer}>
                     {[...Array(4)].map((_, i) => (
@@ -159,6 +163,10 @@ export function Connections({ gameState, puzzle, onSubmitGuess }: ConnectionsPro
                             onPress={() => handleSelect(item)}
                             activeOpacity={0.7}
                             disabled={gameState.status !== 'playing'}
+                            accessibilityRole="button"
+                            accessibilityLabel={`${item}, ${isSelected ? 'selected' : 'not selected'}`}
+                            accessibilityState={{ selected: isSelected, disabled: gameState.status !== 'playing' }}
+                            accessibilityHint="Double tap to select or deselect"
                         >
                             <Text style={[
                                 styles.cardText,
@@ -177,6 +185,9 @@ export function Connections({ gameState, puzzle, onSubmitGuess }: ConnectionsPro
                     style={styles.buttonSecondary}
                     onPress={handleShuffle}
                     disabled={gameState.status !== 'playing'}
+                    accessibilityRole="button"
+                    accessibilityLabel="Shuffle items"
+                    accessibilityState={{ disabled: gameState.status !== 'playing' }}
                 >
                     <Text style={styles.buttonTextSecondary}>Shuffle</Text>
                 </TouchableOpacity>
@@ -185,6 +196,9 @@ export function Connections({ gameState, puzzle, onSubmitGuess }: ConnectionsPro
                     style={styles.buttonSecondary}
                     onPress={handleDeselectAll}
                     disabled={gameState.status !== 'playing' || selectedItems.length === 0}
+                    accessibilityRole="button"
+                    accessibilityLabel="Deselect all items"
+                    accessibilityState={{ disabled: gameState.status !== 'playing' || selectedItems.length === 0 }}
                 >
                     <Text style={styles.buttonTextSecondary}>Deselect All</Text>
                 </TouchableOpacity>
@@ -196,6 +210,10 @@ export function Connections({ gameState, puzzle, onSubmitGuess }: ConnectionsPro
                     ]}
                     onPress={handleSubmit}
                     disabled={selectedItems.length !== 4 || gameState.status !== 'playing'}
+                    accessibilityRole="button"
+                    accessibilityLabel="Submit guess"
+                    accessibilityState={{ disabled: selectedItems.length !== 4 || gameState.status !== 'playing' }}
+                    accessibilityHint={selectedItems.length !== 4 ? "Select 4 items to submit" : "Double tap to submit your guess"}
                 >
                     <Text style={styles.buttonTextPrimary}>Submit</Text>
                 </TouchableOpacity>
