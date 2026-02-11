@@ -9,6 +9,7 @@ import {
     Platform,
     UIManager
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { ConnectionsState } from '@/types/game';
 import { ConnectionsPuzzle } from '@/constants/ConnectionsData';
 import { Colors, Typography, Spacing, Layout } from '@/constants/theme';
@@ -61,9 +62,11 @@ export function Connections({ gameState, puzzle, onSubmitGuess }: ConnectionsPro
         if (gameState.status !== 'playing') return;
 
         if (selectedItems.includes(item)) {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
             setSelectedItems(prev => prev.filter(i => i !== item));
         } else {
             if (selectedItems.length < 4) {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 setSelectedItems(prev => [...prev, item]);
             }
         }
@@ -96,6 +99,7 @@ export function Connections({ gameState, puzzle, onSubmitGuess }: ConnectionsPro
     const prevMistakes = useRef(gameState.mistakesRemaining);
     useEffect(() => {
         if (gameState.mistakesRemaining < prevMistakes.current) {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
             // Shake animation
             Animated.sequence([
                 Animated.timing(shakeAnim, { toValue: 10, duration: 50, useNativeDriver: true }),
@@ -106,6 +110,15 @@ export function Connections({ gameState, puzzle, onSubmitGuess }: ConnectionsPro
         }
         prevMistakes.current = gameState.mistakesRemaining;
     }, [gameState.mistakesRemaining]);
+
+    // Effect to detect correct guess (completed group added)
+    const prevCompletedGroups = useRef(gameState.completedGroups.length);
+    useEffect(() => {
+        if (gameState.completedGroups.length > prevCompletedGroups.current) {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        }
+        prevCompletedGroups.current = gameState.completedGroups.length;
+    }, [gameState.completedGroups.length]);
 
     // Render completed groups
     const renderCompletedGroups = () => {
