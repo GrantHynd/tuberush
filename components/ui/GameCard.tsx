@@ -35,11 +35,23 @@ export function GameCard({
         }
     };
 
+    const a11yLabel = [
+        title,
+        description,
+        isPremium ? 'Premium game' : '',
+        isLocked ? 'Locked' : ''
+    ].filter(Boolean).join(', ');
+
+    const a11yHint = isLocked ? 'Double tap to subscribe' : 'Double tap to play';
+
     return (
         <TouchableOpacity
             style={[styles.card, isLocked && styles.cardLocked]}
             onPress={handlePress}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={a11yLabel}
+            accessibilityHint={a11yHint}
         >
             <View style={[styles.accent, { backgroundColor: color }]} />
 
