@@ -46,6 +46,7 @@ export function GameCard({
 
     return (
         <TouchableOpacity
+            testID={`game-card-${id}`}
             style={[styles.card, isLocked && styles.cardLocked]}
             onPress={handlePress}
             activeOpacity={0.7}

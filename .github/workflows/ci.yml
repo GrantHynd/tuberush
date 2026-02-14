@@ -11,21 +11,35 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  unit-test:
-    name: Unit Tests
+  validate:
+    name: Validate (Lint, Typecheck, Unit Test)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'npm'
-      - run: npm ci
-      - run: npm test
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type Check
+        run: npm run type-check
+
+      - name: Unit Tests
+        run: npm test
 
   e2e-test:
     name: E2E Tests (iOS)
+    # Run in parallel with validation to save wall-clock time,
+    # but could depend on validation to save money: needs: validate
+    # Given the user priority "speed of pipeline steps", we run in parallel.
     runs-on: macos-latest
     timeout-minutes: 45
     env:
@@ -46,25 +60,17 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Cache npm dependencies
-        uses: actions/cache@v4
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
-
+      # Cache CocoaPods global cache to speed up 'pod install'
+      # We use package-lock.json as key because native deps (and their pod versions) are defined there.
       - name: Cache CocoaPods
         uses: actions/cache@v4
         with:
-          path: |
-            ios/Pods
-            ~/Library/Caches/CocoaPods
-          key: ${{ runner.os }}-pods-${{ hashFiles('ios/Podfile.lock') }}
+          path: ~/.cocoapods
+          key: ${{ runner.os }}-pods-${{ hashFiles('package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-pods-
 
-      - name: Install Dependencies
+      - name: Install Node Dependencies
         run: npm ci
 
       - name: Install Maestro
@@ -72,9 +78,15 @@ jobs:
           curl -Ls "https://get.maestro.mobile.dev" | bash
           echo "$HOME/.maestro/bin" >> $GITHUB_PATH
 
+      # Prebuild generates the native project (ios/ directory).
+      # --no-install skips 'pod install' so we can control it and use the global cache effectively.
       - name: Prebuild iOS
-        # --clean ensures fresh native project
-        run: npx expo prebuild --platform ios --clean
+        run: npx expo prebuild --platform ios --clean --no-install
+
+      - name: Install Pods
+        run: |
+          cd ios
+          pod install
 
       - name: Build iOS App
         run: |
@@ -92,9 +104,9 @@ jobs:
           echo "Building Workspace: $WORKSPACE with Scheme: $SCHEME"
 
           # Optimization Flags:
-          # - ONLY_ACTIVE_ARCH=YES: Build only for the simulator arch (arm64 on M1 runners)
-          # - DEBUG_INFORMATION_FORMAT=dwarf: Skip dSYM generation (faster link)
-          # - COMPILER_INDEX_STORE_ENABLE=NO: Disable indexing (saves time)
+          # - ONLY_ACTIVE_ARCH=YES: Build only for the simulator arch
+          # - DEBUG_INFORMATION_FORMAT=dwarf: Skip dSYM generation
+          # - COMPILER_INDEX_STORE_ENABLE=NO: Disable indexing
 
           xcodebuild -workspace "$WORKSPACE" \
             -scheme "$SCHEME" \
@@ -127,9 +139,6 @@ jobs:
           xcrun simctl install booted "$APP_PATH"
 
       - name: Run Maestro Flow
-        # Run the flow defined in .maestro/flow.yaml
-        # Increase driver timeout for CI environment
-        # Capture output for artifacts
         env:
           MAESTRO_DRIVER_STARTUP_TIMEOUT: 120000
         run: |
