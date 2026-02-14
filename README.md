@@ -5,7 +5,7 @@ A React Native game platform with offline-first architecture, premium subscripti
 ## Features
 
 ✅ **Two Games**
-- Tic-Tac-Toe (Free)
+- Connections (Free)
 - Crossword Puzzles (Premium)
 
 ✅ **Premium Membership**
@@ -163,7 +163,7 @@ if (game.isPremium && !user?.isPremium) {
 - Profile auto-creation on signup
 
 ### Games
-- **Tic-Tac-Toe**: Classic 3x3 grid with win detection
+- **Connections**: Find groups of 4 related items
 - **Crossword**: Premium puzzle game with clue display
 
 ### Subscriptions
@@ -205,6 +205,35 @@ The sync manager is in `lib/offline-sync-manager.ts`. Key methods:
 - `handleConflict()`: Resolve sync conflicts
 
 ## Testing
+
+### Automated Testing
+
+We use **Jest** for unit/integration testing and **Maestro** for E2E testing.
+
+#### Unit & Integration Tests (Jest)
+
+These tests run in a Node environment and verify component logic and navigation flows.
+
+```bash
+# Run tests
+npm test
+
+# Run tests in watch mode
+npm run test:watch
+```
+
+#### End-to-End Tests (Maestro)
+
+These tests run against a real simulator/emulator and verify the app from a user's perspective.
+
+1. Install Maestro: `curl -Ls "https://get.maestro.mobile.dev" | bash`
+2. Ensure your simulator is running.
+3. Run the flow:
+   ```bash
+   maestro test .maestro/flow.yaml
+   ```
+
+See `.maestro/README.md` for more details.
 
 ### Offline Mode Testing
 1. Enable airplane mode on device

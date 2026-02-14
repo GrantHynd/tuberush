@@ -4,7 +4,8 @@ import { GAMES } from '@/constants/Games';
 import { useAuthStore } from '@/stores/auth-store';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { ScrollView, StyleSheet, Text, View, SafeAreaView, TouchableOpacity } from 'react-native';
+import { ScrollView, StyleSheet, Text, View, TouchableOpacity } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, TFL, Typography, Spacing, Layout } from '@/constants/theme';
 
 export default function HomeScreen() {

@@ -1,0 +1,145 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unit-test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      - run: npm ci
+      - run: npm test
+
+  e2e-test:
+    name: E2E Tests (iOS)
+    runs-on: macos-latest
+    timeout-minutes: 45
+    env:
+      EXPO_PUBLIC_SUPABASE_URL: "https://example.supabase.co"
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: "mock-key"
+      EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY: "mock-key"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Cache npm dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Cache CocoaPods
+        uses: actions/cache@v4
+        with:
+          path: |
+            ios/Pods
+            ~/Library/Caches/CocoaPods
+          key: ${{ runner.os }}-pods-${{ hashFiles('ios/Podfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pods-
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Install Maestro
+        run: |
+          curl -Ls "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> $GITHUB_PATH
+
+      - name: Prebuild iOS
+        # --clean ensures fresh native project
+        run: npx expo prebuild --platform ios --clean
+
+      - name: Build iOS App
+        run: |
+          cd ios
+          # Find the workspace
+          WORKSPACE=$(find . -maxdepth 1 -name "*.xcworkspace" | head -n 1)
+
+          if [ -z "$WORKSPACE" ]; then
+            echo "Error: No .xcworkspace found"
+            ls -R
+            exit 1
+          fi
+
+          SCHEME="tuberushv2"
+          echo "Building Workspace: $WORKSPACE with Scheme: $SCHEME"
+
+          # Optimization Flags:
+          # - ONLY_ACTIVE_ARCH=YES: Build only for the simulator arch (arm64 on M1 runners)
+          # - DEBUG_INFORMATION_FORMAT=dwarf: Skip dSYM generation (faster link)
+          # - COMPILER_INDEX_STORE_ENABLE=NO: Disable indexing (saves time)
+
+          xcodebuild -workspace "$WORKSPACE" \
+            -scheme "$SCHEME" \
+            -configuration Release \
+            -sdk iphonesimulator \
+            -destination 'platform=iOS Simulator,name=iPhone 16' \
+            -derivedDataPath build \
+            ONLY_ACTIVE_ARCH=YES \
+            DEBUG_INFORMATION_FORMAT=dwarf \
+            COMPILER_INDEX_STORE_ENABLE=NO \
+            CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO \
+            -quiet
+
+      - name: Boot Simulator
+        run: |
+          xcrun simctl boot "iPhone 16" || true
+          xcrun simctl bootstatus "iPhone 16"
+
+      - name: Install App on Simulator
+        run: |
+          # Find the built .app
+          APP_PATH=$(find ios/build/Build/Products/Release-iphonesimulator -name "*.app" | head -n 1)
+
+          if [ -z "$APP_PATH" ]; then
+            echo "Error: No .app found in build directory"
+            exit 1
+          fi
+
+          echo "Installing App from: $APP_PATH"
+          xcrun simctl install booted "$APP_PATH"
+
+      - name: Run Maestro Flow
+        # Run the flow defined in .maestro/flow.yaml
+        # Increase driver timeout for CI environment
+        # Capture output for artifacts
+        env:
+          MAESTRO_DRIVER_STARTUP_TIMEOUT: 120000
+        run: |
+          maestro test .maestro/flow.yaml --format junit --output report.xml
+
+      - name: Upload Maestro Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: maestro-artifacts
+          path: |
+            report.xml
+            ~/.maestro/tests/**/*
