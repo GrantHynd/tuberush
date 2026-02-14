@@ -9,9 +9,11 @@ appId: com.tuberush.v2
 
 # Find and tap on Connections game
 - scrollUntilVisible:
-    element: "Connections"
+    element:
+        id: "game-card-connections"
     direction: DOWN
-- tapOn: "Connections"
+- tapOn:
+    id: "game-card-connections"
 
 # Verify Auth Screen appears (Game Guard)
 - assertVisible: "Sign In" # Header title
