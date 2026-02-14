@@ -17,6 +17,11 @@ export const TFL = {
   },
 };
 
+export const Fonts = {
+  rounded: 'System',
+  mono: 'System',
+};
+
 export const Colors = {
   light: {
     text: '#111111',

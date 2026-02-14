@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity, SegmentedControlIOS } from 'react-native';
+import { View, Text, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { Colors, TFL, Typography, Spacing, Layout } from '@/constants/theme';
 import { leaderboard } from '@/lib/leaderboard';
 import { useAuthStore } from '@/stores/auth-store';
