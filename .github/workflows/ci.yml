@@ -44,7 +44,7 @@ jobs:
       EXPO_PUBLIC_SUPABASE_ANON_KEY: "mock-key"
       EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY: "mock-key"
       # Ensure Maestro driver waits enough for simulator boot/app launch
-      MAESTRO_DRIVER_STARTUP_TIMEOUT: 120000
+      MAESTRO_DRIVER_STARTUP_TIMEOUT: 300000
 
     steps:
       - uses: actions/checkout@v4
@@ -133,6 +133,8 @@ jobs:
         run: |
           xcrun simctl boot "iPhone 16" || true
           xcrun simctl bootstatus "iPhone 16"
+          # Wait a bit for the simulator to settle
+          sleep 30
 
       - name: Install App on Simulator
         run: |
