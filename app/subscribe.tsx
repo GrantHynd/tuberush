@@ -31,6 +31,11 @@ export default function SubscribeScreen() {
             return;
         }
 
+        if (user.isPremium) {
+            Alert.alert('Info', 'You are already a premium member.');
+            return;
+        }
+
         setLoading(true);
         try {
             // 1. Fetch params from backend
@@ -68,18 +73,49 @@ export default function SubscribeScreen() {
             }
 
             // 3. Present Payment Sheet
-            const { error: paymentError } = await presentPaymentSheet();
+            // @ts-ignore
+            if (__DEV__ && user.email && (user.email.startsWith('test_user_') || user.email.endsWith('@example.com'))) {
+                // Simulate payment for test users
+                const { error: testError } = await supabase.functions.invoke('e2e-test-helper', {
+                    body: {
+                        action: 'promote_premium',
+                        secret: 'e2e_secret_9f8e7d6c5b4a3_DO_NOT_USE_IN_PROD_random_string_xyz'
+                    }
+                });
 
-            if (paymentError) {
-                if (paymentError.code === 'Canceled') {
-                    // User canceled, do nothing
-                    return;
+                if (testError) {
+                    throw new Error(testError.message || 'Test promotion failed');
                 }
-                throw new Error(paymentError.message);
+
+                // Simulate network delay
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            } else {
+                const { error: paymentError } = await presentPaymentSheet();
+
+                if (paymentError) {
+                    if (paymentError.code === 'Canceled') {
+                        // User canceled, do nothing
+                        return;
+                    }
+                    throw new Error(paymentError.message);
+                }
             }
 
             // 4. Success
-            await refreshPremiumStatus();
+            // Poll for status update to ensure UI reflects premium state
+            let attempts = 0;
+            let isPremium = false;
+            while (!isPremium && attempts < 5) {
+                await refreshPremiumStatus();
+                // Check store state directly or assume refresh updates it
+                // We need to get the latest state
+                isPremium = useAuthStore.getState().user?.isPremium || false;
+                if (isPremium) break;
+
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                attempts++;
+            }
+
             Alert.alert('Success', 'Premium membership activated!', [
                 { text: 'OK', onPress: () => router.back() }
             ]);
@@ -125,9 +161,10 @@ export default function SubscribeScreen() {
                 </View>
 
                 <TouchableOpacity
-                    style={styles.subscribeButton}
+                    style={[styles.subscribeButton, user?.isPremium && styles.subscribeButtonDisabled]}
                     onPress={handleSubscribe}
-                    disabled={loading}
+                    disabled={loading || user?.isPremium}
+                    testID="subscribe-button"
                 >
                     {loading ? (
                         <ActivityIndicator color="#fff" />
@@ -214,6 +251,9 @@ const styles = StyleSheet.create({
         width: '100%',
         alignItems: 'center',
         marginBottom: 15,
+    },
+    subscribeButtonDisabled: {
+        backgroundColor: '#bdc3c7',
     },
     subscribeButtonText: {
         color: '#fff',

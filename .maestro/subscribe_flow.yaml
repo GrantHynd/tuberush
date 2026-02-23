@@ -1,0 +1,54 @@
+appId: com.tuberush.v2
+---
+- launchApp:
+    clearState: true
+
+# 1. Tap on Crossword Puzzle (Premium Game)
+- tapOn: "Crossword Puzzle"
+
+# 2. Verify Sign In Modal appears
+- assertVisible: "Sign In"
+- assertVisible: "Don't have an account? Sign up"
+
+# 3. Sign Up
+- tapOn: "Don't have an account? Sign up"
+- tapOn: "Email"
+- inputText: "test_user_${MAESTRO_ITERATION}@example.com"
+- tapOn: "Password"
+- inputText: "password123"
+- tapOn: "Sign Up"
+
+# 4. Wait for Home Screen (Logged In)
+- assertVisible: "Daily Challenges"
+- assertVisible: "Welcome back"
+
+# 5. Tap on Crossword Puzzle again (Logged in, not premium)
+- tapOn: "Crossword Puzzle"
+
+# 6. Verify Subscribe Screen
+- assertVisible: "Go Premium!"
+- assertVisible: "Unlock exclusive features"
+- assertVisible: "Subscribe Now"
+
+# 7. Subscribe
+- tapOn:
+    id: "subscribe-button"
+
+# Note: The app is configured to detect 'test_user_' emails and simulate a successful payment.
+# It calls a backend function to promote the user, then refreshes the session.
+
+# 8. Verify success alert
+- assertVisible: "Success"
+- assertVisible: "Premium membership activated!"
+- tapOn: "OK"
+
+# 9. Verify back on Home Screen
+# The alert OK button triggers router.back(), taking us back to Home
+- assertVisible: "Daily Challenges"
+
+# 10. Tap on Crossword Puzzle again (Now premium)
+- tapOn: "Crossword Puzzle"
+
+# 11. Verify we are IN the game
+# Assuming the game screen has a header with "Crossword"
+- assertVisible: "Crossword"
