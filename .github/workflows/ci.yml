@@ -3,8 +3,22 @@ name: CI
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - '**.md'
+      - '.cursor/**'
+      - 'docs/**'
+      - 'CHANGELOG*'
+      - 'LICENSE'
+      - '.vscode/**'
   pull_request:
     branches: [main]
+    paths-ignore:
+      - '**.md'
+      - '.cursor/**'
+      - 'docs/**'
+      - 'CHANGELOG*'
+      - 'LICENSE'
+      - '.vscode/**'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
