@@ -51,15 +51,15 @@ jobs:
 
   e2e-test:
     name: E2E Tests (iOS)
-    # Run in parallel with validation to save wall-clock time,
-    # but could depend on validation to save money: needs: validate
-    # Given the user priority "speed of pipeline steps", we run in parallel.
     runs-on: macos-latest
     timeout-minutes: 45
     env:
       EXPO_PUBLIC_SUPABASE_URL: "https://example.supabase.co"
       EXPO_PUBLIC_SUPABASE_ANON_KEY: "mock-key"
       EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY: "mock-key"
+      # Ensure Maestro driver waits enough for simulator boot/app launch
+      MAESTRO_DRIVER_STARTUP_TIMEOUT: 300000
+
     steps:
       - uses: actions/checkout@v4
 
@@ -75,7 +75,6 @@ jobs:
           java-version: '17'
 
       # Cache CocoaPods global cache to speed up 'pod install'
-      # We use package-lock.json as key because native deps (and their pod versions) are defined there.
       - name: Cache CocoaPods
         uses: actions/cache@v4
         with:
@@ -92,6 +91,11 @@ jobs:
           curl -Ls "https://get.maestro.mobile.dev" | bash
           echo "$HOME/.maestro/bin" >> $GITHUB_PATH
 
+      - name: Check Maestro Version
+        run: |
+          export PATH="$HOME/.maestro/bin:$PATH"
+          maestro --version
+
       # Prebuild generates the native project (ios/ directory).
       # --no-install skips 'pod install' so we can control it and use the global cache effectively.
       - name: Prebuild iOS
@@ -102,26 +106,24 @@ jobs:
           cd ios
           pod install
 
+      - name: List Simulators
+        run: xcrun simctl list devices available
+
       - name: Build iOS App
         run: |
           cd ios
-          # Find the workspace
           WORKSPACE=$(find . -maxdepth 1 -name "*.xcworkspace" | head -n 1)
 
           if [ -z "$WORKSPACE" ]; then
             echo "Error: No .xcworkspace found"
-            ls -R
             exit 1
           fi
 
           SCHEME="tuberushv2"
           echo "Building Workspace: $WORKSPACE with Scheme: $SCHEME"
 
-          # Optimization Flags:
-          # - ONLY_ACTIVE_ARCH=YES: Build only for the simulator arch
-          # - DEBUG_INFORMATION_FORMAT=dwarf: Skip dSYM generation
-          # - COMPILER_INDEX_STORE_ENABLE=NO: Disable indexing
-
+          # Build and pipe output to build.log for debugging on failure
+          set -o pipefail
           xcodebuild -workspace "$WORKSPACE" \
             -scheme "$SCHEME" \
             -configuration Release \
@@ -132,12 +134,21 @@ jobs:
             DEBUG_INFORMATION_FORMAT=dwarf \
             COMPILER_INDEX_STORE_ENABLE=NO \
             CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO \
-            -quiet
+            | tee build.log
+
+      - name: Upload Build Log on Failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: ios/build.log
 
       - name: Boot Simulator
         run: |
           xcrun simctl boot "iPhone 16" || true
           xcrun simctl bootstatus "iPhone 16"
+          # Wait a bit for the simulator to settle
+          sleep 30
 
       - name: Install App on Simulator
         run: |
@@ -153,8 +164,6 @@ jobs:
           xcrun simctl install booted "$APP_PATH"
 
       - name: Run Maestro Flow
-        env:
-          MAESTRO_DRIVER_STARTUP_TIMEOUT: 120000
         run: |
           maestro test .maestro/flow.yaml --format junit --output report.xml
 
