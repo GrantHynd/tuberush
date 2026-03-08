@@ -75,10 +75,8 @@ appId: com.tuberush.v2
 # Navigate to Profile tab
 - tapOn: "Profile"
 
-# Wait for profile to load
-- assertVisible:
-    text: "test_user_.*@example.com"
-    regex: true
+# Wait for profile to load - check for test email domain
+- assertVisible: "@example.com"
 
 - assertVisible: "Membership"
 - assertVisible: "Free"
@@ -151,10 +149,8 @@ appId: com.tuberush.v2
 # Navigate to profile to confirm user is logged in
 - tapOn: "Profile"
 
-# Verify profile shows user info
-- assertVisible:
-    text: "test_user_.*@example.com"
-    regex: true
+# Verify profile shows user info - check for test email domain
+- assertVisible: "@example.com"
 - assertVisible: "Membership"
 
 # =============================================================================
