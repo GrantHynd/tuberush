@@ -52,12 +52,11 @@ jobs:
   e2e-test:
     name: E2E Tests (iOS)
     runs-on: macos-latest
-    timeout-minutes: 45
+    timeout-minutes: 30
     env:
       EXPO_PUBLIC_SUPABASE_URL: "https://example.supabase.co"
       EXPO_PUBLIC_SUPABASE_ANON_KEY: "mock-key"
       EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY: "mock-key"
-      # Ensure Maestro driver waits enough for simulator boot/app launch
       MAESTRO_DRIVER_STARTUP_TIMEOUT: 300000
 
     steps:
@@ -74,42 +73,89 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      # Cache CocoaPods global cache to speed up 'pod install'
-      - name: Cache CocoaPods
+      # Generate cache keys for better granularity
+      - name: Generate Cache Keys
+        id: cache-keys
+        run: |
+          echo "pods-key=${{ runner.os }}-pods-${{ hashFiles('**/Podfile.lock', 'package-lock.json') }}" >> $GITHUB_OUTPUT
+          echo "build-key=${{ runner.os }}-ios-build-${{ hashFiles('app/**', 'components/**', 'lib/**', 'stores/**', 'ios/**/*.{h,m,mm,swift}', 'package-lock.json') }}" >> $GITHUB_OUTPUT
+
+      # Cache the entire Pods folder for faster pod install
+      - name: Cache Pods
+        id: cache-pods
+        uses: actions/cache@v4
+        with:
+          path: ios/Pods
+          key: ${{ steps.cache-keys.outputs.pods-key }}
+          restore-keys: |
+            ${{ runner.os }}-pods-
+
+      # Cache CocoaPods global cache as fallback
+      - name: Cache CocoaPods Specs
         uses: actions/cache@v4
         with:
           path: ~/.cocoapods
-          key: ${{ runner.os }}-pods-${{ hashFiles('package-lock.json') }}
+          key: ${{ runner.os }}-cocoapods-specs-${{ hashFiles('**/Podfile.lock') }}
           restore-keys: |
-            ${{ runner.os }}-pods-
+            ${{ runner.os }}-cocoapods-specs-
+
+      # Cache the built app to skip rebuild if source hasn't changed
+      - name: Cache iOS Build
+        id: cache-ios-build
+        uses: actions/cache@v4
+        with:
+          path: |
+            ios/build/Build/Products/Release-iphonesimulator
+            ios/build/ModuleCache.noindex
+          key: ${{ steps.cache-keys.outputs.build-key }}
+          restore-keys: |
+            ${{ runner.os }}-ios-build-
 
       - name: Install Node Dependencies
         run: npm ci
 
-      - name: Install Maestro
-        run: |
-          curl -Ls "https://get.maestro.mobile.dev" | bash
-          echo "$HOME/.maestro/bin" >> $GITHUB_PATH
-
-      - name: Check Maestro Version
-        run: |
-          export PATH="$HOME/.maestro/bin:$PATH"
-          maestro --version
-
-      # Prebuild generates the native project (ios/ directory).
-      # --no-install skips 'pod install' so we can control it and use the global cache effectively.
+      # Prebuild generates the native project (ios/ directory)
+      # Skip if ios/ already exists from cache
       - name: Prebuild iOS
-        run: npx expo prebuild --platform ios --clean --no-install
+        run: |
+          if [ ! -d "ios" ]; then
+            npx expo prebuild --platform ios --no-install
+          else
+            echo "iOS directory exists, skipping prebuild"
+          fi
 
+      # Only run pod install if cache missed or Podfile.lock changed
       - name: Install Pods
+        if: steps.cache-pods.outputs.cache-hit != 'true'
         run: |
           cd ios
-          pod install
+          pod install --verbose
 
-      - name: List Simulators
-        run: xcrun simctl list devices available
+      # Boot simulator early in parallel with other setup
+      - name: Boot Simulator
+        run: |
+          # Boot simulator in background
+          xcrun simctl boot "iPhone 16" || echo "Simulator already booted"
+          # Reduced wait time from 30s to 5s - Maestro will wait for app anyway
+          sleep 5
 
+      - name: Install Maestro
+        run: |
+          curl -fsSL "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> $GITHUB_PATH
+
+      # Display cache status
+      - name: Check Build Cache Status
+        run: |
+          if [ "${{ steps.cache-ios-build.outputs.cache-hit }}" == "true" ]; then
+            echo "✓ Build cache hit! Skipping build step (saves ~8 minutes)"
+          else
+            echo "✗ Build cache miss. Will build from scratch."
+          fi
+
+      # Build only if cache missed
       - name: Build iOS App
+        if: steps.cache-ios-build.outputs.cache-hit != 'true'
         run: |
           cd ios
           WORKSPACE=$(find . -maxdepth 1 -name "*.xcworkspace" | head -n 1)
@@ -122,7 +168,7 @@ jobs:
           SCHEME="tuberushv2"
           echo "Building Workspace: $WORKSPACE with Scheme: $SCHEME"
 
-          # Build and pipe output to build.log for debugging on failure
+          # Optimized build settings for CI
           set -o pipefail
           xcodebuild -workspace "$WORKSPACE" \
             -scheme "$SCHEME" \
@@ -130,10 +176,16 @@ jobs:
             -sdk iphonesimulator \
             -destination 'platform=iOS Simulator,name=iPhone 16' \
             -derivedDataPath build \
+            -jobs $(sysctl -n hw.ncpu) \
             ONLY_ACTIVE_ARCH=YES \
             DEBUG_INFORMATION_FORMAT=dwarf \
             COMPILER_INDEX_STORE_ENABLE=NO \
-            CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO \
+            ENABLE_BITCODE=NO \
+            GCC_OPTIMIZATION_LEVEL=s \
+            SWIFT_OPTIMIZATION_LEVEL=-O \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
             | tee build.log
 
       - name: Upload Build Log on Failure
@@ -143,16 +195,8 @@ jobs:
           name: build-log
           path: ios/build.log
 
-      - name: Boot Simulator
-        run: |
-          xcrun simctl boot "iPhone 16" || true
-          xcrun simctl bootstatus "iPhone 16"
-          # Wait a bit for the simulator to settle
-          sleep 30
-
       - name: Install App on Simulator
         run: |
-          # Find the built .app
           APP_PATH=$(find ios/build/Build/Products/Release-iphonesimulator -name "*.app" | head -n 1)
 
           if [ -z "$APP_PATH" ]; then
@@ -161,10 +205,11 @@ jobs:
           fi
 
           echo "Installing App from: $APP_PATH"
-          xcrun simctl install booted "$APP_PATH"
+          xcrun simctl install "iPhone 16" "$APP_PATH"
 
       - name: Run Maestro Flow
         run: |
+          export PATH="$HOME/.maestro/bin:$PATH"
           maestro test .maestro/flow.yaml --format junit --output report.xml
 
       - name: Upload Maestro Artifacts
