@@ -57,6 +57,7 @@ export default function AuthScreen() {
 
                 <View style={styles.form}>
                     <TextInput
+                        testID="auth-email-input"
                         style={styles.input}
                         placeholder="Email"
                         value={email}
@@ -67,6 +68,7 @@ export default function AuthScreen() {
                     />
 
                     <TextInput
+                        testID="auth-password-input"
                         style={styles.input}
                         placeholder="Password"
                         value={password}
@@ -76,6 +78,7 @@ export default function AuthScreen() {
                     />
 
                     <TouchableOpacity
+                        testID="auth-submit-button"
                         style={styles.button}
                         onPress={handleSubmit}
                         disabled={loading}
@@ -90,6 +93,7 @@ export default function AuthScreen() {
                     </TouchableOpacity>
 
                     <TouchableOpacity
+                        testID="auth-switch-button"
                         style={styles.switchButton}
                         onPress={() => setIsSignUp(!isSignUp)}
                         disabled={loading}

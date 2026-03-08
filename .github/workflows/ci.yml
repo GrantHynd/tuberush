@@ -163,9 +163,9 @@ jobs:
           echo "Installing App from: $APP_PATH"
           xcrun simctl install booted "$APP_PATH"
 
-      - name: Run Maestro Flow
+      - name: Run Maestro Flows
         run: |
-          maestro test .maestro/flow.yaml --format junit --output report.xml
+          maestro test .maestro/flow.yaml .maestro/auth_flow.yaml --format junit --output report.xml
 
       - name: Upload Maestro Artifacts
         if: always()
