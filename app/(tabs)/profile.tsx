@@ -1,4 +1,5 @@
 import { PremiumBadge } from '@/components/ui/PremiumBadge';
+import { HeaderBackButton } from '@/components/ui/HeaderBackButton';
 import { useAuthStore } from '@/stores/auth-store';
 import { useGameStore } from '@/stores/game-store';
 import { useRouter } from 'expo-router';
@@ -60,7 +61,8 @@ export default function ProfileScreen() {
 
     if (!user) {
         return (
-            <View style={styles.container}>
+            <SafeAreaView style={styles.container} edges={['top']}>
+                <HeaderBackButton title="Settings" />
                 <View style={styles.emptyState}>
                     <View style={styles.iconCircle}>
                         <IconSymbol name="person.fill" size={40} color={Colors.light.tint} />
@@ -76,12 +78,14 @@ export default function ProfileScreen() {
                         <Text style={styles.primaryButtonText}>Sign In</Text>
                     </TouchableOpacity>
                 </View>
-            </View>
+            </SafeAreaView>
         );
     }
 
     return (
-        <ScrollView style={styles.container}>
+        <SafeAreaView style={styles.container} edges={['top']}>
+        <ScrollView style={styles.scrollContainer}>
+            <HeaderBackButton title="Settings" />
             <View style={styles.header}>
                 <View style={styles.avatarContainer}>
                     <Text style={styles.avatarText}>{user.email[0].toUpperCase()}</Text>
@@ -194,6 +198,7 @@ export default function ProfileScreen() {
                 </SafeAreaView>
             </Modal>
         </ScrollView>
+        </SafeAreaView>
     );
 }
 
@@ -201,6 +206,9 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: Colors.light.background,
+    },
+    scrollContainer: {
+        flex: 1,
     },
     header: {
         alignItems: 'center',

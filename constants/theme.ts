@@ -22,6 +22,14 @@ export const Fonts = {
   mono: 'System',
 };
 
+/** Connections game group colours — consistent across sessions (difficulty 1→4) */
+export const ConnectionsGroupColors = {
+  amber: '#F59E0B',
+  emerald: '#10B981',
+  indigo: '#6366F1',
+  pink: '#EC4899',
+} as const;
+
 export const Colors = {
   light: {
     text: '#111111',
@@ -35,6 +43,11 @@ export const Colors = {
     error: TFL.red,
     success: TFL.green,
     warning: TFL.yellow,
+    /** Dark surface for game screens (Connections, etc.) */
+    surface: {
+      gameBase: '#1A1A1E',
+      gameOverlay: 'rgba(26, 26, 30, 0.92)',
+    },
   },
   dark: { // Keeping same as light to force light theme
     text: '#111111',
@@ -48,6 +61,10 @@ export const Colors = {
     error: TFL.red,
     success: TFL.green,
     warning: TFL.yellow,
+    surface: {
+      gameBase: '#1A1A1E',
+      gameOverlay: 'rgba(26, 26, 30, 0.92)',
+    },
   },
 };
 

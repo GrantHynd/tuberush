@@ -75,8 +75,8 @@ export default function RootLayout() {
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="auth" options={{ presentation: 'modal', title: 'Sign In' }} />
         <Stack.Screen name="subscribe" options={{ presentation: 'modal', title: 'Subscribe' }} />
-        <Stack.Screen name="games/play-crossword" options={{ title: 'Crossword' }} />
-        <Stack.Screen name="games/play-connections" options={{ title: 'Connections' }} />
+        <Stack.Screen name="games/play-crossword" options={{ headerShown: false }} />
+        <Stack.Screen name="games/play-connections" options={{ headerShown: false }} />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>
