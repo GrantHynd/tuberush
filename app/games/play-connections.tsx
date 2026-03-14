@@ -1,11 +1,11 @@
-import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, ActivityIndicator, Alert, Modal } from 'react-native';
+import React, { useEffect, useState, useCallback } from 'react';
+import { View, StyleSheet, ActivityIndicator, Alert, Modal, Text, TouchableOpacity } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { useAuthStore } from '@/stores/auth-store';
 import { useGameStore } from '@/stores/game-store';
 import { Connections } from '@/components/games/Connections';
 import { getDailyPuzzle, ConnectionsPuzzle } from '@/constants/ConnectionsData';
-import { Colors } from '@/constants/theme';
+import { Colors, Spacing, Layout, TFL } from '@/constants/theme';
 import { ConnectionsState } from '@/types/game';
 import { leaderboard } from '@/lib/leaderboard';
 import { Leaderboard } from '@/components/ui/Leaderboard';
@@ -31,12 +31,10 @@ export default function PlayConnectionsScreen() {
             const today = new Date().toISOString().split('T')[0];
             const gameId = `connections_${user.id}_${today}`;
 
-            // Try to load existing game for today
             try {
                 let game = await loadGame(gameId, user.id);
 
                 if (!game) {
-                    // Create new game
                     game = createNewGame(user.id, 'connections', gameId);
                 }
 
@@ -51,12 +49,11 @@ export default function PlayConnectionsScreen() {
         initGame();
     }, [user]);
 
-    const handleSubmitGuess = async (items: string[]) => {
+    const handleSubmitGuess = useCallback(async (items: string[]) => {
         if (!currentGame || !puzzle || !user) return;
 
         const state = currentGame.state as ConnectionsState;
 
-        // Prevent moves if game over
         if (state.status !== 'playing') return;
 
         // Check against groups
@@ -69,7 +66,6 @@ export default function PlayConnectionsScreen() {
         const newState = { ...state };
 
         if (matchedGroup) {
-            // Correct!
             if (!state.completedGroups.includes(matchedGroup.category)) {
                 newState.completedGroups = [...state.completedGroups, matchedGroup.category];
 
@@ -79,58 +75,31 @@ export default function PlayConnectionsScreen() {
                     const endTime = Date.now();
                     newState.endTime = endTime;
 
-                    // Calculate time taken in seconds
                     const timeTaken = Math.floor((endTime - newState.startTime) / 1000);
 
-                    // Submit score if borough is set
                     if (user.borough) {
                         leaderboard.submitScore(user.id, user.borough, timeTaken, 'connections')
                             .catch(err => console.error('Failed to submit score', err));
                     }
-
-                    setTimeout(() => {
-                        Alert.alert(
-                            'Congratulations!',
-                            `You solved today's puzzle in ${timeTaken} seconds!`,
-                            [
-                                { text: 'Leaderboard', onPress: () => setShowLeaderboard(true) },
-                                { text: 'Close', onPress: () => router.back() }
-                            ]
-                        );
-                    }, 500);
                 }
             }
         } else {
-            // Wrong!
             newState.mistakesRemaining = Math.max(0, state.mistakesRemaining - 1);
 
-            // Check loss condition
             if (newState.mistakesRemaining === 0) {
                 newState.status = 'lost';
                 newState.endTime = Date.now();
-                setTimeout(() => {
-                    Alert.alert(
-                        'Game Over',
-                        'Out of lives! Better luck next time.',
-                        [
-                            { text: 'Leaderboard', onPress: () => setShowLeaderboard(true) },
-                            { text: 'Close', onPress: () => router.back() }
-                        ]
-                    );
-                }, 500);
             }
         }
 
-        // Update history
         newState.history = [...state.history, items];
 
-        // Save
         await saveGame({
             ...currentGame,
             state: newState,
             lastUpdated: new Date().toISOString()
         });
-    };
+    }, [currentGame, puzzle, user, saveGame]);
 
     if (loading || !puzzle || !currentGame) {
         return (
@@ -141,6 +110,10 @@ export default function PlayConnectionsScreen() {
     }
 
     const gameState = currentGame.state as ConnectionsState;
+    const isGameOver = gameState.status === 'won' || gameState.status === 'lost';
+    const timeTaken = gameState.endTime
+        ? Math.floor((gameState.endTime - gameState.startTime) / 1000)
+        : null;
 
     return (
         <View style={styles.container}>
@@ -154,6 +127,40 @@ export default function PlayConnectionsScreen() {
                 puzzle={puzzle}
                 onSubmitGuess={handleSubmitGuess}
             />
+
+            {/* Game Over Banner */}
+            {isGameOver && (
+                <View style={styles.gameOverContainer}>
+                    <Text style={styles.gameOverTitle}>
+                        {gameState.status === 'won' ? 'Well done!' : 'Better luck next time'}
+                    </Text>
+                    {timeTaken !== null && gameState.status === 'won' && (
+                        <Text style={styles.gameOverTime}>
+                            Solved in {timeTaken}s
+                        </Text>
+                    )}
+                    <View style={styles.gameOverActions}>
+                        <TouchableOpacity
+                            style={styles.gameOverButton}
+                            onPress={() => setShowLeaderboard(true)}
+                            accessibilityRole="button"
+                            accessibilityLabel="View leaderboard"
+                        >
+                            <Text style={styles.gameOverButtonText}>Leaderboard</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={[styles.gameOverButton, styles.gameOverButtonPrimary]}
+                            onPress={() => router.back()}
+                            accessibilityRole="button"
+                            accessibilityLabel="Return home"
+                        >
+                            <Text style={[styles.gameOverButtonText, styles.gameOverButtonTextPrimary]}>
+                                Home
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            )}
 
             <Modal
                 visible={showLeaderboard}
@@ -178,5 +185,43 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-    }
+    },
+    gameOverContainer: {
+        paddingHorizontal: Spacing.md,
+        paddingVertical: Spacing.lg,
+        alignItems: 'center',
+    },
+    gameOverTitle: {
+        fontSize: 20,
+        fontWeight: '700',
+        color: Colors.light.text,
+        marginBottom: 4,
+    },
+    gameOverTime: {
+        fontSize: 15,
+        color: TFL.grey.dark,
+        marginBottom: Spacing.md,
+    },
+    gameOverActions: {
+        flexDirection: 'row',
+        gap: Spacing.sm,
+    },
+    gameOverButton: {
+        paddingVertical: 12,
+        paddingHorizontal: 24,
+        borderRadius: 24,
+        borderWidth: 1,
+        borderColor: Colors.light.text,
+    },
+    gameOverButtonPrimary: {
+        backgroundColor: Colors.light.text,
+    },
+    gameOverButtonText: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: Colors.light.text,
+    },
+    gameOverButtonTextPrimary: {
+        color: Colors.light.background,
+    },
 });

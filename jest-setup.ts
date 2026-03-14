@@ -114,3 +114,8 @@ jest.mock('react-native-purchases-ui', () => ({
     presentCustomerCenter: jest.fn(() => Promise.resolve()),
   },
 }));
+
+// Mock Alert
+(global as any).Alert = {
+  alert: jest.fn(),
+};
