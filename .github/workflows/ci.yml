@@ -78,8 +78,11 @@ jobs:
       - name: Generate Cache Keys
         id: cache-keys
         run: |
-          echo "pods-key=${{ runner.os }}-pods-${{ hashFiles('**/Podfile.lock', 'package-lock.json') }}" >> $GITHUB_OUTPUT
-          echo "build-key=${{ runner.os }}-ios-build-${{ hashFiles('app/**', 'components/**', 'lib/**', 'stores/**', 'ios/**/*.{h,m,mm,swift}', 'package-lock.json') }}" >> $GITHUB_OUTPUT
+          # Use package-lock.json as primary cache key, Podfile.lock may not exist yet
+          PODS_HASH="${{ hashFiles('package-lock.json') }}"
+          BUILD_HASH="${{ hashFiles('app/**', 'components/**', 'lib/**', 'stores/**', 'package-lock.json') }}"
+          echo "pods-key=${{ runner.os }}-pods-${PODS_HASH}" >> $GITHUB_OUTPUT
+          echo "build-key=${{ runner.os }}-ios-build-${BUILD_HASH}" >> $GITHUB_OUTPUT
 
       # Cache the entire Pods folder for faster pod install
       - name: Cache Pods
@@ -96,7 +99,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cocoapods
-          key: ${{ runner.os }}-cocoapods-specs-${{ hashFiles('**/Podfile.lock') }}
+          key: ${{ runner.os }}-cocoapods-specs-${{ hashFiles('package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-cocoapods-specs-
 
@@ -116,19 +119,24 @@ jobs:
         run: npm ci
 
       # Prebuild generates the native project (ios/ directory)
-      # Skip if ios/ already exists from cache
+      # Always prebuild to ensure ios/ directory is properly generated
       - name: Prebuild iOS
         run: |
-          if [ ! -d "ios" ]; then
-            npx expo prebuild --platform ios --no-install
+          if [ ! -f "ios/Podfile" ]; then
+            echo "Podfile not found, running prebuild..."
+            npx expo prebuild --platform ios --clean --no-install
           else
-            echo "iOS directory exists, skipping prebuild"
+            echo "iOS project already exists (Podfile found), skipping prebuild"
           fi
 
       # Only run pod install if cache missed or Podfile.lock changed
       - name: Install Pods
         if: steps.cache-pods.outputs.cache-hit != 'true'
         run: |
+          if [ ! -d "ios" ]; then
+            echo "Error: ios directory not found. Prebuild may have failed."
+            exit 1
+          fi
           cd ios
           pod install --verbose
 
