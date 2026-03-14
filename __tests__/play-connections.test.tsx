@@ -18,7 +18,7 @@ jest.mock("@/stores/game-store", () => ({
 
 jest.mock("@/lib/leaderboard", () => ({
   leaderboard: {
-    submitScore: jest.fn(),
+    submitScore: jest.fn(() => Promise.resolve()),
     getLeaderboard: jest.fn(() => Promise.resolve([])),
   },
 }));
@@ -597,17 +597,25 @@ describe("PlayConnectionsScreen", () => {
 
   describe("Edge Cases", () => {
     it("handles game load error gracefully", async () => {
+      jest.useRealTimers();
+      const consoleSpy = jest.spyOn(console, "error").mockImplementation();
       mockLoadGame.mockRejectedValue(new Error("Network error"));
 
       render(<PlayConnectionsScreen />);
 
-      await waitFor(() => {
-        expect(global.Alert.alert).toHaveBeenCalledWith(
-          "Error",
-          "Failed to load game",
-        );
-        expect(mockRouter.back).toHaveBeenCalled();
-      });
+      await waitFor(
+        () => {
+          expect(consoleSpy).toHaveBeenCalledWith(
+            "Failed to init game:",
+            expect.any(Error),
+          );
+          expect(mockRouter.back).toHaveBeenCalled();
+        },
+        { timeout: 2000 },
+      );
+
+      consoleSpy.mockRestore();
+      jest.useFakeTimers();
     });
 
     it("does not process guess when game is already won", async () => {

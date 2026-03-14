@@ -64,10 +64,12 @@ export function Connections({
   }, [gameState.completedGroups, puzzle]);
 
   // Auto-submit when 4 items are selected
+  const isSubmittingRef = useRef(false);
+  isSubmittingRef.current = isSubmitting;
   useEffect(() => {
     if (
       selectedItems.length === 4 &&
-      !isSubmitting &&
+      !isSubmittingRef.current &&
       gameState.status === "playing"
     ) {
       setIsSubmitting(true);
@@ -79,7 +81,7 @@ export function Connections({
       }, 400);
       return () => clearTimeout(timer);
     }
-  }, [selectedItems, isSubmitting, gameState.status, onSubmitGuess]);
+  }, [selectedItems, gameState.status, onSubmitGuess]);
 
   const handleSelect = useCallback(
     (item: string) => {
