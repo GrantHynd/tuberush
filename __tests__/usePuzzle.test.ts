@@ -1,6 +1,7 @@
 import { renderHook } from '@testing-library/react-native';
 import { usePuzzle } from '@/hooks/usePuzzle';
 import { getDailyPuzzle, getPuzzleById } from '@/constants/CrosswordData';
+import type { CrosswordPuzzle } from '@/types/game';
 
 jest.mock('@/constants/CrosswordData', () => {
   const dailyPuzzle = {
@@ -62,7 +63,7 @@ describe('usePuzzle hook', () => {
   });
 
   it('memoizes the result for the same puzzleId', () => {
-    const { result, rerender } = renderHook(
+    const { result, rerender } = renderHook<CrosswordPuzzle, { id: string }>(
       ({ id }) => usePuzzle(id),
       { initialProps: { id: 'specific-1' } }
     );
@@ -75,7 +76,7 @@ describe('usePuzzle hook', () => {
   });
 
   it('recomputes when puzzleId changes', () => {
-    const { result, rerender } = renderHook(
+    const { result, rerender } = renderHook<CrosswordPuzzle, { id: string | undefined }>(
       ({ id }) => usePuzzle(id),
       { initialProps: { id: undefined as string | undefined } }
     );
