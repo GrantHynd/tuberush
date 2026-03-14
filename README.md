@@ -9,9 +9,9 @@ A React Native game platform with offline-first architecture, premium subscripti
 - Crossword Puzzles (Premium)
 
 ✅ **Premium Membership**
-- Stripe-powered subscriptions
-- Unlock exclusive games
-- Priority support
+- RevenueCat subscriptions (Monthly & Yearly)
+- TubeRush Pro entitlement
+- Unlock exclusive games, Customer Center for management
 
 ✅ **Offline-First**
 - Play games without internet
@@ -35,7 +35,7 @@ A React Native game platform with offline-first architecture, premium subscripti
 - **Language**: TypeScript
 - **State Management**: Zustand
 - **Backend**: Supabase (PostgreSQL, Auth, Real-time)
-- **Payments**: Stripe
+- **Payments**: RevenueCat (react-native-purchases)
 - **Offline Storage**: AsyncStorage
 - **Network Detection**: NetInfo
 
@@ -85,7 +85,6 @@ tuberush-v2/
 - npm or yarn
 - Expo CLI
 - Supabase account
-- Stripe account (for payments)
 
 ### Installation
 
@@ -107,7 +106,7 @@ tuberush-v2/
    Fill in your credentials:
    - `EXPO_PUBLIC_SUPABASE_URL`
    - `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
-   - `EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY`
+   - `EXPO_PUBLIC_REVENUECAT_API_KEY` (from RevenueCat dashboard)
 
 4. **Start the development server**
    ```bash
@@ -167,9 +166,9 @@ if (game.isPremium && !user?.isPremium) {
 - **Crossword**: Premium puzzle game with clue display
 
 ### Subscriptions
-- $4.99/month premium membership
-- Stripe payment integration
-- Webhook-based subscription management
+- RevenueCat-powered subscriptions (Monthly & Yearly)
+- TubeRush Pro entitlement
+- RevenueCat Paywall UI, Customer Center for subscription management
 
 ### Sync System
 - Optimistic updates for instant feedback
@@ -182,11 +181,11 @@ if (game.isPremium && !user?.isPremium) {
 ### Supabase
 See `supabase/README.md` for detailed setup instructions.
 
-### Stripe
-1. Create products in Stripe Dashboard
-2. Set up webhook endpoint
-3. Configure environment variables
-4. Test with test mode cards
+### RevenueCat
+1. Create a project at https://app.revenuecat.com
+2. Configure products (Monthly, Yearly) and entitlement "TubeRush Pro"
+3. Create an Offering and Paywall in the dashboard
+4. Add `EXPO_PUBLIC_REVENUECAT_API_KEY` to `.env`
 
 ## Development
 
@@ -244,8 +243,8 @@ See `.maestro/README.md` for more details.
 ### Premium Flow Testing
 1. Create account
 2. Try accessing premium game (should prompt)
-3. Complete subscription (use Stripe test cards)
-4. Verify premium access granted
+3. Complete subscription via RevenueCat Paywall (use Sandbox/Test Store)
+4. Verify premium access granted; use Customer Center to manage
 
 ## Deployment
 
@@ -275,9 +274,9 @@ eas submit --platform android
 - Verify email confirmation
 
 ### Payment Issues
-- Ensure using Stripe test mode
-- Check webhook configuration
-- Verify API keys in environment
+- Ensure using RevenueCat Test Store or platform Sandbox for testing
+- Verify products (Monthly, Yearly) and entitlement "TubeRush Pro" in RevenueCat dashboard
+- Check that a current Offering and Paywall are configured
 
 ## Future Enhancements
 

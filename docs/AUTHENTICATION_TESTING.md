@@ -108,9 +108,10 @@ CREATE TABLE profiles (
   email TEXT NOT NULL,
   is_premium BOOLEAN DEFAULT FALSE,
   borough TEXT,
-  stripe_customer_id TEXT,
   subscription_id TEXT,
   subscription_status TEXT,
+  expires_at TIMESTAMP WITH TIME ZONE,
+  apple_original_transaction_id TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -139,7 +140,7 @@ All tables have RLS enabled to ensure users can only access their own data:
 
 - Users can view/update their own profile
 - Users can view/insert/update/delete their own game states
-- Users can view their own subscriptions
+- Subscription status is stored on profiles
 
 ### 3. Auth Store (State Management)
 
@@ -294,7 +295,6 @@ Each test run increments `MAESTRO_ITERATION`, ensuring unique email addresses.
    ```bash
    EXPO_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
    EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-anon-key
-   EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
    ```
 
 3. **Install Dependencies**

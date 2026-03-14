@@ -8,6 +8,8 @@ export interface User {
     isPremium: boolean;
     subscriptionId?: string;
     subscriptionStatus?: 'active' | 'canceled' | 'past_due';
+    expiresAt?: string | null;
+    appleOriginalTransactionId?: string | null;
     borough?: Borough;
 }
 

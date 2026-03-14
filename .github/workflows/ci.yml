@@ -58,7 +58,6 @@ jobs:
     env:
       EXPO_PUBLIC_SUPABASE_URL: "https://example.supabase.co"
       EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "mock-key"
-      EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY: "mock-key"
       # Increase to 10 minutes to handle slower CI environments
       MAESTRO_DRIVER_STARTUP_TIMEOUT: 600000
 
