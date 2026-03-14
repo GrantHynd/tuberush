@@ -138,6 +138,7 @@ export default function ProfileScreen() {
             </View>
 
             <TouchableOpacity
+                testID="profile-sign-out-button"
                 style={styles.signOutButton}
                 onPress={handleSignOut}
             >

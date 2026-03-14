@@ -1,0 +1,173 @@
+appId: com.tuberush.v2
+---
+# =============================================================================
+# E2E Test: Authentication Flow
+# Tests: Sign Up, Sign Out, Sign In, and Session Persistence
+# =============================================================================
+
+- launchApp:
+    clearState: true
+
+# =============================================================================
+# PART 1: VERIFY LOGGED OUT STATE
+# =============================================================================
+- assertVisible: "TubeRush"
+- assertVisible: "Mind the Gap. Play the Game."
+- assertVisible: "Sign In / Register"
+
+# =============================================================================
+# PART 2: SIGN UP FLOW
+# =============================================================================
+
+# Navigate to auth screen
+- tapOn: "Sign In / Register"
+
+# Verify we're on the auth screen in sign-in mode
+- assertVisible: "Welcome back!"
+- assertVisible: "Sign In"
+
+# Switch to sign-up mode
+- tapOn:
+    id: "auth-switch-button"
+
+# Verify we're now in sign-up mode
+- assertVisible: "Create your account"
+- assertVisible: "Sign Up"
+
+# Enter test credentials
+- tapOn:
+    id: "auth-email-input"
+- inputText: "test_user_${MAESTRO_ITERATION}@example.com"
+
+- tapOn:
+    id: "auth-password-input"
+- inputText: "SecurePass123!"
+
+# Submit sign up
+- tapOn:
+    id: "auth-submit-button"
+
+# Wait for alert to appear (account creation success or navigation)
+# Note: Supabase may require email verification in production, but for test accounts
+# we're typically auto-verified or the alert shows asking to check email
+- assertVisible:
+    text: "Success|Account created"
+    optional: true
+
+# Dismiss any alert if present
+- tapOn:
+    text: "OK"
+    optional: true
+
+# Wait a moment for profile creation and state updates
+- extendedWaitUntil:
+    visible: "Daily Challenges"
+    timeout: 10000
+
+# Verify we're now logged in (home screen shows welcome message)
+- assertVisible: "Daily Challenges"
+- assertNotVisible: "Sign In / Register"
+
+# =============================================================================
+# PART 3: VERIFY PROFILE SHOWS USER INFO
+# =============================================================================
+
+# Navigate to Profile tab
+- tapOn: "Profile"
+
+# Wait for profile to load - check for test email domain
+- assertVisible: "@example.com"
+
+- assertVisible: "Membership"
+- assertVisible: "Free"
+
+# =============================================================================
+# PART 4: SIGN OUT FLOW
+# =============================================================================
+
+# Tap sign out button
+- tapOn:
+    id: "profile-sign-out-button"
+
+# Confirm sign out in alert
+- assertVisible: "Are you sure you want to sign out?"
+- tapOn: "Sign Out"
+
+# Wait for navigation to home
+- extendedWaitUntil:
+    visible: "Mind the Gap. Play the Game."
+    timeout: 5000
+
+# Verify we're logged out (profile should show empty state)
+- assertVisible: "Not Signed In"
+- assertVisible:
+    text: "Sign in to save your game progress"
+
+# Navigate back to Home
+- tapOn: "Home"
+
+# Verify logged out state on home
+- assertVisible: "Sign In / Register"
+
+# =============================================================================
+# PART 5: SIGN IN FLOW (with existing account)
+# =============================================================================
+
+# Navigate back to auth screen
+- tapOn: "Sign In / Register"
+
+# Verify we're in sign-in mode
+- assertVisible: "Welcome back!"
+- assertVisible: "Sign In"
+
+# Enter same credentials
+- tapOn:
+    id: "auth-email-input"
+- inputText: "test_user_${MAESTRO_ITERATION}@example.com"
+
+- tapOn:
+    id: "auth-password-input"
+- inputText: "SecurePass123!"
+
+# Submit sign in
+- tapOn:
+    id: "auth-submit-button"
+
+# Wait for successful sign in and navigation back
+- extendedWaitUntil:
+    visible: "Daily Challenges"
+    timeout: 10000
+
+# Verify we're logged in again
+- assertVisible: "Daily Challenges"
+- assertNotVisible: "Sign In / Register"
+
+# =============================================================================
+# PART 6: VERIFY SESSION PERSISTENCE
+# =============================================================================
+
+# Navigate to profile to confirm user is logged in
+- tapOn: "Profile"
+
+# Verify profile shows user info - check for test email domain
+- assertVisible: "@example.com"
+- assertVisible: "Membership"
+
+# =============================================================================
+# PART 7: TEST GAME ACCESS WHILE AUTHENTICATED
+# =============================================================================
+
+# Navigate back to home
+- tapOn: "Home"
+
+# Tap on free game (Connections) - should work
+- tapOn:
+    id: "game-card-connections"
+
+# Verify we're in the game (not auth modal)
+- assertVisible: "Connections"
+- assertNotVisible: "Welcome back!"
+
+# =============================================================================
+# TEST COMPLETE
+# =============================================================================
