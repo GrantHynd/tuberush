@@ -77,7 +77,7 @@ This document outlines the authentication setup for TubeRush v2 and provides com
 
 **Environment Variables Required**:
 - `EXPO_PUBLIC_SUPABASE_URL` - Your Supabase project URL
-- `EXPO_PUBLIC_SUPABASE_ANON_KEY` - Your Supabase anonymous key
+- `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` - Your Supabase anonymous key
 
 **Key Features**:
 - **Session Persistence**: Uses AsyncStorage to persist sessions across app restarts
@@ -85,7 +85,7 @@ This document outlines the authentication setup for TubeRush v2 and provides com
 - **URL Polyfill**: Ensures compatibility with React Native environment
 
 ```typescript
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+export const supabase = createClient(supabaseUrl, supabasePublishableKey, {
     auth: {
         storage: AsyncStorage,
         autoRefreshToken: true,
@@ -293,7 +293,7 @@ Each test run increments `MAESTRO_ITERATION`, ensuring unique email addresses.
    Create a `.env` file in the project root:
    ```bash
    EXPO_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-   EXPO_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+   EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-anon-key
    EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
    ```
 
@@ -461,7 +461,7 @@ To download:
 **Solution**: Ensure `.env` file exists with correct values:
 ```bash
 EXPO_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-EXPO_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-anon-key
 ```
 
 #### 2. "Profile not found after sign up"

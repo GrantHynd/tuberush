@@ -22,10 +22,16 @@
 3. Create a `.env` file in project root:
    ```
    EXPO_PUBLIC_SUPABASE_URL=your_project_url
-   EXPO_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
+   EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your_publishable_key
    ```
 
-### 4. Deploy Edge Function (Optional - for Stripe)
+### 4. Configure Auth Redirect URLs (Email Confirmation & Password Reset)
+1. In Supabase Dashboard, go to **Authentication** → **URL Configuration**
+2. Under **Redirect URLs**, add:
+   - `tuberushv2://**` (catches all auth callbacks for the app scheme)
+3. The app uses the `tuberushv2` scheme (configured in `app.config.ts`). When users tap email confirmation or password reset links, they will be redirected back into the app.
+
+### 5. Deploy Edge Function (Optional - for Stripe)
 1. Login to Supabase CLI:
    ```bash
    supabase login
@@ -47,7 +53,7 @@
    supabase secrets set STRIPE_WEBHOOK_SECRET=your_webhook_secret
    ```
 
-### 5. Configure Stripe Webhook (Optional)
+### 6. Configure Stripe Webhook (Optional)
 1. In Stripe Dashboard, go to Developers → Webhooks
 2. Add endpoint URL: `https://your-project-ref.supabase.co/functions/v1/stripe-webhook`
 3. Select events:

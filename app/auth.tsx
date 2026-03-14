@@ -38,7 +38,10 @@ export default function AuthScreen() {
                 router.back();
             }
         } catch (error: any) {
-            Alert.alert('Error', error.message || 'Authentication failed');
+            const message = error?.message || error?.error_description || 'Authentication failed';
+            const details = error?.status ? ` (${error.status})` : '';
+            console.error('[Auth]', error);
+            Alert.alert('Error', `${message}${details}`);
         } finally {
             setLoading(false);
         }
