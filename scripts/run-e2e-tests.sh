@@ -34,7 +34,7 @@ if [ ! -f .env ]; then
     echo ""
     echo "Create a .env file with:"
     echo "  EXPO_PUBLIC_SUPABASE_URL=https://your-project.supabase.co"
-    echo "  EXPO_PUBLIC_SUPABASE_ANON_KEY=your-anon-key"
+    echo "  EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-publishable-key"
     echo ""
     read -p "Continue anyway? (y/N) " -n 1 -r
     echo

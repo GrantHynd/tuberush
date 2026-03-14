@@ -106,7 +106,7 @@ tuberush-v2/
    
    Fill in your credentials:
    - `EXPO_PUBLIC_SUPABASE_URL`
-   - `EXPO_PUBLIC_SUPABASE_ANON_KEY`
+   - `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
    - `EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY`
 
 4. **Start the development server**
