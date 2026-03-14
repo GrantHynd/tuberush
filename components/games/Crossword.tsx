@@ -8,36 +8,11 @@ interface CrosswordProps {
     disabled?: boolean;
 }
 
-// Sample crossword puzzle data
-const SAMPLE_PUZZLE = {
-    grid: [
-        [{ letter: 'C', number: 1, isBlack: false }, { letter: 'A', isBlack: false }, { letter: 'T', isBlack: false }, { letter: null, isBlack: true }, { letter: 'D', number: 2, isBlack: false }],
-        [{ letter: 'A', isBlack: false }, { letter: null, isBlack: true }, { letter: 'O', isBlack: false }, { letter: null, isBlack: true }, { letter: 'O', isBlack: false }],
-        [{ letter: 'R', number: 3, isBlack: false }, { letter: 'U', isBlack: false }, { letter: 'N', isBlack: false }, { letter: null, isBlack: true }, { letter: 'G', isBlack: false }],
-        [{ letter: null, isBlack: true }, { letter: null, isBlack: true }, { letter: null, isBlack: true }, { letter: null, isBlack: true }, { letter: null, isBlack: true }],
-        [{ letter: 'S', number: 4, isBlack: false }, { letter: 'U', isBlack: false }, { letter: 'N', isBlack: false }, { letter: null, isBlack: true }, { letter: null, isBlack: true }],
-    ],
-    clues: {
-        across: {
-            1: 'Feline pet',
-            2: 'Canine pet',
-            3: 'Sprint',
-            4: 'Star in our solar system',
-        },
-        down: {
-            1: 'Vehicle',
-            2: 'Frozen water',
-            5: 'Opposite of up',
-        },
-    },
-};
-
 export function Crossword({ gameState, onCellChange, disabled = false }: CrosswordProps) {
     const [selectedCell, setSelectedCell] = useState<{ row: number; col: number } | null>(null);
 
-    // Initialize with sample puzzle if empty
-    const grid = gameState.grid.length > 0 ? gameState.grid : SAMPLE_PUZZLE.grid;
-    const clues = Object.keys(gameState.clues.across).length > 0 ? gameState.clues : SAMPLE_PUZZLE.clues;
+    const grid = gameState.grid;
+    const clues = gameState.clues;
 
     const handleCellPress = (row: number, col: number) => {
         const cell = grid[row][col];

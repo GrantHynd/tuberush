@@ -1,3 +1,4 @@
+import { getDailyPuzzle } from '@/constants/CrosswordData';
 import { offlineSyncManager, SyncStatus } from '@/lib/offline-sync-manager';
 import { GameState, GameType, ConnectionsState, CrosswordState } from '@/types/game';
 import { create } from 'zustand';
@@ -48,10 +49,16 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
                 status: 'playing',
             };
         } else {
-            // Crossword
+            // Crossword — initialise from the daily puzzle data
+            const puzzle = getDailyPuzzle();
+            const cluesMap = {
+                across: Object.fromEntries(puzzle.clues.across.map(c => [c.number, c.clue])),
+                down: Object.fromEntries(puzzle.clues.down.map(c => [c.number, c.clue])),
+            };
             initialState = {
-                grid: [],
-                clues: { across: {}, down: {} },
+                puzzleId: puzzle.id,
+                grid: puzzle.grid,
+                clues: cluesMap,
                 userAnswers: {},
                 completed: false,
             };

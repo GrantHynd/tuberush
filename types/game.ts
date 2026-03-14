@@ -30,6 +30,7 @@ export interface ConnectionsState {
 }
 
 export interface CrosswordState {
+    puzzleId: string;
     grid: CrosswordCell[][];
     clues: {
         across: { [key: number]: string };
@@ -39,10 +40,51 @@ export interface CrosswordState {
     completed: boolean;
 }
 
+/** A single cell in the crossword grid */
 export interface CrosswordCell {
+    /** The correct letter for this cell, or null if it's a black square */
     letter: string | null;
+    /** The clue number displayed in the top-left corner of the cell */
     number?: number;
+    /** Whether this cell is a black (blocked) square */
     isBlack: boolean;
+}
+
+/** A single clue with its position and answer for validation */
+export interface CrosswordClue {
+    /** The clue number as displayed in the grid */
+    number: number;
+    /** The clue text shown to the player */
+    clue: string;
+    /** The correct answer (uppercase), used for validation */
+    answer: string;
+    /** Starting row position (0-indexed) */
+    row: number;
+    /** Starting column position (0-indexed) */
+    col: number;
+    /** Number of cells the answer spans */
+    length: number;
+}
+
+/** A complete crossword puzzle definition (the template, not the player's progress) */
+export interface CrosswordPuzzle {
+    /** Unique puzzle identifier */
+    id: string;
+    /** Date this puzzle is assigned to, in YYYY-MM-DD format */
+    date: string;
+    /** Display title for the puzzle */
+    title: string;
+    /** Number of rows in the grid */
+    rows: number;
+    /** Number of columns in the grid */
+    cols: number;
+    /** 2D array of cells defining the grid layout and correct answers */
+    grid: CrosswordCell[][];
+    /** Across and down clues with positions and answers */
+    clues: {
+        across: CrosswordClue[];
+        down: CrosswordClue[];
+    };
 }
 
 export interface GameState {
