@@ -83,6 +83,6 @@ jest.mock('@/lib/supabase-client', () => ({
 }));
 
 // Mock Alert
-global.Alert = {
+(global as any).Alert = {
   alert: jest.fn(),
-} as any;
+};
