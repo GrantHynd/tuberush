@@ -57,7 +57,8 @@ jobs:
       EXPO_PUBLIC_SUPABASE_URL: "https://example.supabase.co"
       EXPO_PUBLIC_SUPABASE_ANON_KEY: "mock-key"
       EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY: "mock-key"
-      MAESTRO_DRIVER_STARTUP_TIMEOUT: 300000
+      # Increase to 10 minutes to handle slower CI environments
+      MAESTRO_DRIVER_STARTUP_TIMEOUT: 600000
 
     steps:
       - uses: actions/checkout@v4
@@ -134,10 +135,17 @@ jobs:
       # Boot simulator early in parallel with other setup
       - name: Boot Simulator
         run: |
-          # Boot simulator in background
+          # Boot simulator and wait for it to be fully ready
           xcrun simctl boot "iPhone 16" || echo "Simulator already booted"
-          # Reduced wait time from 30s to 5s - Maestro will wait for app anyway
-          sleep 5
+          
+          echo "Waiting for simulator to fully boot..."
+          xcrun simctl bootstatus "iPhone 16"
+          
+          # Additional settling time for simulator UI to be ready
+          echo "Allowing simulator UI to settle..."
+          sleep 15
+          
+          echo "Simulator is ready"
 
       - name: Install Maestro
         run: |
@@ -206,6 +214,13 @@ jobs:
 
           echo "Installing App from: $APP_PATH"
           xcrun simctl install "iPhone 16" "$APP_PATH"
+
+      - name: Pre-launch App
+        run: |
+          echo "Pre-launching app to ensure it's ready..."
+          xcrun simctl launch "iPhone 16" com.tuberush.v2
+          sleep 3
+          echo "App launched successfully"
 
       - name: Run Maestro Flows
         run: |
