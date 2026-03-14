@@ -11,6 +11,7 @@ on:
       - 'LICENSE'
       - '.vscode/**'
   pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
     branches: [main]
     paths-ignore:
       - '**.md'
