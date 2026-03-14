@@ -9,9 +9,10 @@ CREATE TABLE IF NOT EXISTS profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email TEXT NOT NULL,
   is_premium BOOLEAN DEFAULT FALSE,
-  stripe_customer_id TEXT,
   subscription_id TEXT,
   subscription_status TEXT,
+  expires_at TIMESTAMP WITH TIME ZONE,
+  apple_original_transaction_id TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -27,34 +28,15 @@ CREATE TABLE IF NOT EXISTS game_states (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Subscriptions Table (for Stripe webhook data)
-CREATE TABLE IF NOT EXISTS subscriptions (
-  id TEXT PRIMARY KEY,
-  user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
-  stripe_customer_id TEXT NOT NULL,
-  stripe_subscription_id TEXT NOT NULL,
-  status TEXT NOT NULL,
-  price_id TEXT NOT NULL,
-  current_period_start TIMESTAMP WITH TIME ZONE,
-  current_period_end TIMESTAMP WITH TIME ZONE,
-  cancel_at TIMESTAMP WITH TIME ZONE,
-  canceled_at TIMESTAMP WITH TIME ZONE,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_game_states_user_id ON game_states(user_id);
 CREATE INDEX IF NOT EXISTS idx_game_states_game_type ON game_states(game_type);
-CREATE INDEX IF NOT EXISTS idx_subscriptions_user_id ON subscriptions(user_id);
-CREATE INDEX IF NOT EXISTS idx_subscriptions_stripe_customer ON subscriptions(stripe_customer_id);
 
 -- Row Level Security (RLS) Policies
 
 -- Enable RLS
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE game_states ENABLE ROW LEVEL SECURITY;
-ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
 
 -- Profiles policies
 CREATE POLICY "Users can view own profile"
@@ -86,11 +68,6 @@ CREATE POLICY "Users can delete own game states"
   ON game_states FOR DELETE
   USING (auth.uid() = user_id);
 
--- Subscriptions policies
-CREATE POLICY "Users can view own subscriptions"
-  ON subscriptions FOR SELECT
-  USING (auth.uid() = user_id);
-
 -- Functions
 
 -- Function to update updated_at timestamp
@@ -104,9 +81,6 @@ $$ LANGUAGE plpgsql;
 
 -- Triggers for updated_at
 CREATE TRIGGER update_profiles_updated_at BEFORE UPDATE ON profiles
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_subscriptions_updated_at BEFORE UPDATE ON subscriptions
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Function to create profile automatically on signup

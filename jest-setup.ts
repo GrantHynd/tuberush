@@ -79,5 +79,38 @@ jest.mock('@/lib/supabase-client', () => ({
         })),
       })),
     })),
+    functions: {
+      invoke: jest.fn(() => Promise.resolve({ data: null, error: null })),
+    },
+  },
+}));
+
+// Mock RevenueCat (native-only)
+jest.mock('react-native-purchases', () => ({
+  default: {
+    configure: jest.fn(() => Promise.resolve()),
+    setLogLevel: jest.fn(),
+    logIn: jest.fn(() => Promise.resolve({ customerInfo: {} })),
+    logOut: jest.fn(() => Promise.resolve()),
+    getCustomerInfo: jest.fn(() =>
+      Promise.resolve({ entitlements: { active: {} } })
+    ),
+    getOfferings: jest.fn(() => Promise.resolve({ current: null })),
+    purchasePackage: jest.fn(() => Promise.resolve({ customerInfo: {} })),
+    restorePurchases: jest.fn(() => Promise.resolve({})),
+    LOG_LEVEL: { DEBUG: 0, INFO: 1, WARN: 2, ERROR: 3 },
+    PAYWALL_RESULT: {
+      PURCHASED: 'PURCHASED',
+      RESTORED: 'RESTORED',
+      CANCELLED: 'CANCELLED',
+      NOT_PRESENTED: 'NOT_PRESENTED',
+    },
+  },
+}));
+jest.mock('react-native-purchases-ui', () => ({
+  default: {
+    presentPaywall: jest.fn(() => Promise.resolve('CANCELLED')),
+    presentPaywallIfNeeded: jest.fn(() => Promise.resolve('NOT_PRESENTED')),
+    presentCustomerCenter: jest.fn(() => Promise.resolve()),
   },
 }));

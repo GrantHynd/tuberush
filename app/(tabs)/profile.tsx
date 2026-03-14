@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
     Alert,
+    Platform,
     ScrollView,
     StyleSheet,
     Text,
@@ -12,8 +13,8 @@ import {
     View,
     Modal,
     FlatList,
-    Platform
 } from 'react-native';
+import RevenueCatUI from 'react-native-purchases-ui';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, TFL, Typography, Spacing, Layout } from '@/constants/theme';
 import { BOROUGHS, Borough } from '@/constants/Boroughs';
@@ -113,17 +114,30 @@ export default function ProfileScreen() {
                     <View>
                         <Text style={styles.settingLabel}>Membership</Text>
                         <Text style={styles.settingValue}>
-                            {user.isPremium ? 'Premium' : 'Free'}
+                            {user.isPremium ? 'TubeRush Pro' : 'Free'}
                         </Text>
                     </View>
-                    {!user.isPremium && (
+                    {!user.isPremium ? (
                         <TouchableOpacity
                             style={styles.upgradeButton}
                             onPress={() => router.push('/subscribe')}
                         >
                             <Text style={styles.upgradeButtonText}>Upgrade</Text>
                         </TouchableOpacity>
-                    )}
+                    ) : (Platform.OS === 'ios' || Platform.OS === 'android') ? (
+                        <TouchableOpacity
+                            style={styles.upgradeButton}
+                            onPress={async () => {
+                                try {
+                                    await RevenueCatUI.presentCustomerCenter();
+                                } catch {
+                                    Alert.alert('Error', 'Could not open subscription management');
+                                }
+                            }}
+                        >
+                            <Text style={styles.upgradeButtonText}>Manage</Text>
+                        </TouchableOpacity>
+                    ) : null}
                 </View>
 
                 <View style={styles.settingRow}>

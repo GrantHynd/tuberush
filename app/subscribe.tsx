@@ -1,28 +1,24 @@
 import { supabase } from '@/lib/supabase-client';
 import { useAuthStore } from '@/stores/auth-store';
-import { useStripe } from '@stripe/stripe-react-native';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
-    ScrollView,
+    Platform,
     StyleSheet,
     Text,
     TouchableOpacity,
     View,
 } from 'react-native';
-
-// Note: This is a simplified version. Full Stripe integration requires:
-// 1. Stripe account setup
-// 2. Backend endpoint for creating payment intents
-// 3. @stripe/stripe-react-native integration
+import RevenueCatUI, { PAYWALL_RESULT } from 'react-native-purchases-ui';
 
 export default function SubscribeScreen() {
     const router = useRouter();
-    const { user, refreshPremiumStatus } = useAuthStore();
+    const { user, refreshPremiumStatusFromRevenueCat } = useAuthStore();
     const [loading, setLoading] = useState(false);
-    const { initPaymentSheet, presentPaymentSheet } = useStripe();
+
+    const isNative = Platform.OS === 'ios' || Platform.OS === 'android';
 
     const handleSubscribe = async () => {
         if (!user) {
@@ -36,98 +32,71 @@ export default function SubscribeScreen() {
             return;
         }
 
+        if (!isNative) {
+            Alert.alert('Info', 'In-app purchases are available on iOS and Android.');
+            return;
+        }
+
         setLoading(true);
         try {
-            // 1. Fetch params from backend
-            const { data, error } = await supabase.functions.invoke('create-payment-sheet');
-
-            if (error) {
-                console.error('Function error:', error);
-                throw new Error(error.message || 'Failed to initialize payment');
-            }
-
-            if (!data) {
-                throw new Error('No data returned from payment service');
-            }
-
-            const { paymentIntent, ephemeralKey, customer } = data;
-
-            if (!paymentIntent || !ephemeralKey || !customer) {
-                throw new Error('Invalid payment data');
-            }
-
-            // 2. Initialize Payment Sheet
-            const { error: initError } = await initPaymentSheet({
-                merchantDisplayName: 'TubeRush',
-                customerId: customer,
-                customerEphemeralKeySecret: ephemeralKey,
-                paymentIntentClientSecret: paymentIntent,
-                defaultBillingDetails: {
-                    name: 'TubeRush User',
-                },
-            });
-
-            if (initError) {
-                console.error('Init error:', initError);
-                throw new Error(initError.message);
-            }
-
-            // 3. Present Payment Sheet
-            // @ts-ignore
-            if (__DEV__ && user.email && (user.email.startsWith('test_user_') || user.email.endsWith('@example.com'))) {
-                // Simulate payment for test users
+            // Test users: bypass IAP and use e2e-test-helper
+            if (
+                __DEV__ &&
+                user.email &&
+                (user.email.startsWith('test_user_') || user.email.endsWith('@example.com'))
+            ) {
                 const { error: testError } = await supabase.functions.invoke('e2e-test-helper', {
                     body: {
                         action: 'promote_premium',
-                        secret: 'e2e_secret_9f8e7d6c5b4a3_DO_NOT_USE_IN_PROD_random_string_xyz'
-                    }
+                        secret: 'e2e_secret_9f8e7d6c5b4a3_DO_NOT_USE_IN_PROD_random_string_xyz',
+                    },
                 });
 
                 if (testError) {
                     throw new Error(testError.message || 'Test promotion failed');
                 }
 
-                // Simulate network delay
-                await new Promise(resolve => setTimeout(resolve, 1000));
-            } else {
-                const { error: paymentError } = await presentPaymentSheet();
-
-                if (paymentError) {
-                    if (paymentError.code === 'Canceled') {
-                        // User canceled, do nothing
-                        return;
-                    }
-                    throw new Error(paymentError.message);
-                }
+                await new Promise((resolve) => setTimeout(resolve, 1000));
+                await refreshPremiumStatusFromRevenueCat();
+                Alert.alert('Success', 'Premium membership activated!', [
+                    { text: 'OK', onPress: () => router.back() },
+                ]);
+                return;
             }
 
-            // 4. Success
-            // Poll for status update to ensure UI reflects premium state
-            let attempts = 0;
-            let isPremium = false;
-            while (!isPremium && attempts < 5) {
-                await refreshPremiumStatus();
-                // Check store state directly or assume refresh updates it
-                // We need to get the latest state
-                isPremium = useAuthStore.getState().user?.isPremium || false;
-                if (isPremium) break;
+            // RevenueCat Paywall - presents native paywall UI
+            const result = await RevenueCatUI.presentPaywall({
+                displayCloseButton: true,
+            });
 
-                await new Promise(resolve => setTimeout(resolve, 1000));
-                attempts++;
+            await refreshPremiumStatusFromRevenueCat();
+
+            if (result === PAYWALL_RESULT.PURCHASED) {
+                Alert.alert('Success', 'Premium membership activated!', [
+                    { text: 'OK', onPress: () => router.back() },
+                ]);
+            } else if (result === PAYWALL_RESULT.RESTORED) {
+                Alert.alert('Success', 'Purchases restored!', [
+                    { text: 'OK', onPress: () => router.back() },
+                ]);
+            } else if (result === PAYWALL_RESULT.CANCELLED) {
+                // User dismissed without purchasing - do nothing
+            } else if (result === PAYWALL_RESULT.NOT_PRESENTED) {
+                // User already has entitlement - paywall wasn't shown
+                Alert.alert('Info', 'You already have premium access.', [
+                    { text: 'OK', onPress: () => router.back() },
+                ]);
             }
-
-            Alert.alert('Success', 'Premium membership activated!', [
-                { text: 'OK', onPress: () => router.back() }
-            ]);
-        } catch (error: any) {
-            Alert.alert('Error', error.message || 'Subscription failed');
+        } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : 'Subscription failed';
+            Alert.alert('Error', message);
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <ScrollView style={styles.container}>
+        <View style={styles.container}>
             <View style={styles.content}>
                 <Text style={styles.logo}>⭐</Text>
                 <Text style={styles.title}>Go Premium!</Text>
@@ -155,11 +124,6 @@ export default function SubscribeScreen() {
                     </View>
                 </View>
 
-                <View style={styles.pricingCard}>
-                    <Text style={styles.price}>$4.99</Text>
-                    <Text style={styles.priceSubtext}>per month</Text>
-                </View>
-
                 <TouchableOpacity
                     style={[styles.subscribeButton, user?.isPremium && styles.subscribeButtonDisabled]}
                     onPress={handleSubscribe}
@@ -174,10 +138,10 @@ export default function SubscribeScreen() {
                 </TouchableOpacity>
 
                 <Text style={styles.disclaimer}>
-                    Cancel anytime. Payment secured by Stripe.
+                    Cancel anytime. Monthly and yearly plans available.
                 </Text>
             </View>
-        </ScrollView>
+        </View>
     );
 }
 
@@ -224,24 +188,6 @@ const styles = StyleSheet.create({
     featureText: {
         fontSize: 16,
         color: '#2c3e50',
-    },
-    pricingCard: {
-        backgroundColor: '#f39c12',
-        paddingVertical: 30,
-        paddingHorizontal: 60,
-        borderRadius: 15,
-        marginBottom: 30,
-    },
-    price: {
-        fontSize: 48,
-        fontWeight: 'bold',
-        color: '#fff',
-        textAlign: 'center',
-    },
-    priceSubtext: {
-        fontSize: 16,
-        color: '#fff',
-        textAlign: 'center',
     },
     subscribeButton: {
         backgroundColor: '#3498db',

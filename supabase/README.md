@@ -31,7 +31,7 @@
    - `tuberushv2://**` (catches all auth callbacks for the app scheme)
 3. The app uses the `tuberushv2` scheme (configured in `app.config.ts`). When users tap email confirmation or password reset links, they will be redirected back into the app.
 
-### 5. Deploy Edge Function (Optional - for Stripe)
+### 5. Deploy Edge Functions (Optional)
 1. Login to Supabase CLI:
    ```bash
    supabase login
@@ -42,24 +42,15 @@
    supabase link --project-ref your-project-ref
    ```
 
-3. Deploy the webhook function:
+3. Deploy the validate-iap function (for Apple IAP receipt validation):
    ```bash
-   supabase functions deploy stripe-webhook
+   supabase functions deploy validate-iap
    ```
 
-4. Set secrets:
+4. Deploy the e2e-test-helper (for E2E testing only):
    ```bash
-   supabase secrets set STRIPE_SECRET_KEY=your_stripe_secret_key
-   supabase secrets set STRIPE_WEBHOOK_SECRET=your_webhook_secret
+   supabase functions deploy e2e-test-helper
    ```
-
-### 6. Configure Stripe Webhook (Optional)
-1. In Stripe Dashboard, go to Developers → Webhooks
-2. Add endpoint URL: `https://your-project-ref.supabase.co/functions/v1/stripe-webhook`
-3. Select events:
-   - checkout.session.completed
-   - customer.subscription.updated
-   - customer.subscription.deleted
 
 ## Testing
 After setup, test by:
@@ -72,3 +63,7 @@ After setup, test by:
 - RLS (Row Level Security) is enabled - users can only access their own data
 - Profiles are automatically created on signup
 - Game states are automatically synced when online
+
+## Migrating from Stripe
+
+If you previously used Stripe, see [SUPABASE_STRIPE_CLEANUP.md](../docs/SUPABASE_STRIPE_CLEANUP.md) for steps to remove deployed functions and secrets.

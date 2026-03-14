@@ -252,7 +252,7 @@ npm run lint
    cat > .env << EOF
    EXPO_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
    EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
-   EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
+   EXPO_PUBLIC_REVENUECAT_API_KEY=your_revenuecat_api_key
    EOF
    ```
 

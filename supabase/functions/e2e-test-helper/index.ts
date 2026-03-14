@@ -51,12 +51,18 @@ serve(async (req) => {
         );
 
         if (action === 'promote_premium') {
+            const now = Date.now();
+            const expiresAt = new Date();
+            expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+
             const { error: updateError } = await supabaseAdmin
                 .from('profiles')
                 .update({
                     is_premium: true,
                     subscription_status: 'active',
-                    subscription_id: `test_sub_${Date.now()}`
+                    subscription_id: `test_sub_${now}`,
+                    apple_original_transaction_id: `test_apple_${now}`,
+                    expires_at: expiresAt.toISOString(),
                 })
                 .eq('id', user.id);
 

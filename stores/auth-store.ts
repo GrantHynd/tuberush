@@ -1,5 +1,7 @@
+import { hasActiveEntitlement, logInRevenueCat, logOutRevenueCat } from '@/lib/revenuecat';
 import { supabase } from '@/lib/supabase-client';
 import type { User } from '@/types/game';
+import { Platform } from 'react-native';
 import { create } from 'zustand';
 
 interface AuthState {
@@ -11,6 +13,7 @@ interface AuthState {
     signOut: () => Promise<void>;
     checkSession: () => Promise<void>;
     refreshPremiumStatus: () => Promise<void>;
+    refreshPremiumStatusFromRevenueCat: () => Promise<void>;
     updateProfile: (updates: Partial<User>) => Promise<void>;
 }
 
@@ -55,6 +58,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         }
 
         if (data.user) {
+            // Log in to RevenueCat with user ID for cross-device sync
+            try {
+                await logInRevenueCat(data.user.id);
+            } catch (rcError) {
+                console.warn('[Auth] RevenueCat login failed:', rcError);
+            }
+
             // Fetch profile
             const { data: profile } = await supabase
                 .from('profiles')
@@ -62,13 +72,25 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 .eq('id', data.user.id)
                 .single();
 
+            // Check RevenueCat entitlement (source of truth for premium on native)
+            let isPremium = profile?.is_premium || false;
+            if (Platform.OS === 'ios' || Platform.OS === 'android') {
+                try {
+                    isPremium = await hasActiveEntitlement();
+                } catch {
+                    // Fall back to Supabase if RevenueCat fails
+                }
+            }
+
             set({
                 user: {
                     id: data.user.id,
                     email: data.user.email!,
-                    isPremium: profile?.is_premium || false,
+                    isPremium,
                     subscriptionId: profile?.subscription_id,
                     subscriptionStatus: profile?.subscription_status,
+                    expiresAt: profile?.expires_at,
+                    appleOriginalTransactionId: profile?.apple_original_transaction_id,
                     borough: profile?.borough,
                 },
                 session: data.session,
@@ -77,6 +99,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     },
 
     signOut: async () => {
+        try {
+            await logOutRevenueCat();
+        } catch {
+            // Ignore RevenueCat logout errors
+        }
         await supabase.auth.signOut();
         set({ user: null, session: null });
     },
@@ -87,6 +114,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         const { data: { session } } = await supabase.auth.getSession();
 
         if (session?.user) {
+            try {
+                await logInRevenueCat(session.user.id);
+            } catch {
+                // Ignore if already logged in or RevenueCat not configured
+            }
+
             // Fetch profile
             const { data: profile } = await supabase
                 .from('profiles')
@@ -94,13 +127,24 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 .eq('id', session.user.id)
                 .single();
 
+            let isPremium = profile?.is_premium || false;
+            if (Platform.OS === 'ios' || Platform.OS === 'android') {
+                try {
+                    isPremium = await hasActiveEntitlement();
+                } catch {
+                    // Fall back to Supabase
+                }
+            }
+
             set({
                 user: {
                     id: session.user.id,
                     email: session.user.email!,
-                    isPremium: profile?.is_premium || false,
+                    isPremium,
                     subscriptionId: profile?.subscription_id,
                     subscriptionStatus: profile?.subscription_status,
+                    expiresAt: profile?.expires_at,
+                    appleOriginalTransactionId: profile?.apple_original_transaction_id,
                     borough: profile?.borough,
                 },
                 session,
@@ -121,16 +165,44 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             .eq('id', user.id)
             .single();
 
+        let isPremium = profile?.is_premium ?? false;
+        if (Platform.OS === 'ios' || Platform.OS === 'android') {
+            try {
+                isPremium = await hasActiveEntitlement();
+            } catch {
+                // Keep Supabase value on error
+            }
+        }
+
         if (profile) {
             set({
                 user: {
                     ...user,
-                    isPremium: profile.is_premium,
+                    isPremium,
                     subscriptionId: profile.subscription_id,
                     subscriptionStatus: profile.subscription_status,
+                    expiresAt: profile.expires_at,
+                    appleOriginalTransactionId: profile.apple_original_transaction_id,
                     borough: profile.borough,
                 },
             });
+        }
+    },
+
+    refreshPremiumStatusFromRevenueCat: async () => {
+        const user = get().user;
+        if (!user || (Platform.OS !== 'ios' && Platform.OS !== 'android')) return;
+
+        try {
+            const isPremium = await hasActiveEntitlement();
+            set({
+                user: {
+                    ...user,
+                    isPremium,
+                },
+            });
+        } catch {
+            // Ignore errors
         }
     },
 
