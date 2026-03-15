@@ -3,55 +3,69 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-export interface ConnectionsPuzzleListItemProps {
+export interface GamePuzzleListItemProps {
     dayNumber: number;
     label: string;
     isToday: boolean;
     isLive: boolean;
-    puzzleNumber: string;
-    commuteCount: string;
+    sublabel?: string;
     isCompleted: boolean;
     completionTime?: string;
     score?: string;
     isWon?: boolean;
+    /** Accent color for today/completed badges (e.g. TFL.blue, TFL.red) */
+    accentColor: string;
+    /** If true, show win (check) vs loss (X). If false, only show check for completed */
+    hasWinLoss: boolean;
+    /** Badge color when completed (e.g. TFL.blue for crossword). Falls back to accentColor if not set. */
+    completedBadgeColor?: string;
     onPress: () => void;
 }
 
-export function ConnectionsPuzzleListItem({
+export function GamePuzzleListItem({
     dayNumber,
     label,
     isToday,
     isLive,
-    puzzleNumber,
-    commuteCount,
+    sublabel,
     isCompleted,
     completionTime,
     score,
     isWon,
+    accentColor,
+    hasWinLoss,
+    completedBadgeColor,
     onPress,
-}: ConnectionsPuzzleListItemProps) {
+}: GamePuzzleListItemProps) {
+    const badgeColor = isCompleted
+        ? hasWinLoss && !isWon
+            ? TFL.red
+            : (completedBadgeColor ?? accentColor)
+        : isToday
+            ? accentColor
+            : TFL.grey.light;
+
     return (
         <TouchableOpacity
             style={styles.container}
             onPress={onPress}
             accessibilityRole="button"
-            accessibilityLabel={`${label}, ${puzzleNumber}, ${isCompleted ? 'completed' : 'play puzzle'}`}
+            accessibilityLabel={`${label}${sublabel ? `, ${sublabel}` : ''}, ${isCompleted ? 'completed' : 'play puzzle'}`}
         >
-            <View style={[
-                styles.dateBadge,
-                isToday ? styles.dateBadgeToday : styles.dateBadgeDefault
-            ]}>
+            <View style={[styles.dateBadge, { backgroundColor: badgeColor }]}>
                 {isCompleted ? (
-                    <MaterialIcons 
-                        name="check" 
-                        size={20} 
-                        color={TFL.white} 
+                    <MaterialIcons
+                        name={hasWinLoss && !isWon ? 'close' : 'check'}
+                        size={20}
+                        color={TFL.white}
                     />
                 ) : (
-                    <Text style={[
-                        styles.dayNumber,
-                        isToday ? styles.dayNumberToday : styles.dayNumberDefault
-                    ]}>
+                    <Text
+                        style={[
+                            styles.dayNumber,
+                            (isToday || isCompleted) ? styles.dayNumberLight : styles.dayNumberDefault,
+                        ]}
+                    >
                         {dayNumber}
                     </Text>
                 )}
@@ -61,32 +75,34 @@ export function ConnectionsPuzzleListItem({
                 <View style={styles.labelRow}>
                     <Text style={styles.label}>{label}</Text>
                     {isLive && (
-                        <View style={styles.liveBadge}>
+                        <View style={[styles.liveBadge, { backgroundColor: accentColor }]}>
                             <Text style={styles.liveText}>LIVE</Text>
                         </View>
                     )}
                 </View>
-                <Text style={styles.sublabel}>
-                    {puzzleNumber} · {commuteCount}
-                </Text>
+                {sublabel ? (
+                    <Text style={styles.sublabel}>{sublabel}</Text>
+                ) : null}
             </View>
 
             {isCompleted ? (
                 <View style={styles.completedInfo}>
-                    <Text style={[
-                        styles.time,
-                        isWon ? styles.timeWon : styles.timeLost
-                    ]}>
-                        {completionTime}
+                    <Text
+                        style={[
+                            styles.time,
+                            hasWinLoss && !isWon ? styles.timeLost : styles.timeWon,
+                        ]}
+                    >
+                        {completionTime ?? '—'}
                     </Text>
-                    <Text style={styles.score}>{score}</Text>
+                    {score ? <Text style={styles.score}>{score}</Text> : null}
                 </View>
             ) : (
                 <View style={styles.playButton}>
-                    <MaterialIcons 
-                        name="person-outline" 
-                        size={16} 
-                        color={TFL.grey.dark} 
+                    <MaterialIcons
+                        name="person-outline"
+                        size={16}
+                        color={TFL.grey.dark}
                     />
                     <Text style={styles.playText}>Play</Text>
                 </View>
@@ -111,17 +127,11 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginRight: Spacing.md,
     },
-    dateBadgeToday: {
-        backgroundColor: TFL.blue,
-    },
-    dateBadgeDefault: {
-        backgroundColor: TFL.grey.light,
-    },
     dayNumber: {
         fontSize: 20,
         fontWeight: '600',
     },
-    dayNumberToday: {
+    dayNumberLight: {
         color: TFL.white,
     },
     dayNumberDefault: {
@@ -142,7 +152,6 @@ const styles = StyleSheet.create({
         color: Colors.light.text,
     },
     liveBadge: {
-        backgroundColor: TFL.blue,
         paddingHorizontal: 8,
         paddingVertical: 2,
         borderRadius: 4,
