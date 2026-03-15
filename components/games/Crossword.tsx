@@ -1,7 +1,9 @@
-import type { CrosswordClue, CrosswordPuzzle, CrosswordState } from '@/types/game';
+import type { CrosswordCell as CrosswordCellType, CrosswordClue, CrosswordPuzzle, CrosswordState } from '@/types/game';
 import { Colors, Layout, Spacing, TFL, Typography } from '@/constants/theme';
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+    AccessibilityInfo,
+    ScrollView,
     StyleSheet,
     Text,
     TextInput,
@@ -11,6 +13,109 @@ import {
 } from 'react-native';
 
 type Direction = 'across' | 'down';
+
+// ─── Memoized grid cell ───────────────────────────────────────────────
+
+interface GridCellProps {
+    cell: CrosswordCellType;
+    rowIndex: number;
+    colIndex: number;
+    cellSize: number;
+    isSelected: boolean;
+    isActiveWord: boolean;
+    userAnswer: string;
+    direction: Direction;
+    disabled: boolean;
+    accessibilityLabel: string;
+    onPress: (row: number, col: number) => void;
+    onLongPress: (row: number, col: number) => void;
+}
+
+const GridCell = React.memo(function GridCell({
+    cell, rowIndex, colIndex, cellSize, isSelected, isActiveWord,
+    userAnswer, direction, disabled, accessibilityLabel, onPress, onLongPress,
+}: GridCellProps) {
+    return (
+        <TouchableOpacity
+            style={[
+                styles.cell,
+                { width: cellSize, height: cellSize, minWidth: 44, minHeight: 44 },
+                cell.isBlack && styles.blackCell,
+                isActiveWord && !isSelected && styles.activeWordCell,
+                isSelected && styles.selectedCell,
+            ]}
+            onPress={() => onPress(rowIndex, colIndex)}
+            onLongPress={() => onLongPress(rowIndex, colIndex)}
+            disabled={disabled || cell.isBlack}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={cell.isBlack ? 'Black cell' : accessibilityLabel}
+            accessibilityHint={cell.isBlack ? undefined : `Entering ${direction}`}
+            accessibilityState={{ selected: isSelected, disabled: disabled || cell.isBlack }}
+        >
+            {cell.number != null && (
+                <Text
+                    style={[
+                        styles.cellNumber,
+                        { fontSize: Math.max(8, cellSize * 0.2) },
+                        isSelected && styles.cellNumberSelected,
+                    ]}
+                >
+                    {cell.number}
+                </Text>
+            )}
+            {!cell.isBlack && (
+                <Text
+                    style={[
+                        styles.cellLetter,
+                        { fontSize: Math.max(14, cellSize * 0.45) },
+                        isSelected && styles.cellLetterSelected,
+                    ]}
+                >
+                    {userAnswer}
+                </Text>
+            )}
+        </TouchableOpacity>
+    );
+});
+
+// ─── Memoized clue row ────────────────────────────────────────────────
+
+interface ClueItemProps {
+    item: CrosswordClue;
+    direction: Direction;
+    isActive: boolean;
+    isFilled: boolean;
+    puzzleCompleted: boolean;
+    onPress: (clue: CrosswordClue, dir: Direction) => void;
+}
+
+const ClueItem = React.memo(function ClueItem({
+    item, direction, isActive, isFilled, puzzleCompleted, onPress,
+}: ClueItemProps) {
+    const dirLabel = direction === 'across' ? 'Across' : 'Down';
+    const showDimmed = isFilled;
+    const showCheckmark = isFilled && puzzleCompleted;
+    return (
+        <TouchableOpacity
+            style={[styles.clueRow, isActive && styles.clueRowActive]}
+            onPress={() => onPress(item, direction)}
+            accessibilityRole="button"
+            accessibilityLabel={`${dirLabel} ${item.number}: ${item.clue}${showCheckmark ? ', completed' : ''}`}
+            accessibilityState={{ selected: isActive }}
+        >
+            <Text style={[styles.clueNumber, showDimmed && styles.clueCompleted]}>
+                {item.number}
+            </Text>
+            <Text style={[styles.clueText, showDimmed && styles.clueCompleted]}>
+                {item.clue}
+            </Text>
+            {showCheckmark && (
+                <Text style={styles.clueCheckmark} accessibilityElementsHidden>✓</Text>
+            )}
+        </TouchableOpacity>
+    );
+});
 
 interface CrosswordProps {
     puzzle: CrosswordPuzzle;
@@ -29,11 +134,14 @@ export function Crossword({ puzzle, gameState, onCellChange, disabled = false }:
     const rows = grid.length;
     const cols = grid[0]?.length ?? 0;
 
-    // Responsive cell size: fill available width with padding
     const gridPadding = Spacing.md * 2;
     const borderWidth = 1;
-    const totalBorders = cols + 1; // borders between cells + outer borders
-    const cellSize = Math.floor((screenWidth - gridPadding - totalBorders * borderWidth) / cols);
+    const totalBorders = cols + 1;
+    const MIN_CELL_SIZE = 44;
+    const naturalCellSize = Math.floor((screenWidth - gridPadding - totalBorders * borderWidth) / cols);
+    const cellSize = Math.max(naturalCellSize, MIN_CELL_SIZE);
+    const gridWidth = cellSize * cols + totalBorders * borderWidth;
+    const needsHorizontalScroll = gridWidth > screenWidth - gridPadding;
 
     // Build lookup: for each cell, which across/down clue it belongs to
     const cellToClue = useMemo(() => {
@@ -93,6 +201,33 @@ export function Crossword({ puzzle, gameState, onCellChange, disabled = false }:
         [gameState.userAnswers],
     );
 
+    useEffect(() => {
+        if (activeClue) {
+            const dir = puzzle.clues.across.includes(activeClue) ? 'Across' : 'Down';
+            AccessibilityInfo.announceForAccessibility(
+                `${dir} ${activeClue.number}: ${activeClue.clue}`
+            );
+        }
+    }, [activeClue, puzzle.clues.across]);
+
+    const getCellAccessibilityLabel = useCallback(
+        (rowIndex: number, colIndex: number, userAnswer: string) => {
+            const key = `${rowIndex}-${colIndex}`;
+            const clueInfo = cellToClue[key];
+            let label = `Row ${rowIndex + 1}, Column ${colIndex + 1}`;
+            if (userAnswer) label += `, letter ${userAnswer}`;
+            else label += ', empty';
+            if (clueInfo?.across) {
+                label += `, across ${clueInfo.across.number}: ${clueInfo.across.clue}`;
+            }
+            if (clueInfo?.down) {
+                label += `, down ${clueInfo.down.number}: ${clueInfo.down.clue}`;
+            }
+            return label;
+        },
+        [cellToClue],
+    );
+
     const handleCellPress = (row: number, col: number) => {
         const cell = grid[row][col];
         if (cell.isBlack) return;
@@ -117,23 +252,47 @@ export function Crossword({ puzzle, gameState, onCellChange, disabled = false }:
     };
 
     const handleCluePress = (clue: CrosswordClue, dir: Direction) => {
-        setSelectedCell({ row: clue.row, col: clue.col });
+        const isAcross = dir === 'across';
+        let targetRow = clue.row;
+        let targetCol = clue.col;
+        for (let i = 0; i < clue.length; i++) {
+            const r = isAcross ? clue.row : clue.row + i;
+            const c = isAcross ? clue.col + i : clue.col;
+            if (!gameState.userAnswers[`${r}-${c}`]) {
+                targetRow = r;
+                targetCol = c;
+                break;
+            }
+        }
+        setSelectedCell({ row: targetRow, col: targetCol });
         setDirection(dir);
         inputRef.current?.focus();
     };
 
     const advanceToNextCell = (row: number, col: number) => {
         if (direction === 'across') {
+            for (let c = col + 1; c < cols; c++) {
+                if (grid[row][c].isBlack) break;
+                if (!gameState.userAnswers[`${row}-${c}`]) {
+                    setSelectedCell({ row, col: c });
+                    return;
+                }
+            }
             const nextCol = col + 1;
             if (nextCol < cols && !grid[row][nextCol].isBlack) {
                 setSelectedCell({ row, col: nextCol });
-                return;
             }
         } else {
+            for (let r = row + 1; r < rows; r++) {
+                if (grid[r][col].isBlack) break;
+                if (!gameState.userAnswers[`${r}-${col}`]) {
+                    setSelectedCell({ row: r, col });
+                    return;
+                }
+            }
             const nextRow = row + 1;
             if (nextRow < rows && !grid[nextRow][col].isBlack) {
                 setSelectedCell({ row: nextRow, col });
-                return;
             }
         }
     };
@@ -142,17 +301,23 @@ export function Crossword({ puzzle, gameState, onCellChange, disabled = false }:
         if (!selectedCell) return;
 
         if (value === '') {
-            // Backspace: clear current cell and move back
-            onCellChange(selectedCell.row, selectedCell.col, '');
-            if (direction === 'across') {
-                const prevCol = selectedCell.col - 1;
-                if (prevCol >= 0 && !grid[selectedCell.row][prevCol].isBlack) {
-                    setSelectedCell({ row: selectedCell.row, col: prevCol });
-                }
+            const currentKey = `${selectedCell.row}-${selectedCell.col}`;
+            const currentAnswer = gameState.userAnswers[currentKey];
+            if (currentAnswer) {
+                onCellChange(selectedCell.row, selectedCell.col, '');
             } else {
-                const prevRow = selectedCell.row - 1;
-                if (prevRow >= 0 && !grid[prevRow][selectedCell.col].isBlack) {
-                    setSelectedCell({ row: prevRow, col: selectedCell.col });
+                if (direction === 'across') {
+                    const prevCol = selectedCell.col - 1;
+                    if (prevCol >= 0 && !grid[selectedCell.row][prevCol].isBlack) {
+                        onCellChange(selectedCell.row, prevCol, '');
+                        setSelectedCell({ row: selectedCell.row, col: prevCol });
+                    }
+                } else {
+                    const prevRow = selectedCell.row - 1;
+                    if (prevRow >= 0 && !grid[prevRow][selectedCell.col].isBlack) {
+                        onCellChange(prevRow, selectedCell.col, '');
+                        setSelectedCell({ row: prevRow, col: selectedCell.col });
+                    }
                 }
             }
             return;
@@ -167,36 +332,15 @@ export function Crossword({ puzzle, gameState, onCellChange, disabled = false }:
 
     const cluesForDirection = direction === 'across' ? puzzle.clues.across : puzzle.clues.down;
 
-    const renderClueItem = ({ item }: { item: CrosswordClue }) => {
-        const completed = isClueCompleted(item, direction === 'across');
-        const isActive = activeClue?.number === item.number &&
-            ((direction === 'across' && puzzle.clues.across.includes(item)) ||
-             (direction === 'down' && puzzle.clues.down.includes(item)));
-
-        return (
-            <TouchableOpacity
-                style={[styles.clueRow, isActive && styles.clueRowActive]}
-                onPress={() => handleCluePress(item, direction)}
-            >
-                <Text
-                    style={[
-                        styles.clueNumber,
-                        completed && styles.clueCompleted,
-                    ]}
-                >
-                    {item.number}
-                </Text>
-                <Text
-                    style={[
-                        styles.clueText,
-                        completed && styles.clueCompleted,
-                    ]}
-                >
-                    {item.clue}
-                </Text>
-            </TouchableOpacity>
-        );
-    };
+    const handleCellLongPress = useCallback(
+        (row: number, col: number) => {
+            const cell = grid[row]?.[col];
+            if (!disabled && cell && !cell.isBlack) {
+                onCellChange(row, col, '');
+            }
+        },
+        [disabled, grid, onCellChange],
+    );
 
     return (
         <View style={styles.container}>
@@ -206,6 +350,25 @@ export function Crossword({ puzzle, gameState, onCellChange, disabled = false }:
                 style={styles.hiddenInput}
                 value=""
                 onChangeText={handleKeyInput}
+                onKeyPress={(e) => {
+                    if (!selectedCell) return;
+                    const { key } = e.nativeEvent;
+                    let nextRow = selectedCell.row;
+                    let nextCol = selectedCell.col;
+                    if (key === 'ArrowUp') nextRow = Math.max(0, nextRow - 1);
+                    else if (key === 'ArrowDown') nextRow = Math.min(rows - 1, nextRow + 1);
+                    else if (key === 'ArrowLeft') nextCol = Math.max(0, nextCol - 1);
+                    else if (key === 'ArrowRight') nextCol = Math.min(cols - 1, nextCol + 1);
+                    else if (key === 'Tab') {
+                        e.preventDefault?.();
+                        setDirection((prev) => (prev === 'across' ? 'down' : 'across'));
+                        return;
+                    } else return;
+
+                    if (!grid[nextRow][nextCol].isBlack) {
+                        setSelectedCell({ row: nextRow, col: nextCol });
+                    }
+                }}
                 autoCapitalize="characters"
                 autoCorrect={false}
                 spellCheck={false}
@@ -215,11 +378,18 @@ export function Crossword({ puzzle, gameState, onCellChange, disabled = false }:
 
             {/* Grid */}
             <View style={styles.gridWrapper}>
+              <ScrollView
+                horizontal={needsHorizontalScroll}
+                scrollEnabled={needsHorizontalScroll}
+                showsHorizontalScrollIndicator={needsHorizontalScroll}
+              >
                 <View
                     style={[
                         styles.gridContainer,
-                        { width: cellSize * cols + totalBorders * borderWidth },
+                        { width: gridWidth },
                     ]}
+                    accessibilityRole="grid"
+                    accessibilityLabel={`Crossword grid, ${rows} rows by ${cols} columns`}
                 >
                     {grid.map((row, rowIndex) => (
                         <View key={rowIndex} style={styles.row}>
@@ -231,50 +401,27 @@ export function Crossword({ puzzle, gameState, onCellChange, disabled = false }:
                                 const userAnswer = gameState.userAnswers[cellKey] || '';
 
                                 return (
-                                    <TouchableOpacity
+                                    <GridCell
                                         key={colIndex}
-                                        style={[
-                                            styles.cell,
-                                            {
-                                                width: cellSize,
-                                                height: cellSize,
-                                            },
-                                            cell.isBlack && styles.blackCell,
-                                            isActiveWord && !isSelected && styles.activeWordCell,
-                                            isSelected && styles.selectedCell,
-                                        ]}
-                                        onPress={() => handleCellPress(rowIndex, colIndex)}
-                                        disabled={disabled || cell.isBlack}
-                                        activeOpacity={0.7}
-                                    >
-                                        {cell.number != null && (
-                                            <Text
-                                                style={[
-                                                    styles.cellNumber,
-                                                    { fontSize: Math.max(8, cellSize * 0.2) },
-                                                    isSelected && styles.cellNumberSelected,
-                                                ]}
-                                            >
-                                                {cell.number}
-                                            </Text>
-                                        )}
-                                        {!cell.isBlack && (
-                                            <Text
-                                                style={[
-                                                    styles.cellLetter,
-                                                    { fontSize: Math.max(14, cellSize * 0.45) },
-                                                    isSelected && styles.cellLetterSelected,
-                                                ]}
-                                            >
-                                                {userAnswer}
-                                            </Text>
-                                        )}
-                                    </TouchableOpacity>
+                                        cell={cell}
+                                        rowIndex={rowIndex}
+                                        colIndex={colIndex}
+                                        cellSize={cellSize}
+                                        isSelected={isSelected}
+                                        isActiveWord={isActiveWord}
+                                        userAnswer={userAnswer}
+                                        direction={direction}
+                                        disabled={disabled}
+                                        accessibilityLabel={getCellAccessibilityLabel(rowIndex, colIndex, userAnswer)}
+                                        onPress={handleCellPress}
+                                        onLongPress={handleCellLongPress}
+                                    />
                                 );
                             })}
                         </View>
                     ))}
                 </View>
+              </ScrollView>
             </View>
 
             {/* Active clue panel */}
@@ -292,10 +439,13 @@ export function Crossword({ puzzle, gameState, onCellChange, disabled = false }:
             )}
 
             {/* Direction tabs */}
-            <View style={styles.tabContainer}>
+            <View style={styles.tabContainer} accessibilityRole="tablist">
                 <TouchableOpacity
                     style={[styles.tab, direction === 'across' && styles.tabActive]}
                     onPress={() => setDirection('across')}
+                    accessibilityRole="tab"
+                    accessibilityState={{ selected: direction === 'across' }}
+                    accessibilityLabel="Across clues"
                 >
                     <Text
                         style={[
@@ -309,6 +459,9 @@ export function Crossword({ puzzle, gameState, onCellChange, disabled = false }:
                 <TouchableOpacity
                     style={[styles.tab, direction === 'down' && styles.tabActive]}
                     onPress={() => setDirection('down')}
+                    accessibilityRole="tab"
+                    accessibilityState={{ selected: direction === 'down' }}
+                    accessibilityLabel="Down clues"
                 >
                     <Text
                         style={[
@@ -321,14 +474,26 @@ export function Crossword({ puzzle, gameState, onCellChange, disabled = false }:
                 </TouchableOpacity>
             </View>
 
-            {/* Clue list - use View + map to avoid nesting VirtualizedList inside ScrollView */}
+            {/* Clue list */}
             <View style={styles.clueList}>
                 <View style={styles.clueListContent}>
-                    {cluesForDirection.map((item) => (
-                        <View key={`${direction}-${item.number}`}>
-                            {renderClueItem({ item })}
-                        </View>
-                    ))}
+                    {cluesForDirection.map((item) => {
+                        const filled = isClueCompleted(item, direction === 'across');
+                        const isActive = activeClue?.number === item.number &&
+                            ((direction === 'across' && puzzle.clues.across.includes(item)) ||
+                             (direction === 'down' && puzzle.clues.down.includes(item)));
+                        return (
+                            <ClueItem
+                                key={`${direction}-${item.number}`}
+                                item={item}
+                                direction={direction}
+                                isActive={isActive}
+                                isFilled={filled}
+                                puzzleCompleted={gameState.completed}
+                                onPress={handleCluePress}
+                            />
+                        );
+                    })}
                 </View>
             </View>
         </View>
@@ -478,5 +643,11 @@ const styles = StyleSheet.create({
     clueCompleted: {
         textDecorationLine: 'line-through',
         color: TFL.grey.dark,
+    },
+    clueCheckmark: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: TFL.green ?? Colors.light.success,
+        marginLeft: Spacing.xs,
     },
 });

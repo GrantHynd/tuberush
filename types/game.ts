@@ -41,6 +41,8 @@ export interface CrosswordState {
     completed: boolean;
     startTime?: number;
     endTime?: number;
+    /** Cumulative milliseconds spent paused (backgrounded) — for accurate elapsed time */
+    accumulatedPause?: number;
 }
 
 /** A single cell in the crossword grid */
