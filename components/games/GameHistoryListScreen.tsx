@@ -28,6 +28,8 @@ export interface GameHistoryListScreenProps {
     loadMore: () => Promise<void>;
     loadingMore: boolean;
     onPuzzlePress: (navigateKey: string) => void;
+    /** Optional per-item accessory renderer (e.g. mini grid preview) */
+    renderItemAccessory?: (item: GameHistoryListItem) => React.ReactNode;
 }
 
 export function GameHistoryListScreen({
@@ -42,6 +44,7 @@ export function GameHistoryListScreen({
     loadMore,
     loadingMore,
     onPuzzlePress,
+    renderItemAccessory,
 }: GameHistoryListScreenProps) {
 
     const headerIcon = (
@@ -70,6 +73,7 @@ export function GameHistoryListScreen({
             accentColor={accentColor}
             hasWinLoss={hasWinLoss}
             completedBadgeColor={completedBadgeColor}
+            renderAccessory={renderItemAccessory?.(item)}
             onPress={() => onPuzzlePress(item.navigateKey)}
         />
     );
@@ -95,6 +99,14 @@ export function GameHistoryListScreen({
         );
     };
 
+    const renderEmpty = () => (
+        <View style={styles.emptyContainer}>
+            <MaterialIcons name={icon} size={48} color={TFL.grey.medium} />
+            <Text style={styles.emptyTitle}>No games played yet</Text>
+            <Text style={styles.emptySubtitle}>Completed puzzles will appear here</Text>
+        </View>
+    );
+
     return (
         <SafeAreaView style={styles.container} edges={['top']}>
             <HeaderBackButton title={title} icon={headerIcon} />
@@ -110,8 +122,9 @@ export function GameHistoryListScreen({
                 renderItem={renderItem}
                 ItemSeparatorComponent={renderSeparator}
                 ListFooterComponent={renderListFooter}
+                ListEmptyComponent={renderEmpty}
                 stickySectionHeadersEnabled={false}
-                contentContainerStyle={styles.listContent}
+                contentContainerStyle={sections.length === 0 ? styles.listContentEmpty : styles.listContent}
             />
         </SafeAreaView>
     );
@@ -159,5 +172,27 @@ const styles = StyleSheet.create({
     showMoreText: {
         fontSize: 16,
         fontWeight: '600',
+    },
+    listContentEmpty: {
+        flexGrow: 1,
+        justifyContent: 'center',
+        paddingBottom: Spacing.xl,
+    },
+    emptyContainer: {
+        alignItems: 'center',
+        paddingHorizontal: Spacing.xl,
+        paddingVertical: Spacing.xl,
+    },
+    emptyTitle: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: Colors.light.text,
+        marginTop: Spacing.md,
+        marginBottom: Spacing.xs,
+    },
+    emptySubtitle: {
+        fontSize: 15,
+        color: TFL.grey.dark,
+        textAlign: 'center',
     },
 });

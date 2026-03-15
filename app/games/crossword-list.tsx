@@ -1,11 +1,14 @@
+import { CrosswordGridPreview } from '@/components/games/CrosswordGridPreview';
 import { GameHistoryListScreen } from '@/components/games/GameHistoryListScreen';
 import { crosswordGameHistoryConfig } from '@/config/gameHistoryConfigs';
+import { getPuzzleById } from '@/constants/CrosswordData';
 import { useGameHistoryList } from '@/hooks/useGameHistoryList';
 import { useAuthStore } from '@/stores/auth-store';
 import { TFL } from '@/constants/theme';
+import type { GameHistoryListItem } from '@/types/game-history';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback } from 'react';
-import { Alert } from 'react-native';
+import { Alert, View } from 'react-native';
 
 export default function CrosswordListScreen() {
     const router = useRouter();
@@ -39,6 +42,17 @@ export default function CrosswordListScreen() {
         router.push(`/games/play-crossword?puzzleId=${puzzleId}` as never);
     };
 
+    const renderGridPreview = useCallback((item: GameHistoryListItem) => {
+        if (!item.isCompleted) return null;
+        const puzzle = getPuzzleById(item.navigateKey);
+        if (!puzzle) return null;
+        return (
+            <View style={{ marginRight: 8 }}>
+                <CrosswordGridPreview grid={puzzle.grid} size={36} />
+            </View>
+        );
+    }, []);
+
     return (
         <GameHistoryListScreen
             title="Crossword"
@@ -52,6 +66,7 @@ export default function CrosswordListScreen() {
             loadMore={loadMore}
             loadingMore={loadingMore}
             onPuzzlePress={handlePuzzlePress}
+            renderItemAccessory={renderGridPreview}
         />
     );
 }

@@ -5,7 +5,7 @@ import { leaderboard, getLocationDisplay, LeaderboardFilter } from '@/lib/leader
 import { useAuthStore } from '@/stores/auth-store';
 
 interface LeaderboardProps {
-    gameType: 'connections';
+    gameType: 'connections' | 'crossword';
     date?: string;
     onClose?: () => void;
 }

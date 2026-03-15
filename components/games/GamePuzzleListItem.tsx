@@ -19,6 +19,8 @@ export interface GamePuzzleListItemProps {
     hasWinLoss: boolean;
     /** Badge color when completed (e.g. TFL.blue for crossword). Falls back to accentColor if not set. */
     completedBadgeColor?: string;
+    /** Optional accessory rendered after the content, before completion info */
+    renderAccessory?: React.ReactNode;
     onPress: () => void;
 }
 
@@ -35,6 +37,7 @@ export function GamePuzzleListItem({
     accentColor,
     hasWinLoss,
     completedBadgeColor,
+    renderAccessory,
     onPress,
 }: GamePuzzleListItemProps) {
     const badgeColor = isCompleted
@@ -84,6 +87,8 @@ export function GamePuzzleListItem({
                     <Text style={styles.sublabel}>{sublabel}</Text>
                 ) : null}
             </View>
+
+            {renderAccessory}
 
             {isCompleted ? (
                 <View style={styles.completedInfo}>

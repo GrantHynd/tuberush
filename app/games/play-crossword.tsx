@@ -1,16 +1,25 @@
 import { Crossword } from '@/components/games/Crossword';
+import { CrosswordErrorBoundary } from '@/components/games/CrosswordErrorBoundary';
+import { Leaderboard } from '@/components/ui/Leaderboard';
 import { Colors, Layout, Spacing, TFL, Typography } from '@/constants/theme';
+import { leaderboard } from '@/lib/leaderboard';
 import { useAuthStore } from '@/stores/auth-store';
 import { useGameStore } from '@/stores/game-store';
+import { useCrosswordTimer } from '@/hooks/useCrosswordTimer';
 import { usePuzzle } from '@/hooks/usePuzzle';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import * as Haptics from 'expo-haptics';
 import type { CrosswordState, GameState } from '@/types/game';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
     ScrollView,
+    Share,
     StyleSheet,
     Text,
     TouchableOpacity,
@@ -27,6 +36,12 @@ function formatPuzzleDate(dateStr: string): string {
     return `${day} ${month} ${year}`;
 }
 
+function formatTime(seconds: number): string {
+    const minutes = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${minutes}:${secs.toString().padStart(2, '0')}`;
+}
+
 export default function PlayCrossword() {
     const router = useRouter();
     const { puzzleId: puzzleIdParam } = useLocalSearchParams<{ puzzleId?: string }>();
@@ -35,6 +50,7 @@ export default function PlayCrossword() {
     const puzzle = usePuzzle(puzzleIdParam);
     const [gameState, setGameState] = useState<GameState | null>(null);
     const [loading, setLoading] = useState(true);
+    const [showLeaderboard, setShowLeaderboard] = useState(false);
 
     useEffect(() => {
         if (!user) {
@@ -81,6 +97,8 @@ export default function PlayCrossword() {
         initGame();
     }, [user, puzzle.id, loadGame, createNewGame, router]);
 
+    const timerRef = React.useRef<{ accumulatedPause: number }>({ accumulatedPause: 0 });
+
     const handleCellChange = async (row: number, col: number, value: string) => {
         if (!gameState) return;
 
@@ -93,6 +111,8 @@ export default function PlayCrossword() {
         const newState: CrosswordState = {
             ...state,
             userAnswers: newAnswers,
+            startTime: state.startTime ?? Date.now(),
+            accumulatedPause: timerRef.current.accumulatedPause,
         };
 
         const updatedGame: GameState = {
@@ -144,11 +164,13 @@ export default function PlayCrossword() {
         }
 
         if (allCorrect) {
+            const endTime = Date.now();
             const newState: CrosswordState = {
                 ...state,
                 completed: true,
-                startTime: state.startTime ?? Date.now(),
-                endTime: Date.now(),
+                startTime: state.startTime ?? endTime,
+                endTime,
+                accumulatedPause: timerRef.current.accumulatedPause,
             };
             const updatedGame: GameState = {
                 ...gameState,
@@ -157,14 +179,38 @@ export default function PlayCrossword() {
             };
             setGameState(updatedGame);
             await saveGame(updatedGame);
+
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+            if (user?.city && newState.startTime) {
+                const pauseMs = newState.accumulatedPause ?? 0;
+                const timeTaken = Math.floor((endTime - newState.startTime - pauseMs) / 1000);
+                leaderboard
+                    .submitScore(
+                        user.id,
+                        user.city,
+                        user.city === 'London' ? user.borough ?? null : null,
+                        timeTaken,
+                        'crossword',
+                    )
+                    .catch((err) => console.error('Failed to submit crossword score', err));
+            }
         } else {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
             Alert.alert(
                 'Not quite!',
                 "There's a wrong answer somewhere. Keep going!",
                 [{ text: 'OK' }]
             );
         }
-    }, [gameState, saveGame]);
+    }, [gameState, saveGame, user]);
+
+    const crosswordState = (gameState?.state ?? null) as CrosswordState | null;
+    const timer = useCrosswordTimer(crosswordState ?? {
+        puzzleId: '', grid: [], clues: { across: {}, down: {} },
+        userAnswers: {}, completed: false,
+    });
+    timerRef.current.accumulatedPause = timer.accumulatedPause;
 
     if (!user?.isPremium) {
         return null;
@@ -195,6 +241,21 @@ export default function PlayCrossword() {
     const state = gameState.state as CrosswordState;
     const isCompleted = state.completed;
 
+    const completionTimeSecs = (isCompleted && state.startTime && state.endTime)
+        ? Math.floor((state.endTime - state.startTime - (state.accumulatedPause ?? 0)) / 1000)
+        : null;
+
+    const handleShare = async () => {
+        if (completionTimeSecs == null) return;
+        const dateStr = formatPuzzleDate(puzzle.date);
+        const timeStr = formatTime(completionTimeSecs);
+        try {
+            await Share.share({
+                message: `TubeRush Crossword - ${dateStr} - Solved in ${timeStr}`,
+            });
+        } catch { /* user cancelled */ }
+    };
+
     return (
         <SafeAreaView style={styles.container} edges={['top']}>
             {/* Header */}
@@ -215,58 +276,104 @@ export default function PlayCrossword() {
                     </View>
                 </View>
 
-                <Text style={styles.headerDate}>{formatPuzzleDate(puzzle.date)}</Text>
+                <View style={styles.headerRight}>
+                    {state.startTime && !isCompleted && (
+                        <Text style={styles.headerTimer}>{timer.formatted}</Text>
+                    )}
+                    <Text style={styles.headerDate}>{formatPuzzleDate(puzzle.date)}</Text>
+                </View>
             </View>
 
-            <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
-                <Crossword
-                    puzzle={puzzle}
-                    gameState={state}
-                    onCellChange={handleCellChange}
-                    disabled={isCompleted}
-                />
+            <CrosswordErrorBoundary onReset={() => router.back()}>
+            <KeyboardAvoidingView
+                style={styles.scroll}
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                keyboardVerticalOffset={0}
+            >
+                <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
+                    <Crossword
+                        puzzle={puzzle}
+                        gameState={state}
+                        onCellChange={handleCellChange}
+                        disabled={isCompleted}
+                    />
 
-                {!isCompleted && (
-                    <View style={styles.checkSection}>
-                        <TouchableOpacity
-                            style={[
-                                styles.checkButton,
-                                !isFullyFilled && styles.checkButtonDisabled,
-                            ]}
-                            onPress={checkAnswers}
-                            disabled={!isFullyFilled}
-                            accessibilityRole="button"
-                            accessibilityLabel="Check answers"
-                        >
-                            <Text
+                    {!isCompleted && (
+                        <View style={styles.checkSection}>
+                            <TouchableOpacity
                                 style={[
-                                    styles.checkButtonText,
-                                    !isFullyFilled && styles.checkButtonTextDisabled,
+                                    styles.checkButton,
+                                    !isFullyFilled && styles.checkButtonDisabled,
                                 ]}
+                                onPress={checkAnswers}
+                                disabled={!isFullyFilled}
+                                accessibilityRole="button"
+                                accessibilityLabel="Check answers"
                             >
-                                Check
-                            </Text>
-                        </TouchableOpacity>
-                    </View>
-                )}
+                                <Text
+                                    style={[
+                                        styles.checkButtonText,
+                                        !isFullyFilled && styles.checkButtonTextDisabled,
+                                    ]}
+                                >
+                                    Check
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+                    )}
 
-                {isCompleted && (
-                    <View style={styles.gameOverContainer}>
-                        <Text style={styles.gameOverTitle}>Well done!</Text>
-                        <Text style={styles.gameOverSubtitle}>You completed the puzzle!</Text>
-                        <TouchableOpacity
-                            style={[styles.checkButton, styles.checkButtonPrimary]}
-                            onPress={() => router.back()}
-                            accessibilityRole="button"
-                            accessibilityLabel="Return home"
-                        >
-                            <Text style={[styles.checkButtonText, styles.checkButtonTextPrimary]}>
-                                Home
-                            </Text>
-                        </TouchableOpacity>
-                    </View>
-                )}
-            </ScrollView>
+                    {isCompleted && (
+                        <View style={styles.gameOverContainer}>
+                            <Text style={styles.gameOverTitle}>Well done!</Text>
+                            {completionTimeSecs != null && (
+                                <Text style={styles.gameOverTime}>
+                                    Solved in {formatTime(completionTimeSecs)}
+                                </Text>
+                            )}
+                            <View style={styles.gameOverActions}>
+                                <TouchableOpacity
+                                    style={styles.gameOverButton}
+                                    onPress={() => setShowLeaderboard(true)}
+                                    accessibilityRole="button"
+                                    accessibilityLabel="View leaderboard"
+                                >
+                                    <Text style={styles.gameOverButtonText}>Leaderboard</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={styles.gameOverButton}
+                                    onPress={handleShare}
+                                    accessibilityRole="button"
+                                    accessibilityLabel="Share result"
+                                >
+                                    <Text style={styles.gameOverButtonText}>Share</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={[styles.gameOverButton, styles.gameOverButtonPrimary]}
+                                    onPress={() => router.back()}
+                                    accessibilityRole="button"
+                                    accessibilityLabel="Return home"
+                                >
+                                    <Text style={[styles.gameOverButtonText, styles.gameOverButtonTextPrimary]}>
+                                        Home
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    )}
+                </ScrollView>
+            </KeyboardAvoidingView>
+            </CrosswordErrorBoundary>
+
+            <Modal
+                visible={showLeaderboard}
+                animationType="slide"
+                presentationStyle="pageSheet"
+            >
+                <Leaderboard
+                    gameType="crossword"
+                    onClose={() => setShowLeaderboard(false)}
+                />
+            </Modal>
         </SafeAreaView>
     );
 }
@@ -313,12 +420,18 @@ const styles = StyleSheet.create({
         color: Colors.light.text,
     },
     headerRight: {
-        width: 80,
+        alignItems: 'flex-end' as const,
+        marginRight: Spacing.sm,
+    },
+    headerTimer: {
+        fontSize: 14,
+        fontWeight: '600' as const,
+        fontVariant: ['tabular-nums'] as const,
+        color: Colors.light.text,
     },
     headerDate: {
         ...Typography.caption,
         color: TFL.grey.dark,
-        marginRight: Spacing.sm,
     },
     scroll: {
         flex: 1,
@@ -359,7 +472,7 @@ const styles = StyleSheet.create({
     },
     gameOverContainer: {
         paddingHorizontal: Spacing.md,
-        paddingTop: Spacing.lg,
+        paddingVertical: Spacing.lg,
         alignItems: 'center',
     },
     gameOverTitle: {
@@ -368,9 +481,31 @@ const styles = StyleSheet.create({
         color: Colors.light.text,
         marginBottom: 4,
     },
-    gameOverSubtitle: {
+    gameOverTime: {
         fontSize: 15,
         color: TFL.grey.dark,
         marginBottom: Spacing.md,
+    },
+    gameOverActions: {
+        flexDirection: 'row',
+        gap: Spacing.sm,
+    },
+    gameOverButton: {
+        paddingVertical: 12,
+        paddingHorizontal: 24,
+        borderRadius: 24,
+        borderWidth: 1,
+        borderColor: Colors.light.text,
+    },
+    gameOverButtonPrimary: {
+        backgroundColor: Colors.light.text,
+    },
+    gameOverButtonText: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: Colors.light.text,
+    },
+    gameOverButtonTextPrimary: {
+        color: Colors.light.background,
     },
 });

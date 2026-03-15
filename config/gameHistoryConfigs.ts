@@ -105,8 +105,9 @@ export const crosswordGameHistoryConfig: GameHistoryConfig = {
     const isCompleted = state?.completed === true;
     let completionTime: string | undefined;
     if (isCompleted && state?.startTime != null && state?.endTime != null) {
-      const duration = Math.floor((state.endTime - state.startTime) / 1000);
-      completionTime = formatTime(duration);
+      const pauseMs = state.accumulatedPause ?? 0;
+      const duration = Math.floor((state.endTime - state.startTime - pauseMs) / 1000);
+      completionTime = formatTime(Math.max(0, duration));
     }
     return { isCompleted, isWon: isCompleted, completionTime };
   },
