@@ -1,4 +1,4 @@
-import { Colors, Layout, Spacing, TFL, Typography } from '@/constants/theme';
+import { Colors, Layout, Spacing, TFL } from '@/constants/theme';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';

@@ -1,4 +1,4 @@
-import { Colors, Spacing, TFL, Typography } from '@/constants/theme';
+import { Colors, Spacing, TFL } from '@/constants/theme';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 

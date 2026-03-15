@@ -18,7 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 export default function ConnectionsListScreen() {
     const router = useRouter();
     const { user } = useAuthStore();
-    const { sections, stats, loading } = useConnectionsList();
+    const { sections, stats } = useConnectionsList();
 
     const handlePuzzlePress = (date: string) => {
         if (!user) {
