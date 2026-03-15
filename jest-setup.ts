@@ -13,6 +13,7 @@ jest.mock("expo-router", () => ({
     back: jest.fn(),
   })),
   useLocalSearchParams: jest.fn(() => ({})),
+  useFocusEffect: jest.fn((callback: () => void) => callback()),
   useSegments: jest.fn(() => []),
   usePathname: jest.fn(() => "/"),
   Tabs: {
