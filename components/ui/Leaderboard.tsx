@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
-import { Colors, TFL, Typography, Spacing, Layout } from '@/constants/theme';
-import { leaderboard } from '@/lib/leaderboard';
+import { Colors, Typography, Spacing, Layout } from '@/constants/theme';
+import { leaderboard, getLocationDisplay, LeaderboardFilter } from '@/lib/leaderboard';
 import { useAuthStore } from '@/stores/auth-store';
-import { Borough } from '@/constants/Boroughs';
 
 interface LeaderboardProps {
     gameType: 'connections';
@@ -15,11 +14,11 @@ export function Leaderboard({ gameType, date, onClose }: LeaderboardProps) {
     const { user } = useAuthStore();
     const [entries, setEntries] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const [filter, setFilter] = useState<'all' | 'borough'>('all');
+    const [filter, setFilter] = useState<LeaderboardFilter>('all');
 
     useEffect(() => {
         loadLeaderboard();
-    }, [gameType, date, filter]);
+    }, [gameType, date, filter, user?.id, user?.city, user?.borough]);
 
     const loadLeaderboard = async () => {
         setLoading(true);
@@ -27,7 +26,8 @@ export function Leaderboard({ gameType, date, onClose }: LeaderboardProps) {
             const data = await leaderboard.getLeaderboard(
                 gameType,
                 date,
-                filter === 'borough' ? user?.borough : undefined
+                filter,
+                user
             );
             setEntries(data || []);
         } catch (error) {
@@ -41,6 +41,12 @@ export function Leaderboard({ gameType, date, onClose }: LeaderboardProps) {
         const mins = Math.floor(seconds / 60);
         const secs = seconds % 60;
         return `${mins}:${secs.toString().padStart(2, '0')}`;
+    };
+
+    const getMyAreaLabel = () => {
+        if (!user?.city) return 'My Area';
+        if (user.city === 'London' && user.borough) return user.borough;
+        return user.city;
     };
 
     return (
@@ -59,15 +65,25 @@ export function Leaderboard({ gameType, date, onClose }: LeaderboardProps) {
                     style={[styles.filterButton, filter === 'all' && styles.filterActive]}
                     onPress={() => setFilter('all')}
                 >
-                    <Text style={[styles.filterText, filter === 'all' && styles.filterTextActive]}>All London</Text>
+                    <Text style={[styles.filterText, filter === 'all' && styles.filterTextActive]}>
+                        All UK
+                    </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                    style={[styles.filterButton, filter === 'borough' && styles.filterActive]}
-                    onPress={() => setFilter('borough')}
-                    disabled={!user?.borough}
+                    style={[styles.filterButton, filter === 'london' && styles.filterActive]}
+                    onPress={() => setFilter('london')}
                 >
-                    <Text style={[styles.filterText, filter === 'borough' && styles.filterTextActive]}>
-                        {user?.borough ? user.borough : 'My Borough'}
+                    <Text style={[styles.filterText, filter === 'london' && styles.filterTextActive]}>
+                        All London
+                    </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                    style={[styles.filterButton, filter === 'area' && styles.filterActive]}
+                    onPress={() => setFilter('area')}
+                    disabled={!user?.city}
+                >
+                    <Text style={[styles.filterText, filter === 'area' && styles.filterTextActive]}>
+                        {getMyAreaLabel()}
                     </Text>
                 </TouchableOpacity>
             </View>
@@ -92,7 +108,9 @@ export function Leaderboard({ gameType, date, onClose }: LeaderboardProps) {
                                 <Text style={styles.email}>
                                     {item.profiles?.email?.split('@')[0] || 'Anonymous'}
                                 </Text>
-                                <Text style={styles.borough}>{item.borough}</Text>
+                                <Text style={styles.location}>
+                                    {getLocationDisplay(item)}
+                                </Text>
                             </View>
                             <Text style={styles.score}>{formatTime(item.score)}</Text>
                         </View>
@@ -180,7 +198,7 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         color: Colors.light.text,
     },
-    borough: {
+    location: {
         fontSize: 12,
         color: Colors.light.icon,
     },

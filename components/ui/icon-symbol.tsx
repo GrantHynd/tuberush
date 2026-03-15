@@ -15,6 +15,10 @@ const MAPPING = {
   'chevron.right': 'chevron-right',
   'person.fill': 'person',
   'lock.fill': 'lock',
+  'checkmark.circle.fill': 'check-circle',
+  'arrow.clockwise': 'refresh',
+  'arrow.right.square': 'logout',
+  'ticket.fill': 'confirmation-number',
 } as Partial<Record<SymbolViewProps['name'], ComponentProps<typeof MaterialIcons>['name']>>;
 
 export type IconSymbolName = keyof typeof MAPPING;

@@ -10,7 +10,8 @@ export interface User {
     subscriptionStatus?: 'active' | 'canceled' | 'past_due';
     expiresAt?: string | null;
     appleOriginalTransactionId?: string | null;
-    borough?: Borough;
+    city?: string | null;
+    borough?: Borough | null;
 }
 
 export interface ConnectionsGroup {
@@ -109,7 +110,8 @@ export interface SyncOperation {
 export interface LeaderboardEntry {
     id: string;
     userId: string;
-    borough: Borough;
+    city: string;
+    borough: string | null;
     score: number; // Time taken in seconds (lower is better)
     date: string; // YYYY-MM-DD
     gameType: GameType;

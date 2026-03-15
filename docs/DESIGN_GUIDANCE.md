@@ -129,7 +129,7 @@ Centred layout, vertically centred on screen.
 
 **Section: "PREFERENCES"** (all-caps label, Grey Dark)
 
-- Setting row: "London Borough" label + selected value ("Islington") with a right chevron. White card background, grey border.
+- Setting row: "City/Town" label + selected value with a right chevron. White card background, grey border. Tapping opens a modal: SearchSelect for UK cities/towns. Selecting "London" shows a second step to pick borough; other cities complete immediately. Display: "London, Islington" for London+borough, city name for others, "Not set" when empty.
 
 **Section: "ACCOUNT"** (all-caps label, Grey Dark)
 

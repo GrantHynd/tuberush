@@ -1,12 +1,11 @@
-import { PremiumBadge } from '@/components/ui/PremiumBadge';
 import { HeaderBackButton } from '@/components/ui/HeaderBackButton';
+import { SearchSelect } from '@/components/ui/SearchSelect';
 import { useAuthStore } from '@/stores/auth-store';
 import { useGameStore } from '@/stores/game-store';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
     Alert,
-    Platform,
     ScrollView,
     StyleSheet,
     Text,
@@ -15,17 +14,29 @@ import {
     Modal,
     FlatList,
 } from 'react-native';
-import RevenueCatUI from 'react-native-purchases-ui';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, TFL, Typography, Spacing, Layout } from '@/constants/theme';
 import { BOROUGHS, Borough } from '@/constants/Boroughs';
+import { UK_CITIES, isLondon } from '@/constants/UKCities';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import Constants from 'expo-constants';
+
+function getLocationDisplayValue(user: { city?: string | null; borough?: string | null }): string {
+    if (!user.city) return 'Not set';
+    if (isLondon(user.city) && user.borough) {
+        return `London, ${user.borough}`;
+    }
+    return user.city;
+}
 
 export default function ProfileScreen() {
     const router = useRouter();
     const { user, signOut, updateProfile } = useAuthStore();
-    const { syncNow, syncStatus } = useGameStore();
-    const [boroughModalVisible, setBoroughModalVisible] = useState(false);
+    const { syncNow } = useGameStore();
+    const [locationModalVisible, setLocationModalVisible] = useState(false);
+    const [locationStep, setLocationStep] = useState<'city' | 'borough'>('city');
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const [selectedCity, setSelectedCity] = useState<string | null>(null);
 
     const handleSignOut = () => {
         Alert.alert(
@@ -50,13 +61,44 @@ export default function ProfileScreen() {
         Alert.alert('Sync', 'Sync completed!');
     };
 
-    const handleBoroughSelect = async (borough: Borough) => {
-        try {
-            await updateProfile({ borough });
-            setBoroughModalVisible(false);
-        } catch (error) {
-            Alert.alert('Error', 'Failed to update borough');
+    const handleCitySelect = (city: string) => {
+        if (isLondon(city)) {
+            setSelectedCity(city);
+            setLocationStep('borough');
+        } else {
+            handleLocationComplete(city, null);
         }
+    };
+
+    const handleBoroughSelect = async (borough: Borough) => {
+        handleLocationComplete('London', borough);
+    };
+
+    const handleLocationComplete = async (city: string, borough: Borough | null) => {
+        try {
+            await updateProfile({ city, borough });
+            setLocationModalVisible(false);
+            setLocationStep('city');
+            setSelectedCity(null);
+        } catch (err) {
+            console.error('Failed to update location:', err);
+            Alert.alert(
+                'Error',
+                'Failed to update location. The database may need the city column added. Run the migration in your Supabase project (see supabase/README.md).'
+            );
+        }
+    };
+
+    const handleLocationModalClose = () => {
+        setLocationModalVisible(false);
+        setLocationStep('city');
+        setSelectedCity(null);
+    };
+
+    const openLocationModal = () => {
+        setLocationStep('city');
+        setSelectedCity(null);
+        setLocationModalVisible(true);
     };
 
     if (!user) {
@@ -82,6 +124,12 @@ export default function ProfileScreen() {
         );
     }
 
+    const getMembershipTier = () => {
+        return user?.isPremium ? '1st Class' : 'Free';
+    };
+
+    const showBoroughStep = locationModalVisible && locationStep === 'borough';
+
     return (
         <SafeAreaView style={styles.container} edges={['top']}>
         <ScrollView style={styles.scrollContainer}>
@@ -91,67 +139,62 @@ export default function ProfileScreen() {
                     <Text style={styles.avatarText}>{user.email[0].toUpperCase()}</Text>
                 </View>
                 <Text style={styles.headerTitle}>{user.email}</Text>
-                {user.isPremium && <PremiumBadge size="small" />}
-            </View>
-
-            <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Preferences</Text>
-
-                <TouchableOpacity
-                    style={styles.settingRow}
-                    onPress={() => setBoroughModalVisible(true)}
-                >
-                    <View>
-                        <Text style={styles.settingLabel}>London Borough</Text>
-                        <Text style={styles.settingValue}>
-                            {user.borough || 'Select your borough'}
-                        </Text>
-                    </View>
-                    <IconSymbol name="chevron.right" size={20} color={Colors.light.icon} />
-                </TouchableOpacity>
-            </View>
-
-            <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Account</Text>
-
-                <View style={styles.settingRow}>
-                    <View>
-                        <Text style={styles.settingLabel}>Membership</Text>
-                        <Text style={styles.settingValue}>
-                            {user.isPremium ? 'TubeRush Pro' : 'Free'}
-                        </Text>
-                    </View>
-                    {!user.isPremium ? (
-                        <TouchableOpacity
-                            style={styles.upgradeButton}
-                            onPress={() => router.push('/subscribe')}
-                        >
-                            <Text style={styles.upgradeButtonText}>Upgrade</Text>
-                        </TouchableOpacity>
-                    ) : (Platform.OS === 'ios' || Platform.OS === 'android') ? (
-                        <TouchableOpacity
-                            style={styles.upgradeButton}
-                            onPress={async () => {
-                                try {
-                                    await RevenueCatUI.presentCustomerCenter();
-                                } catch {
-                                    Alert.alert('Error', 'Could not open subscription management');
-                                }
-                            }}
-                        >
-                            <Text style={styles.upgradeButtonText}>Manage</Text>
-                        </TouchableOpacity>
-                    ) : null}
+                <View style={styles.membershipBadge}>
+                    <IconSymbol name="ticket.fill" size={14} color={TFL.black} />
+                    <Text style={styles.membershipBadgeText}>{getMembershipTier()}</Text>
                 </View>
+            </View>
 
-                <View style={styles.settingRow}>
-                    <View>
-                        <Text style={styles.settingLabel}>Sync Status</Text>
-                        <Text style={[styles.settingValue, { fontSize: 12 }]}>{syncStatus.message}</Text>
-                    </View>
-                    <TouchableOpacity onPress={handleSync}>
-                        <IconSymbol name="paperplane.fill" size={20} color={Colors.light.tint} />
+            <View style={styles.section}>
+                <Text style={styles.sectionTitle}>PREFERENCES</Text>
+
+                <View style={styles.card}>
+                    <TouchableOpacity
+                        style={styles.cardRow}
+                        onPress={openLocationModal}
+                        accessibilityRole="button"
+                        accessibilityLabel={`City or town: ${getLocationDisplayValue(user)}`}
+                    >
+                        <Text style={styles.rowLabel}>City/Town</Text>
+                        <View style={styles.rowRight}>
+                            <Text
+                                style={styles.rowValueTruncatable}
+                                numberOfLines={1}
+                                ellipsizeMode="tail"
+                                accessibilityLabel={getLocationDisplayValue(user)}
+                            >
+                                {getLocationDisplayValue(user)}
+                            </Text>
+                            <IconSymbol name="chevron.right" size={20} color={Colors.light.icon} />
+                        </View>
                     </TouchableOpacity>
+                </View>
+            </View>
+
+            <View style={styles.section}>
+                <Text style={styles.sectionTitle}>ACCOUNT</Text>
+
+                <View style={styles.card}>
+                    <View style={styles.cardRow}>
+                        <Text style={styles.rowLabel}>Membership</Text>
+                        <Text style={styles.rowValueTruncatable} numberOfLines={1} ellipsizeMode="tail">
+                            {getMembershipTier()}
+                        </Text>
+                    </View>
+                    
+                    <View style={styles.cardDivider} />
+                    
+                    <View style={styles.cardRow}>
+                        <Text style={styles.rowLabel}>Sync Status</Text>
+                        <View style={styles.rowRight}>
+                            <Text style={styles.rowValueTruncatable} numberOfLines={1} ellipsizeMode="tail">
+                                Synced
+                            </Text>
+                            <TouchableOpacity onPress={handleSync} style={styles.syncButton} accessibilityLabel="Sync now">
+                                <IconSymbol name="arrow.clockwise" size={20} color={Colors.light.tint} />
+                            </TouchableOpacity>
+                        </View>
+                    </View>
                 </View>
             </View>
 
@@ -160,37 +203,63 @@ export default function ProfileScreen() {
                 style={styles.signOutButton}
                 onPress={handleSignOut}
             >
+                <IconSymbol name="arrow.right.square" size={20} color={TFL.red} />
                 <Text style={styles.signOutButtonText}>Sign Out</Text>
             </TouchableOpacity>
 
-            <Text style={styles.version}>TubeRush v2.0.0</Text>
+            <Text style={styles.version}>TubeRush v{Constants.expoConfig?.version || '1.0.0'}</Text>
+
+            {!showBoroughStep && (
+                <SearchSelect
+                    options={[...UK_CITIES]}
+                    value={user.city ?? null}
+                    onSelect={handleCitySelect}
+                    placeholder="Search cities..."
+                    accessibilityLabel="Search and select your city or town"
+                    modalTitle="Select City/Town"
+                    visible={locationModalVisible}
+                    onClose={handleLocationModalClose}
+                    closeOnSelect={(city) => !isLondon(city)}
+                />
+            )}
 
             <Modal
-                visible={boroughModalVisible}
+                visible={showBoroughStep}
                 animationType="slide"
                 presentationStyle="pageSheet"
+                onRequestClose={handleLocationModalClose}
             >
                 <SafeAreaView style={styles.modalContainer}>
                     <View style={styles.modalHeader}>
                         <Text style={styles.modalTitle}>Select Borough</Text>
-                        <TouchableOpacity onPress={() => setBoroughModalVisible(false)}>
+                        <TouchableOpacity
+                            onPress={handleLocationModalClose}
+                            accessibilityRole="button"
+                            accessibilityLabel="Close"
+                        >
                             <Text style={styles.closeButton}>Close</Text>
                         </TouchableOpacity>
                     </View>
                     <FlatList
                         data={BOROUGHS}
                         keyExtractor={(item) => item}
+                        accessibilityRole="list"
                         renderItem={({ item }) => (
                             <TouchableOpacity
                                 style={styles.boroughItem}
                                 onPress={() => handleBoroughSelect(item)}
+                                accessibilityRole="button"
+                                accessibilityLabel={item}
+                                accessibilityState={{
+                                    selected: user.borough === item,
+                                }}
                             >
                                 <Text style={[
                                     styles.boroughText,
                                     user.borough === item && styles.selectedBoroughText
                                 ]}>{item}</Text>
                                 {user.borough === item && (
-                                    <IconSymbol name="chevron.right" size={20} color={Colors.light.tint} /> // Use checkmark if available
+                                    <IconSymbol name="checkmark.circle.fill" size={22} color={Colors.light.tint} />
                                 )}
                             </TouchableOpacity>
                         )}
@@ -213,9 +282,7 @@ const styles = StyleSheet.create({
     header: {
         alignItems: 'center',
         paddingVertical: Spacing.xl,
-        backgroundColor: Colors.light.card,
-        borderBottomWidth: 1,
-        borderBottomColor: Colors.light.border,
+        backgroundColor: Colors.light.background,
     },
     avatarContainer: {
         width: 80,
@@ -232,58 +299,98 @@ const styles = StyleSheet.create({
         color: 'white',
     },
     headerTitle: {
-        ...Typography.h3,
-        marginBottom: Spacing.xs,
+        fontSize: 18,
+        fontWeight: '700',
+        color: Colors.light.text,
+        marginBottom: Spacing.sm,
+    },
+    membershipBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: TFL.yellow,
+        paddingHorizontal: Spacing.md,
+        paddingVertical: Spacing.xs,
+        borderRadius: 16,
+        gap: 6,
+    },
+    membershipBadgeText: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: TFL.black,
     },
     section: {
         marginTop: Spacing.lg,
         paddingHorizontal: Spacing.md,
     },
     sectionTitle: {
-        ...Typography.label,
+        fontSize: 11,
+        fontWeight: '600',
+        textTransform: 'uppercase',
+        letterSpacing: 1,
+        color: TFL.grey.dark,
         marginBottom: Spacing.sm,
         marginLeft: Spacing.xs,
     },
-    settingRow: {
+    card: {
+        backgroundColor: Colors.light.card,
+        borderRadius: Layout.borderRadius.lg,
+        borderWidth: 1,
+        borderColor: Colors.light.border,
+        overflow: 'hidden',
+    },
+    cardRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        backgroundColor: Colors.light.card,
         padding: Spacing.md,
-        borderRadius: Layout.borderRadius.md,
-        marginBottom: Spacing.sm,
-        borderWidth: 1,
-        borderColor: Colors.light.border,
+        minHeight: 56,
     },
-    settingLabel: {
-        fontSize: 14,
-        color: Colors.light.icon,
-        marginBottom: 2,
+    cardDivider: {
+        height: 1,
+        backgroundColor: Colors.light.border,
+        marginHorizontal: Spacing.md,
     },
-    settingValue: {
+    rowLabel: {
         fontSize: 16,
         color: Colors.light.text,
         fontWeight: '500',
+        flexShrink: 0,
     },
-    upgradeButton: {
-        backgroundColor: TFL.yellow,
-        paddingHorizontal: Spacing.md,
-        paddingVertical: Spacing.xs,
-        borderRadius: Layout.borderRadius.sm,
+    rowValue: {
+        fontSize: 16,
+        color: Colors.light.icon,
+        fontWeight: '400',
     },
-    upgradeButtonText: {
-        color: TFL.black,
-        fontWeight: 'bold',
-        fontSize: 12,
+    rowValueTruncatable: {
+        fontSize: 16,
+        color: Colors.light.icon,
+        fontWeight: '400',
+        flex: 1,
+        minWidth: 0,
+        textAlign: 'right',
+    },
+    rowRight: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: Spacing.sm,
+        flex: 1,
+        minWidth: 0,
+    },
+    syncButton: {
+        marginLeft: 4,
+        flexShrink: 0,
     },
     signOutButton: {
         marginTop: Spacing.xl,
         marginHorizontal: Spacing.md,
         paddingVertical: Spacing.md,
         borderRadius: Layout.borderRadius.md,
-        borderWidth: 1,
+        borderWidth: 2,
         borderColor: TFL.red,
         alignItems: 'center',
+        flexDirection: 'row',
+        justifyContent: 'center',
+        gap: 8,
     },
     signOutButtonText: {
         color: TFL.red,
@@ -359,6 +466,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
+        minHeight: 56,
     },
     boroughText: {
         fontSize: 16,

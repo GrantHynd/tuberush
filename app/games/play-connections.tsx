@@ -126,9 +126,15 @@ export default function PlayConnectionsScreen() {
               (endTime - newState.startTime) / 1000,
             );
 
-            if (user.borough) {
+            if (user.city) {
               leaderboard
-                .submitScore(user.id, user.borough, timeTaken, "connections")
+                .submitScore(
+                  user.id,
+                  user.city,
+                  user.city === "London" ? user.borough ?? null : null,
+                  timeTaken,
+                  "connections"
+                )
                 .catch((err) =>
                   console.error("Failed to submit score", err),
                 );
