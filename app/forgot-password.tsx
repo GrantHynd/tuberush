@@ -13,39 +13,53 @@ import {
     View,
 } from 'react-native';
 
-export default function AuthScreen() {
+export default function ForgotPasswordScreen() {
     const router = useRouter();
-    const { signIn, signUp } = useAuthStore();
+    const { resetPasswordForEmail } = useAuthStore();
 
-    const [isSignUp, setIsSignUp] = useState(false);
     const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
+    const [emailSent, setEmailSent] = useState(false);
 
     const handleSubmit = async () => {
-        if (!email || !password) {
-            Alert.alert('Error', 'Please fill in all fields');
+        if (!email) {
+            Alert.alert('Error', 'Please enter your email address');
             return;
         }
 
         setLoading(true);
         try {
-            if (isSignUp) {
-                await signUp(email, password);
-                Alert.alert('Success', 'Account created! Please check your email to verify.');
-            } else {
-                await signIn(email, password);
-                router.back();
-            }
+            await resetPasswordForEmail(email);
+            setEmailSent(true);
         } catch (error: any) {
-            const message = error?.message || error?.error_description || 'Authentication failed';
-            const details = error?.status ? ` (${error.status})` : '';
-            console.error('[Auth]', error);
-            Alert.alert('Error', `${message}${details}`);
+            const message = error?.message || 'Failed to send reset email';
+            console.error('[ForgotPassword]', error);
+            Alert.alert('Error', message);
         } finally {
             setLoading(false);
         }
     };
+
+    if (emailSent) {
+        return (
+            <View style={styles.container}>
+                <View style={styles.content}>
+                    <Text style={styles.logo}>📧</Text>
+                    <Text style={styles.subtitle}>Check your email</Text>
+                    <Text style={styles.description}>
+                        We sent a password reset link to {email}. Tap the link in the email to
+                        reset your password.
+                    </Text>
+                    <TouchableOpacity
+                        style={styles.button}
+                        onPress={() => router.back()}
+                    >
+                        <Text style={styles.buttonText}>Back to Sign In</Text>
+                    </TouchableOpacity>
+                </View>
+            </View>
+        );
+    }
 
     return (
         <KeyboardAvoidingView
@@ -53,14 +67,15 @@ export default function AuthScreen() {
             style={styles.container}
         >
             <View style={styles.content}>
-                <Text style={styles.logo}>🎮 TubeRush</Text>
-                <Text style={styles.subtitle}>
-                    {isSignUp ? 'Create your account' : 'Welcome back!'}
+                <Text style={styles.logo}>🔑</Text>
+                <Text style={styles.subtitle}>Forgot password?</Text>
+                <Text style={styles.description}>
+                    Enter your email address and we{"'"}ll send you a link to reset your password.
                 </Text>
 
                 <View style={styles.form}>
                     <TextInput
-                        testID="auth-email-input"
+                        testID="forgot-password-email-input"
                         style={styles.input}
                         placeholder="Email"
                         value={email}
@@ -68,20 +83,11 @@ export default function AuthScreen() {
                         autoCapitalize="none"
                         keyboardType="email-address"
                         autoComplete="email"
-                    />
-
-                    <TextInput
-                        testID="auth-password-input"
-                        style={styles.input}
-                        placeholder="Password"
-                        value={password}
-                        onChangeText={setPassword}
-                        secureTextEntry
-                        autoComplete="password"
+                        autoFocus
                     />
 
                     <TouchableOpacity
-                        testID="auth-submit-button"
+                        testID="forgot-password-submit-button"
                         style={styles.button}
                         onPress={handleSubmit}
                         disabled={loading}
@@ -89,34 +95,16 @@ export default function AuthScreen() {
                         {loading ? (
                             <ActivityIndicator color="#fff" />
                         ) : (
-                            <Text style={styles.buttonText}>
-                                {isSignUp ? 'Sign Up' : 'Sign In'}
-                            </Text>
+                            <Text style={styles.buttonText}>Send Reset Link</Text>
                         )}
                     </TouchableOpacity>
 
-                    {!isSignUp && (
-                        <TouchableOpacity
-                            testID="auth-forgot-password-button"
-                            style={styles.switchButton}
-                            onPress={() => router.push('/forgot-password')}
-                            disabled={loading}
-                        >
-                            <Text style={styles.switchText}>Forgot password?</Text>
-                        </TouchableOpacity>
-                    )}
-
                     <TouchableOpacity
-                        testID="auth-switch-button"
                         style={styles.switchButton}
-                        onPress={() => setIsSignUp(!isSignUp)}
+                        onPress={() => router.back()}
                         disabled={loading}
                     >
-                        <Text style={styles.switchText}>
-                            {isSignUp
-                                ? 'Already have an account? Sign In'
-                                : "Don't have an account? Sign Up"}
-                        </Text>
+                        <Text style={styles.switchText}>Back to Sign In</Text>
                     </TouchableOpacity>
                 </View>
             </View>
@@ -142,9 +130,16 @@ const styles = StyleSheet.create({
     subtitle: {
         fontSize: 24,
         textAlign: 'center',
-        marginBottom: 40,
+        marginBottom: 12,
         color: '#2c3e50',
         fontWeight: '600',
+    },
+    description: {
+        fontSize: 16,
+        textAlign: 'center',
+        marginBottom: 30,
+        color: '#7f8c8d',
+        lineHeight: 22,
     },
     form: {
         gap: 15,
