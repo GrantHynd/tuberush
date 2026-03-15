@@ -32,13 +32,14 @@ export default function HomeScreen() {
     const { items: connectionsItems, refresh: refreshConnections } = usePuzzleCarousel('connections');
     const { items: crosswordItems, refresh: refreshCrossword } = usePuzzleCarousel('crossword');
 
+    const { stats, refresh: refreshStats } = useUserStats();
     useFocusEffect(
         useCallback(() => {
             refreshConnections();
             refreshCrossword();
-        }, [refreshConnections, refreshCrossword])
+            refreshStats();
+        }, [refreshConnections, refreshCrossword, refreshStats])
     );
-    const { stats } = useUserStats();
     const { rank } = useLocationRank();
 
     const handleConnectionsCardPress = (date: string) => {
@@ -158,6 +159,7 @@ export default function HomeScreen() {
                             icon="timer"
                             label="Best Time"
                             value={stats.bestTime ?? '—'}
+                            sublabel={stats.bestTimeGameType ?? undefined}
                         />
                         <View style={styles.statCardSpacer} />
                         <StatCard

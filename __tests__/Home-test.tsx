@@ -29,7 +29,7 @@ jest.mock('@/hooks/usePuzzleCarousel', () => ({
 
 jest.mock('@/hooks/useUserStats', () => ({
   useUserStats: jest.fn(() => ({
-    stats: { bestTime: null, streak: 0 },
+    stats: { bestTime: null, bestTimeGameType: null, streak: 0 },
     loading: false,
     refresh: jest.fn(),
   })),
