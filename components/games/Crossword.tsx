@@ -388,7 +388,7 @@ export function Crossword({ puzzle, gameState, onCellChange, disabled = false }:
                         styles.gridContainer,
                         { width: gridWidth },
                     ]}
-                    accessibilityRole="grid"
+                    accessible={true}
                     accessibilityLabel={`Crossword grid, ${rows} rows by ${cols} columns`}
                 >
                     {grid.map((row, rowIndex) => (
