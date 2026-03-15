@@ -5,9 +5,22 @@ import {
 import { getRecentPuzzles as getCrosswordRecent } from '@/constants/CrosswordData';
 import type { CrosswordPuzzle } from '@/types/game';
 import { offlineSyncManager } from '@/lib/offline-sync-manager';
+import { supabase } from '@/lib/supabase-client';
 import { useAuthStore } from '@/stores/auth-store';
 import type { ConnectionsState, CrosswordState, GameState } from '@/types/game';
 import { useCallback, useEffect, useState } from 'react';
+
+async function getConnectionsPlayCount(date: string): Promise<number> {
+    try {
+        const { data, error } = await supabase.rpc('get_connections_play_count', {
+            puzzle_date: date,
+        });
+        if (error) return 0;
+        return typeof data === 'number' ? data : 0;
+    } catch {
+        return 0;
+    }
+}
 
 type GameType = 'connections' | 'crossword';
 
@@ -30,6 +43,9 @@ export interface PuzzleCarouselItem {
     commuteCount?: number;
     date: string;
     puzzleId: string;
+    completionTime?: string;
+    score?: string;
+    isWon?: boolean;
 }
 
 export interface ConnectionsCarouselItem extends PuzzleCarouselItem {
@@ -40,20 +56,40 @@ export interface CrosswordCarouselItem extends PuzzleCarouselItem {
     puzzle: CrosswordPuzzle;
 }
 
+function formatTime(seconds: number): string {
+    const minutes = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${minutes}:${secs.toString().padStart(2, '0')}`;
+}
+
 async function loadConnectionsCarousel(
     userId: string,
+    limit: number = 7,
 ): Promise<ConnectionsCarouselItem[]> {
-    const puzzles = getConnectionsRecent(7);
+    const puzzles = getConnectionsRecent(limit);
+    const playCounts = await Promise.all(
+        puzzles.map(p => getConnectionsPlayCount(p.date))
+    );
     const today = new Date().toISOString().split('T')[0];
     const items: ConnectionsCarouselItem[] = [];
 
     for (let i = 0; i < puzzles.length; i++) {
         const puzzle = puzzles[i];
+        const playCount = playCounts[i];
         const gameId = `connections_${userId}_${puzzle.date}`;
         const game = await offlineSyncManager.loadGameState(gameId, userId);
         const state = game?.state as ConnectionsState | undefined;
-        const isCompleted = state?.status === 'won';
-        const commuteCount = state?.history?.length;
+        const isCompleted = state?.status === 'won' || state?.status === 'lost';
+        const isWon = state?.status === 'won';
+
+        let completionTime: string | undefined;
+        let score: string | undefined;
+
+        if (isCompleted && state?.startTime && state?.endTime) {
+            const duration = Math.floor((state.endTime - state.startTime) / 1000);
+            completionTime = formatTime(duration);
+            score = `${state.mistakesRemaining}/4`;
+        }
 
         items.push({
             puzzle,
@@ -61,9 +97,12 @@ async function loadConnectionsCarousel(
             label: formatPuzzleDate(puzzle.date),
             isNew: puzzle.date === today,
             isCompleted,
-            commuteCount: isCompleted ? undefined : commuteCount,
+            commuteCount: isCompleted ? undefined : playCount,
             date: puzzle.date,
             puzzleId: puzzle.id,
+            completionTime,
+            score,
+            isWon,
         });
     }
     return items;

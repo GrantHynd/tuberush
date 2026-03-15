@@ -39,7 +39,7 @@ export function PuzzleCard({
     const statusContent = isCompleted ? (
         <MaterialIcons name="check-circle" size={20} color="white" />
     ) : commuteCount !== undefined ? (
-        <Text style={styles.commuteCount}>{commuteCount} commutes</Text>
+        <Text style={styles.commuteCount}>{commuteCount} commuters played</Text>
     ) : (
         <Text style={styles.commuteCount}>—</Text>
     );

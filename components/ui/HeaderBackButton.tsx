@@ -6,10 +6,11 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 interface HeaderBackButtonProps {
   title: string;
+  icon?: React.ReactNode;
 }
 
 /** Back header matching the settings page style — chevron-left + centered title */
-export function HeaderBackButton({ title }: HeaderBackButtonProps) {
+export function HeaderBackButton({ title, icon }: HeaderBackButtonProps) {
   const router = useRouter();
 
   return (
@@ -22,7 +23,10 @@ export function HeaderBackButton({ title }: HeaderBackButtonProps) {
       >
         <MaterialIcons name="chevron-left" size={28} color={Colors.light.text} />
       </TouchableOpacity>
-      <Text style={styles.title}>{title}</Text>
+      <View style={styles.titleContainer}>
+        {icon}
+        <Text style={styles.title}>{title}</Text>
+      </View>
       <View style={styles.spacer} />
     </View>
   );
@@ -42,6 +46,11 @@ const styles = StyleSheet.create({
   button: {
     padding: Spacing.xs,
     marginLeft: Spacing.xs,
+  },
+  titleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
   },
   title: {
     ...Typography.h3,

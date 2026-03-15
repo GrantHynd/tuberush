@@ -122,7 +122,7 @@ export default function PlayCrossword() {
         return true;
     }, [gameState]);
 
-    const checkAnswers = useCallback(() => {
+    const checkAnswers = useCallback(async () => {
         if (!gameState) return;
         const state = gameState.state as CrosswordState;
         const grid = state.grid;
@@ -144,14 +144,19 @@ export default function PlayCrossword() {
         }
 
         if (allCorrect) {
-            const newState: CrosswordState = { ...state, completed: true };
+            const newState: CrosswordState = {
+                ...state,
+                completed: true,
+                startTime: state.startTime ?? Date.now(),
+                endTime: Date.now(),
+            };
             const updatedGame: GameState = {
                 ...gameState,
                 state: newState,
                 lastUpdated: new Date().toISOString(),
             };
             setGameState(updatedGame);
-            saveGame(updatedGame);
+            await saveGame(updatedGame);
         } else {
             Alert.alert(
                 'Not quite!',

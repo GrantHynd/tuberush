@@ -36,6 +36,32 @@ export class StorageManager {
     }
 
     /**
+     * Get multiple game states in a single batch (uses multiGet for performance)
+     */
+    static async getGameStatesBatch(gameIds: string[]): Promise<Map<string, any>> {
+        if (gameIds.length === 0) return new Map();
+        try {
+            const keys = gameIds.map(id => `${STORAGE_KEYS.GAME_STATE}${id}`);
+            const pairs = await AsyncStorage.multiGet(keys);
+            const result = new Map<string, any>();
+            pairs.forEach(([key, value], i) => {
+                const gameId = gameIds[i];
+                if (value) {
+                    try {
+                        result.set(gameId, JSON.parse(value));
+                    } catch {
+                        // ignore parse errors
+                    }
+                }
+            });
+            return result;
+        } catch (error) {
+            console.error('Error batch loading game states:', error);
+            return new Map();
+        }
+    }
+
+    /**
      * Get all game states
      */
     static async getAllGameStates(): Promise<any[]> {
