@@ -57,6 +57,16 @@
    supabase functions deploy e2e-test-helper
    ```
 
+## Seeding Test Data
+
+To populate a test environment with 50 leaderboard users across UK cities:
+
+1. Make sure all migrations are applied (see step 2 above)
+2. Run `supabase/seed.sql` in the Supabase SQL Editor
+3. This creates 50 users (10 in London with boroughs, 40 across other UK cities) with Connections and Crossword scores for the current week
+
+To re-seed, first run the commented-out cleanup block at the bottom of `seed.sql`, then re-run the seed.
+
 ## Testing
 After setup, test by:
 1. Running the app

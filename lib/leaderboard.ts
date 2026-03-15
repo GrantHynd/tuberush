@@ -1,5 +1,5 @@
 import { supabase } from './supabase-client';
-import { LeaderboardEntry, GameType } from '@/types/game';
+import { LeaderboardEntry, GameType, WeeklyLeaderboardEntry, BoroughBreakdownEntry, CityPlayerCount } from '@/types/game';
 import { Borough } from '@/constants/Boroughs';
 import type { User } from '@/types/game';
 
@@ -135,5 +135,102 @@ export const leaderboard = {
 
         if (error || !data) return null;
         return data.score;
+    },
+
+    /**
+     * Weekly leaderboard — ranked list with aggregated scores for a date range.
+     */
+    async getWeeklyLeaderboard(
+        gameType: GameType,
+        weekStart: string,
+        weekEnd: string,
+        city?: string | null
+    ): Promise<{ entries: WeeklyLeaderboardEntry[]; totalPlayers: number }> {
+        const { data, error } = await supabase.rpc('get_weekly_leaderboard', {
+            p_game_type: gameType,
+            p_week_start: weekStart,
+            p_week_end: weekEnd,
+            p_city: city ?? null,
+        });
+
+        if (error) throw error;
+
+        const rows = (data ?? []) as {
+            user_id: string;
+            email: string;
+            city: string | null;
+            borough: string | null;
+            total_score: number;
+            games_played: number;
+            rank: number;
+            total_players: number;
+        }[];
+
+        const totalPlayers = rows.length > 0 ? rows[0].total_players : 0;
+
+        const entries: WeeklyLeaderboardEntry[] = rows.map((r) => ({
+            userId: r.user_id,
+            email: r.email,
+            city: r.city,
+            borough: r.borough,
+            totalScore: r.total_score,
+            gamesPlayed: r.games_played,
+            rank: r.rank,
+        }));
+
+        return { entries, totalPlayers };
+    },
+
+    /**
+     * Borough breakdown — aggregated stats per London borough for a week.
+     */
+    async getBoroughBreakdown(
+        gameType: GameType,
+        weekStart: string,
+        weekEnd: string
+    ): Promise<BoroughBreakdownEntry[]> {
+        const { data, error } = await supabase.rpc('get_borough_breakdown', {
+            p_game_type: gameType,
+            p_week_start: weekStart,
+            p_week_end: weekEnd,
+        });
+
+        if (error) throw error;
+
+        return ((data ?? []) as {
+            borough: string;
+            commuter_count: number;
+            leader_email: string;
+            top_score: number;
+        }[]).map((r) => ({
+            borough: r.borough,
+            commuterCount: r.commuter_count,
+            leaderEmail: r.leader_email,
+            topScore: r.top_score,
+        }));
+    },
+
+    /**
+     * Available cities with player counts for a given week and game type.
+     */
+    async getAvailableCities(
+        gameType: GameType,
+        weekStart: string,
+        weekEnd: string
+    ): Promise<CityPlayerCount[]> {
+        const { data, error } = await supabase.rpc('get_available_cities', {
+            p_game_type: gameType,
+            p_week_start: weekStart,
+            p_week_end: weekEnd,
+        });
+
+        if (error) throw error;
+
+        return ((data ?? []) as { city: string; player_count: number }[]).map(
+            (r) => ({
+                city: r.city,
+                playerCount: r.player_count,
+            })
+        );
     },
 };

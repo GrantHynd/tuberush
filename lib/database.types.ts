@@ -133,6 +133,48 @@ export interface Database {
         Args: { puzzle_ids: string[] };
         Returns: Record<string, number>;
       };
+      get_weekly_leaderboard: {
+        Args: {
+          p_game_type: string;
+          p_week_start: string;
+          p_week_end: string;
+          p_city?: string | null;
+        };
+        Returns: {
+          user_id: string;
+          email: string;
+          city: string | null;
+          borough: string | null;
+          total_score: number;
+          games_played: number;
+          rank: number;
+          total_players: number;
+        }[];
+      };
+      get_borough_breakdown: {
+        Args: {
+          p_game_type: string;
+          p_week_start: string;
+          p_week_end: string;
+        };
+        Returns: {
+          borough: string;
+          commuter_count: number;
+          leader_email: string;
+          top_score: number;
+        }[];
+      };
+      get_available_cities: {
+        Args: {
+          p_game_type: string;
+          p_week_start: string;
+          p_week_end: string;
+        };
+        Returns: {
+          city: string;
+          player_count: number;
+        }[];
+      };
     };
     Enums: Record<string, never>;
   };

@@ -121,3 +121,33 @@ export interface LeaderboardEntry {
     gameType: GameType;
     created_at: string;
 }
+
+export interface WeeklyLeaderboardEntry {
+    userId: string;
+    email: string;
+    city: string | null;
+    borough: string | null;
+    totalScore: number;
+    gamesPlayed: number;
+    rank: number;
+}
+
+export interface BoroughBreakdownEntry {
+    borough: string;
+    commuterCount: number;
+    leaderEmail: string;
+    topScore: number;
+}
+
+export interface CityPlayerCount {
+    city: string;
+    playerCount: number;
+}
+
+export interface GameOverviewData {
+    gameType: GameType;
+    userRank: number | null;
+    totalPlayers: number;
+    userScore: number | null;
+    nearbyEntries: WeeklyLeaderboardEntry[];
+}

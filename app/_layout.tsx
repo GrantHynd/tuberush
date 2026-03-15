@@ -79,6 +79,8 @@ export default function RootLayout() {
         <Stack.Screen name="games/play-connections" options={{ headerShown: false }} />
         <Stack.Screen name="games/connections-list" options={{ headerShown: false }} />
         <Stack.Screen name="games/crossword-list" options={{ headerShown: false }} />
+        <Stack.Screen name="leaderboard/game" options={{ headerShown: false }} />
+        <Stack.Screen name="leaderboard/boroughs" options={{ headerShown: false }} />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>
