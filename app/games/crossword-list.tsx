@@ -1,29 +1,26 @@
-import { PuzzleCard } from '@/components/home/PuzzleCard';
-import { HeaderBackButton } from '@/components/ui/HeaderBackButton';
-import {
-    usePuzzleCarousel,
-    type CrosswordCarouselItem,
-} from '@/hooks/usePuzzleCarousel';
+import { GameHistoryListScreen } from '@/components/games/GameHistoryListScreen';
+import { crosswordGameHistoryConfig } from '@/config/gameHistoryConfigs';
+import { useGameHistoryList } from '@/hooks/useGameHistoryList';
 import { useAuthStore } from '@/stores/auth-store';
-import { Colors, Spacing, TFL } from '@/constants/theme';
-import { useRouter } from 'expo-router';
-import React from 'react';
-import {
-    Alert,
-    FlatList,
-    StyleSheet,
-    View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-
-const CARD_GAP = 12;
+import { TFL } from '@/constants/theme';
+import { useFocusEffect, useRouter } from 'expo-router';
+import React, { useCallback } from 'react';
+import { Alert } from 'react-native';
 
 export default function CrosswordListScreen() {
     const router = useRouter();
     const { user } = useAuthStore();
-    const { items } = usePuzzleCarousel('crossword');
+    const { sections, stats, refresh, hasMore, loadMore, loadingMore } = useGameHistoryList(
+        crosswordGameHistoryConfig
+    );
 
-    const handleCardPress = (puzzleId: string) => {
+    useFocusEffect(
+        useCallback(() => {
+            refresh();
+        }, [refresh])
+    );
+
+    const handlePuzzlePress = (puzzleId: string) => {
         if (!user) {
             router.push('/auth');
             return;
@@ -35,7 +32,7 @@ export default function CrosswordListScreen() {
                 [
                     { text: 'Subscribe', onPress: () => router.push('/subscribe') },
                     { text: 'Cancel', onPress: () => {} },
-                ],
+                ]
             );
             return;
         }
@@ -43,40 +40,18 @@ export default function CrosswordListScreen() {
     };
 
     return (
-        <SafeAreaView style={styles.container} edges={['top']}>
-            <HeaderBackButton title="Crossword" />
-            <FlatList<CrosswordCarouselItem>
-                data={items as CrosswordCarouselItem[]}
-                keyExtractor={(item) => item.date}
-                contentContainerStyle={styles.listContent}
-                ItemSeparatorComponent={() => <View style={styles.separator} />}
-                renderItem={({ item }) => (
-                    <PuzzleCard
-                        puzzleNumber={item.puzzleNumber}
-                        label={item.label}
-                        isNew={item.isNew}
-                        isCompleted={item.isCompleted}
-                        commuteCount={item.commuteCount}
-                        backgroundColor={TFL.red}
-                        onPress={() => handleCardPress(item.puzzleId)}
-                        variant="list"
-                    />
-                )}
-            />
-        </SafeAreaView>
+        <GameHistoryListScreen
+            title="Crossword"
+            icon="grid-on"
+            accentColor={TFL.red}
+            hasWinLoss={false}
+            completedBadgeColor={TFL.blue}
+            sections={sections}
+            stats={stats}
+            hasMore={hasMore}
+            loadMore={loadMore}
+            loadingMore={loadingMore}
+            onPuzzlePress={handlePuzzlePress}
+        />
     );
 }
-
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: Colors.light.background,
-    },
-    listContent: {
-        padding: Spacing.md,
-        paddingBottom: Spacing.xl,
-    },
-    separator: {
-        height: CARD_GAP,
-    },
-});

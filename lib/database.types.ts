@@ -116,7 +116,24 @@ export interface Database {
       };
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      get_connections_play_count: {
+        Args: { puzzle_date: string };
+        Returns: number;
+      };
+      get_connections_play_counts: {
+        Args: { puzzle_dates: string[] };
+        Returns: Record<string, number>;
+      };
+      get_crossword_play_count: {
+        Args: { puzzle_id: string };
+        Returns: number;
+      };
+      get_crossword_play_counts: {
+        Args: { puzzle_ids: string[] };
+        Returns: Record<string, number>;
+      };
+    };
     Enums: Record<string, never>;
   };
 }

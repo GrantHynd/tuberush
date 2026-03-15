@@ -39,6 +39,8 @@ export interface CrosswordState {
     };
     userAnswers: { [key: string]: string };
     completed: boolean;
+    startTime?: number;
+    endTime?: number;
 }
 
 /** A single cell in the crossword grid */

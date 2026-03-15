@@ -86,3 +86,13 @@ export const getRecentPuzzles = (limit = 7): ConnectionsPuzzle[] => {
         .sort((a, b) => b.date.localeCompare(a.date))
         .slice(0, limit);
 };
+
+/** Returns recent puzzles with offset for pagination (most recent first) */
+export const getRecentPuzzlesWithOffset = (limit: number, offset: number): ConnectionsPuzzle[] => {
+    return [...CONNECTIONS_DATA]
+        .sort((a, b) => b.date.localeCompare(a.date))
+        .slice(offset, offset + limit);
+};
+
+/** Total number of puzzles available (30 days) */
+export const CONNECTIONS_PUZZLE_COUNT = 30;
