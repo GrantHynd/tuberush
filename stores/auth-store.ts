@@ -18,6 +18,7 @@ interface AuthState {
     user: User | null;
     session: any;
     loading: boolean;
+    pendingPasswordReset: boolean;
     signUp: (email: string, password: string) => Promise<void>;
     signIn: (email: string, password: string) => Promise<void>;
     signOut: () => Promise<void>;
@@ -25,12 +26,16 @@ interface AuthState {
     refreshPremiumStatus: () => Promise<void>;
     refreshPremiumStatusFromRevenueCat: () => Promise<void>;
     updateProfile: (updates: Partial<User>) => Promise<void>;
+    resetPasswordForEmail: (email: string) => Promise<void>;
+    updatePassword: (newPassword: string) => Promise<void>;
+    setPendingPasswordReset: (pending: boolean) => void;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
     user: null,
     session: null,
     loading: true,
+    pendingPasswordReset: false,
 
     signUp: async (email: string, password: string) => {
         const { data, error } = await supabase.auth.signUp({
@@ -235,5 +240,26 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         if (error) throw error;
 
         set({ user: { ...user, ...updates } });
+    },
+
+    resetPasswordForEmail: async (email: string) => {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+            redirectTo: 'tuberushv2://',
+        });
+        if (error) throw error;
+    },
+
+    updatePassword: async (newPassword: string) => {
+        const { error } = await supabase.auth.updateUser({
+            password: newPassword,
+        });
+        if (error) throw error;
+        set({ pendingPasswordReset: false });
+        // Refresh session/profile after password update
+        await get().checkSession();
+    },
+
+    setPendingPasswordReset: (pending: boolean) => {
+        set({ pendingPasswordReset: pending });
     },
 }));

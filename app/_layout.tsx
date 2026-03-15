@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase-client';
 import { useAuthStore } from '@/stores/auth-store';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import * as Linking from 'expo-linking';
-import { Stack } from 'expo-router';
+import { Stack, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { useColorScheme, Platform } from 'react-native';
@@ -25,6 +25,7 @@ async function handleAuthDeepLink(url: string) {
   const params = new URLSearchParams(fragment);
   const accessToken = params.get('access_token');
   const refreshToken = params.get('refresh_token');
+  const type = params.get('type');
 
   if (accessToken && refreshToken) {
     const { error } = await supabase.auth.setSession({
@@ -32,7 +33,13 @@ async function handleAuthDeepLink(url: string) {
       refresh_token: refreshToken,
     });
     if (!error) {
-      useAuthStore.getState().checkSession();
+      if (type === 'recovery') {
+        // Password reset flow: navigate to the reset password screen
+        useAuthStore.getState().setPendingPasswordReset(true);
+        router.replace('/reset-password');
+      } else {
+        useAuthStore.getState().checkSession();
+      }
     }
   }
 }
@@ -74,6 +81,8 @@ export default function RootLayout() {
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="auth" options={{ presentation: 'modal', title: 'Sign In' }} />
+        <Stack.Screen name="forgot-password" options={{ presentation: 'modal', title: 'Forgot Password' }} />
+        <Stack.Screen name="reset-password" options={{ presentation: 'modal', title: 'Reset Password', gestureEnabled: false }} />
         <Stack.Screen name="subscribe" options={{ presentation: 'modal', title: 'Subscribe' }} />
         <Stack.Screen name="games/play-crossword" options={{ headerShown: false }} />
         <Stack.Screen name="games/play-connections" options={{ headerShown: false }} />
