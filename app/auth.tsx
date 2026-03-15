@@ -1,4 +1,5 @@
 import { useAuthStore } from '@/stores/auth-store';
+import { TFL } from '@/constants/theme';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
@@ -18,11 +19,16 @@ export default function AuthScreen() {
     const { signIn, signUp } = useAuthStore();
 
     const [isSignUp, setIsSignUp] = useState(false);
+    const [username, setUsername] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
 
     const handleSubmit = async () => {
+        if (isSignUp && !username) {
+            Alert.alert('Error', 'Please enter a username');
+            return;
+        }
         if (!email || !password) {
             Alert.alert('Error', 'Please fill in all fields');
             return;
@@ -31,7 +37,7 @@ export default function AuthScreen() {
         setLoading(true);
         try {
             if (isSignUp) {
-                await signUp(email, password);
+                await signUp(email, password, username);
                 Alert.alert('Success', 'Account created! Please check your email to verify.');
             } else {
                 await signIn(email, password);
@@ -53,16 +59,38 @@ export default function AuthScreen() {
             style={styles.container}
         >
             <View style={styles.content}>
-                <Text style={styles.logo}>🎮 TubeRush</Text>
+                {/* Logo */}
+                <View style={styles.logoContainer}>
+                    <View style={styles.roundel}>
+                        <View style={styles.roundelInner} />
+                        <View style={styles.roundelBar} />
+                    </View>
+                </View>
+
+                <Text style={styles.title}>TubeRush</Text>
                 <Text style={styles.subtitle}>
                     {isSignUp ? 'Create your account' : 'Welcome back!'}
                 </Text>
 
                 <View style={styles.form}>
+                    {isSignUp && (
+                        <TextInput
+                            testID="auth-username-input"
+                            style={styles.input}
+                            placeholder="Username"
+                            placeholderTextColor="#9CA3AF"
+                            value={username}
+                            onChangeText={setUsername}
+                            autoCapitalize="none"
+                            autoComplete="username"
+                        />
+                    )}
+
                     <TextInput
                         testID="auth-email-input"
                         style={styles.input}
                         placeholder="Email"
+                        placeholderTextColor="#9CA3AF"
                         value={email}
                         onChangeText={setEmail}
                         autoCapitalize="none"
@@ -74,11 +102,22 @@ export default function AuthScreen() {
                         testID="auth-password-input"
                         style={styles.input}
                         placeholder="Password"
+                        placeholderTextColor="#9CA3AF"
                         value={password}
                         onChangeText={setPassword}
                         secureTextEntry
                         autoComplete="password"
                     />
+
+                    {!isSignUp && (
+                        <TouchableOpacity
+                            testID="auth-forgot-password-button"
+                            onPress={() => router.push('/forgot-password')}
+                            disabled={loading}
+                        >
+                            <Text style={styles.forgotPasswordText}>Forgot password?</Text>
+                        </TouchableOpacity>
+                    )}
 
                     <TouchableOpacity
                         testID="auth-submit-button"
@@ -94,17 +133,6 @@ export default function AuthScreen() {
                             </Text>
                         )}
                     </TouchableOpacity>
-
-                    {!isSignUp && (
-                        <TouchableOpacity
-                            testID="auth-forgot-password-button"
-                            style={styles.switchButton}
-                            onPress={() => router.push('/forgot-password')}
-                            disabled={loading}
-                        >
-                            <Text style={styles.switchText}>Forgot password?</Text>
-                        </TouchableOpacity>
-                    )}
 
                     <TouchableOpacity
                         testID="auth-switch-button"
@@ -127,55 +155,88 @@ export default function AuthScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#ecf0f1',
+        backgroundColor: '#FFFFFF',
     },
     content: {
         flex: 1,
         justifyContent: 'center',
         paddingHorizontal: 30,
     },
-    logo: {
-        fontSize: 48,
+    logoContainer: {
+        alignItems: 'center',
+        marginBottom: 16,
+    },
+    roundel: {
+        width: 64,
+        height: 64,
+        borderRadius: 32,
+        backgroundColor: TFL.red,
+        justifyContent: 'center',
+        alignItems: 'center',
+        position: 'relative',
+    },
+    roundelInner: {
+        width: 42,
+        height: 42,
+        borderRadius: 21,
+        backgroundColor: '#FFFFFF',
+    },
+    roundelBar: {
+        position: 'absolute',
+        width: 64,
+        height: 10,
+        backgroundColor: TFL.blue,
+    },
+    title: {
+        fontSize: 32,
+        fontWeight: '700',
         textAlign: 'center',
-        marginBottom: 10,
+        color: '#111111',
+        marginBottom: 8,
     },
     subtitle: {
-        fontSize: 24,
+        fontSize: 22,
         textAlign: 'center',
-        marginBottom: 40,
-        color: '#2c3e50',
-        fontWeight: '600',
+        marginBottom: 32,
+        color: TFL.blue,
+        fontWeight: '500',
     },
     form: {
-        gap: 15,
+        gap: 14,
     },
     input: {
-        backgroundColor: '#fff',
+        backgroundColor: '#FFFFFF',
         paddingHorizontal: 20,
-        paddingVertical: 15,
-        borderRadius: 10,
+        paddingVertical: 16,
+        borderRadius: 12,
         fontSize: 16,
         borderWidth: 1,
-        borderColor: '#ddd',
+        borderColor: '#E5E7EB',
+        color: '#111111',
+    },
+    forgotPasswordText: {
+        color: TFL.blue,
+        fontSize: 14,
+        textAlign: 'right',
     },
     button: {
-        backgroundColor: '#3498db',
-        paddingVertical: 15,
-        borderRadius: 10,
+        backgroundColor: TFL.blue,
+        paddingVertical: 16,
+        borderRadius: 12,
         alignItems: 'center',
-        marginTop: 10,
+        marginTop: 4,
     },
     buttonText: {
-        color: '#fff',
+        color: '#FFFFFF',
         fontSize: 18,
-        fontWeight: 'bold',
+        fontWeight: '600',
     },
     switchButton: {
         paddingVertical: 10,
         alignItems: 'center',
     },
     switchText: {
-        color: '#3498db',
+        color: TFL.blue,
         fontSize: 14,
     },
 });

@@ -5,6 +5,7 @@ export type GameType = 'connections' | 'crossword';
 export interface User {
     id: string;
     email: string;
+    username?: string;
     isPremium: boolean;
     subscriptionId?: string;
     subscriptionStatus?: 'active' | 'canceled' | 'past_due';

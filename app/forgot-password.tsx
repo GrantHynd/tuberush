@@ -1,4 +1,5 @@
 import { useAuthStore } from '@/stores/auth-store';
+import { TFL } from '@/constants/theme';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
@@ -44,7 +45,15 @@ export default function ForgotPasswordScreen() {
         return (
             <View style={styles.container}>
                 <View style={styles.content}>
-                    <Text style={styles.logo}>📧</Text>
+                    {/* Logo */}
+                    <View style={styles.logoContainer}>
+                        <View style={styles.roundel}>
+                            <View style={styles.roundelInner} />
+                            <View style={styles.roundelBar} />
+                        </View>
+                    </View>
+
+                    <Text style={styles.title}>TubeRush</Text>
                     <Text style={styles.subtitle}>Check your email</Text>
                     <Text style={styles.description}>
                         We sent a password reset link to {email}. Tap the link in the email to
@@ -67,7 +76,15 @@ export default function ForgotPasswordScreen() {
             style={styles.container}
         >
             <View style={styles.content}>
-                <Text style={styles.logo}>🔑</Text>
+                {/* Logo */}
+                <View style={styles.logoContainer}>
+                    <View style={styles.roundel}>
+                        <View style={styles.roundelInner} />
+                        <View style={styles.roundelBar} />
+                    </View>
+                </View>
+
+                <Text style={styles.title}>TubeRush</Text>
                 <Text style={styles.subtitle}>Forgot password?</Text>
                 <Text style={styles.description}>
                     Enter your email address and we{"'"}ll send you a link to reset your password.
@@ -78,6 +95,7 @@ export default function ForgotPasswordScreen() {
                         testID="forgot-password-email-input"
                         style={styles.input}
                         placeholder="Email"
+                        placeholderTextColor="#9CA3AF"
                         value={email}
                         onChangeText={setEmail}
                         autoCapitalize="none"
@@ -95,7 +113,7 @@ export default function ForgotPasswordScreen() {
                         {loading ? (
                             <ActivityIndicator color="#fff" />
                         ) : (
-                            <Text style={styles.buttonText}>Send Reset Link</Text>
+                            <Text style={styles.buttonText}>Reset Password</Text>
                         )}
                     </TouchableOpacity>
 
@@ -115,62 +133,90 @@ export default function ForgotPasswordScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#ecf0f1',
+        backgroundColor: '#FFFFFF',
     },
     content: {
         flex: 1,
         justifyContent: 'center',
         paddingHorizontal: 30,
     },
-    logo: {
-        fontSize: 48,
+    logoContainer: {
+        alignItems: 'center',
+        marginBottom: 16,
+    },
+    roundel: {
+        width: 64,
+        height: 64,
+        borderRadius: 32,
+        backgroundColor: TFL.red,
+        justifyContent: 'center',
+        alignItems: 'center',
+        position: 'relative',
+    },
+    roundelInner: {
+        width: 42,
+        height: 42,
+        borderRadius: 21,
+        backgroundColor: '#FFFFFF',
+    },
+    roundelBar: {
+        position: 'absolute',
+        width: 64,
+        height: 10,
+        backgroundColor: TFL.blue,
+    },
+    title: {
+        fontSize: 32,
+        fontWeight: '700',
         textAlign: 'center',
-        marginBottom: 10,
+        color: '#111111',
+        marginBottom: 8,
     },
     subtitle: {
-        fontSize: 24,
+        fontSize: 22,
         textAlign: 'center',
         marginBottom: 12,
-        color: '#2c3e50',
-        fontWeight: '600',
+        color: TFL.blue,
+        fontWeight: '500',
     },
     description: {
         fontSize: 16,
         textAlign: 'center',
-        marginBottom: 30,
-        color: '#7f8c8d',
+        marginBottom: 24,
+        color: '#6B7280',
         lineHeight: 22,
     },
     form: {
-        gap: 15,
+        gap: 14,
     },
     input: {
-        backgroundColor: '#fff',
+        backgroundColor: '#FFFFFF',
         paddingHorizontal: 20,
-        paddingVertical: 15,
-        borderRadius: 10,
+        paddingVertical: 16,
+        borderRadius: 12,
         fontSize: 16,
         borderWidth: 1,
-        borderColor: '#ddd',
+        borderColor: '#E5E7EB',
+        color: '#111111',
     },
     button: {
-        backgroundColor: '#3498db',
-        paddingVertical: 15,
-        borderRadius: 10,
+        backgroundColor: TFL.blue,
+        paddingVertical: 16,
+        borderRadius: 12,
         alignItems: 'center',
-        marginTop: 10,
+        marginTop: 4,
     },
     buttonText: {
-        color: '#fff',
+        color: '#FFFFFF',
         fontSize: 18,
-        fontWeight: 'bold',
+        fontWeight: '600',
     },
     switchButton: {
         paddingVertical: 10,
         alignItems: 'center',
     },
     switchText: {
-        color: '#3498db',
+        color: TFL.blue,
         fontSize: 14,
     },
 });
