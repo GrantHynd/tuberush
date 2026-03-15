@@ -63,7 +63,6 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
                 clues: cluesMap,
                 userAnswers: {},
                 completed: false,
-                startTime: Date.now(),
             };
         }
 
