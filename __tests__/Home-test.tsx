@@ -30,15 +30,11 @@ describe('HomeScreen', () => {
 
     const { getByText } = render(<HomeScreen />);
 
-    // Check for welcome text for non-logged in user
-    expect(getByText('Mind the Gap. Play the Game.')).toBeTruthy();
-
-    // Check for "Sign In / Register" button
-    expect(getByText('Sign In / Register')).toBeTruthy();
-
-    // Check if games are rendered
+    // Check for header and games
+    expect(getByText('TubeRush')).toBeTruthy();
+    expect(getByText('Beat the commute')).toBeTruthy();
     expect(getByText('Connections')).toBeTruthy();
-    expect(getByText('Crossword Puzzle')).toBeTruthy();
+    expect(getByText('Crossword')).toBeTruthy();
   });
 
   it('renders correctly when logged in', () => {
@@ -49,10 +45,13 @@ describe('HomeScreen', () => {
 
     const { getByText, queryByText } = render(<HomeScreen />);
 
-    // Check for welcome back message
-    expect(getByText('Welcome back, test!')).toBeTruthy();
+    // Check for header and games
+    expect(getByText('TubeRush')).toBeTruthy();
+    expect(getByText('Beat the commute')).toBeTruthy();
+    expect(getByText('Connections')).toBeTruthy();
+    expect(getByText('Crossword')).toBeTruthy();
 
-    // Check "Sign In / Register" button is NOT present
+    // Check "Sign In / Register" button is NOT present (no welcome section in new design)
     expect(queryByText('Sign In / Register')).toBeNull();
   });
 
@@ -89,7 +88,7 @@ describe('HomeScreen', () => {
 
     const { getByText } = render(<HomeScreen />);
 
-    const gameTitle = getByText('Crossword Puzzle');
+    const gameTitle = getByText('Crossword');
     fireEvent.press(gameTitle);
 
     expect(mockPush).toHaveBeenCalledWith('/subscribe');
@@ -102,7 +101,7 @@ describe('HomeScreen', () => {
 
     const { getByText } = render(<HomeScreen />);
 
-    const gameTitle = getByText('Crossword Puzzle');
+    const gameTitle = getByText('Crossword');
     fireEvent.press(gameTitle);
 
     expect(mockPush).toHaveBeenCalledWith('/games/play-crossword');

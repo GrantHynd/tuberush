@@ -1,4 +1,5 @@
 import { Crossword } from '@/components/games/Crossword';
+import { HeaderBackButton } from '@/components/ui/HeaderBackButton';
 import { useAuthStore } from '@/stores/auth-store';
 import { useGameStore } from '@/stores/game-store';
 import { Colors } from '@/constants/theme';
@@ -12,6 +13,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function PlayCrossword() {
     const router = useRouter();
@@ -83,16 +85,20 @@ export default function PlayCrossword() {
 
     if (!gameState) {
         return (
-            <View style={styles.container}>
-                <Text>Loading...</Text>
-            </View>
+            <SafeAreaView style={styles.container} edges={['top']}>
+                <HeaderBackButton title="Crossword" />
+                <View style={styles.centered}>
+                    <Text>Loading...</Text>
+                </View>
+            </SafeAreaView>
         );
     }
 
     const state = gameState.state as CrosswordState;
 
     return (
-        <View style={styles.container}>
+        <SafeAreaView style={styles.container} edges={['top']}>
+            <HeaderBackButton title="Crossword" />
             <Crossword
                 gameState={state}
                 onCellChange={handleCellChange}
@@ -113,7 +119,7 @@ export default function PlayCrossword() {
                     <Text style={styles.buttonTextSecondary}>Back to Home</Text>
                 </TouchableOpacity>
             </View>
-        </View>
+        </SafeAreaView>
     );
 }
 
@@ -121,6 +127,11 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: Colors.light.background,
+    },
+    centered: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     actions: {
         padding: 20,

@@ -1,171 +1,248 @@
-import { GameCard } from '@/components/ui/GameCard';
-import { SyncIndicator } from '@/components/ui/SyncIndicator';
 import { GAMES } from '@/constants/Games';
+import { Colors, Layout, Spacing, TFL, Typography } from '@/constants/theme';
 import { useAuthStore } from '@/stores/auth-store';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { ScrollView, StyleSheet, Text, View, TouchableOpacity } from 'react-native';
+import {
+    Dimensions,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Colors, TFL, Typography, Spacing, Layout } from '@/constants/theme';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const CARD_GAP = 12;
+const HORIZONTAL_PADDING = 20;
+const CARD_WIDTH = (SCREEN_WIDTH - HORIZONTAL_PADDING * 2 - CARD_GAP) / 2;
 
 export default function HomeScreen() {
-  const router = useRouter();
-  const { user } = useAuthStore();
+    const router = useRouter();
+    const { user } = useAuthStore();
 
-  const handleGamePress = (gameId: string, isPremium: boolean) => {
-    if (!user) {
-      router.push('/auth');
-      return;
-    }
+    const handleGamePress = (gameId: string, isPremium: boolean) => {
+        if (!user) {
+            router.push('/auth');
+            return;
+        }
 
-    if (isPremium && !user.isPremium) {
-       router.push('/subscribe');
-       return;
-    }
+        if (isPremium && !user.isPremium) {
+            router.push('/subscribe');
+            return;
+        }
 
-    router.push(`/games/play-${gameId}` as any);
-  };
+        router.push(`/games/play-${gameId}` as never);
+    };
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Header */}
-        <View style={styles.header}>
-            <View style={styles.logoContainer}>
-                <View style={styles.roundel}>
-                    <View style={styles.roundelInner} />
-                    <View style={styles.roundelBar} />
+    return (
+        <SafeAreaView style={styles.container} edges={['top']}>
+            <ScrollView
+                contentContainerStyle={styles.scrollContent}
+                showsVerticalScrollIndicator={false}
+            >
+                {/* Header */}
+                <View style={styles.header}>
+                    <View style={styles.brandRow}>
+                        <View style={styles.roundel}>
+                            <View style={styles.roundelInner} />
+                            <View style={styles.roundelBar} />
+                        </View>
+                        <View>
+                            <Text style={styles.title}>TubeRush</Text>
+                            <Text style={styles.tagline}>Beat the commute</Text>
+                        </View>
+                    </View>
+                    <TouchableOpacity
+                        onPress={() => router.push(user ? '/profile' : '/auth')}
+                        style={styles.avatarButton}
+                        accessibilityRole="button"
+                        accessibilityLabel={user ? 'Profile' : 'Sign in'}
+                    >
+                        <View style={styles.avatar}>
+                            <Text style={styles.avatarText}>
+                                {user?.email?.[0]?.toUpperCase() ?? '?'}
+                            </Text>
+                        </View>
+                    </TouchableOpacity>
                 </View>
-                <Text style={styles.title}>TubeRush</Text>
-            </View>
-            <SyncIndicator />
-        </View>
 
-        {/* Welcome / Promo */}
-        <View style={styles.welcomeSection}>
-            <Text style={styles.welcomeText}>
-                {user ? `Welcome back, ${user.email?.split('@')[0]}!` : 'Mind the Gap. Play the Game.'}
-            </Text>
-            {!user && (
-                <TouchableOpacity style={styles.signInButton} onPress={() => router.push('/auth')}>
-                    <Text style={styles.signInText}>Sign In / Register</Text>
-                </TouchableOpacity>
-            )}
-        </View>
+                {/* Game Cards - side by side */}
+                <View style={styles.cardsRow}>
+                    {/* Connections */}
+                    <TouchableOpacity
+                        testID="game-card-connections"
+                        style={[styles.gameCard, styles.connectionsCard]}
+                        onPress={() => handleGamePress('connections', false)}
+                        activeOpacity={0.85}
+                        accessibilityRole="button"
+                        accessibilityLabel="Connections, 12.4k live"
+                    >
+                        <MaterialIcons
+                            name="hub"
+                            size={36}
+                            color="white"
+                            style={styles.cardIcon}
+                        />
+                        <Text style={styles.cardTitle}>Connections</Text>
+                        <View style={styles.liveRow}>
+                            <View style={styles.liveDot} />
+                            <Text style={styles.liveText}>12.4k live</Text>
+                        </View>
+                    </TouchableOpacity>
 
-        {/* Games Grid */}
-        <View style={styles.gamesSection}>
-            <Text style={styles.sectionTitle}>Daily Challenges</Text>
-
-            {Object.values(GAMES).map((game) => (
-                <GameCard
-                    key={game.id}
-                    id={game.id}
-                    title={game.name}
-                    description={game.description}
-                    icon={game.icon}
-                    isPremium={game.isPremium}
-                    isLocked={game.isPremium && !user?.isPremium}
-                    color={game.color}
-                    onPress={() => handleGamePress(game.id, game.isPremium)}
-                />
-            ))}
-        </View>
-
-        {/* Footer */}
-        <View style={styles.footer}>
-             <Text style={styles.footerText}>Transport for London inspired games</Text>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
-  );
+                    {/* Crossword */}
+                    <TouchableOpacity
+                        testID="game-card-crossword"
+                        style={[styles.gameCard, styles.crosswordCard]}
+                        onPress={() => handleGamePress('crossword', true)}
+                        activeOpacity={0.85}
+                        accessibilityRole="button"
+                        accessibilityLabel="Crossword Puzzle, Premium"
+                    >
+                        <View style={styles.crownBadge}>
+                            <MaterialIcons name="star" size={18} color="#FFD700" />
+                        </View>
+                        <MaterialIcons
+                            name="grid-on"
+                            size={36}
+                            color="white"
+                            style={styles.cardIcon}
+                        />
+                        <Text style={styles.cardTitle}>Crossword</Text>
+                        <Text style={styles.premiumLabel}>Premium</Text>
+                    </TouchableOpacity>
+                </View>
+            </ScrollView>
+        </SafeAreaView>
+    );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.light.background,
-  },
-  scrollContent: {
-    paddingBottom: Spacing.xl,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.light.border,
-  },
-  logoContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  roundel: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: TFL.red,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: Spacing.sm,
-    position: 'relative',
-  },
-  roundelInner: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: 'white',
-  },
-  roundelBar: {
-    position: 'absolute',
-    width: 36,
-    height: 6,
-    backgroundColor: TFL.blue,
-  },
-  title: {
-    ...Typography.h2,
-    color: TFL.blue,
-    letterSpacing: -0.5,
-  },
-  welcomeSection: {
-    padding: Spacing.lg,
-    backgroundColor: Colors.light.card,
-    margin: Spacing.md,
-    borderRadius: Layout.borderRadius.md,
-    alignItems: 'center',
-  },
-  welcomeText: {
-    ...Typography.h3,
-    marginBottom: Spacing.md,
-    textAlign: 'center',
-  },
-  signInButton: {
-    backgroundColor: TFL.black,
-    paddingHorizontal: Spacing.xl,
-    paddingVertical: Spacing.sm,
-    borderRadius: Layout.borderRadius.sm,
-  },
-  signInText: {
-    color: 'white',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  gamesSection: {
-    paddingHorizontal: Spacing.md,
-  },
-  sectionTitle: {
-    ...Typography.h3,
-    marginBottom: Spacing.md,
-    marginLeft: Spacing.xs,
-  },
-  footer: {
-    marginTop: Spacing.xxl,
-    alignItems: 'center',
-  },
-  footerText: {
-    ...Typography.caption,
-    opacity: 0.6,
-  },
+    container: {
+        flex: 1,
+        backgroundColor: Colors.light.background,
+    },
+    scrollContent: {
+        paddingHorizontal: HORIZONTAL_PADDING,
+        paddingBottom: Spacing.xl,
+    },
+    header: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingVertical: Spacing.lg,
+    },
+    brandRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    roundel: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: TFL.red,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: Spacing.sm,
+        position: 'relative',
+    },
+    roundelInner: {
+        width: 26,
+        height: 26,
+        borderRadius: 13,
+        backgroundColor: 'white',
+    },
+    roundelBar: {
+        position: 'absolute',
+        width: 40,
+        height: 6,
+        backgroundColor: TFL.blue,
+    },
+    title: {
+        ...Typography.h2,
+        fontSize: 24,
+        color: Colors.light.text,
+        letterSpacing: -0.5,
+    },
+    tagline: {
+        fontSize: 14,
+        color: TFL.grey.dark,
+        marginTop: 2,
+    },
+    avatarButton: {
+        padding: 4,
+    },
+    avatar: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: TFL.blue,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    avatarText: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: 'white',
+    },
+    cardsRow: {
+        flexDirection: 'row',
+        gap: CARD_GAP,
+        marginTop: Spacing.sm,
+    },
+    gameCard: {
+        width: CARD_WIDTH,
+        borderRadius: Layout.borderRadius.lg,
+        padding: Spacing.md,
+        minHeight: 140,
+        ...Layout.shadow.md,
+    },
+    connectionsCard: {
+        backgroundColor: TFL.blue,
+    },
+    crosswordCard: {
+        backgroundColor: TFL.red,
+    },
+    crownBadge: {
+        position: 'absolute',
+        top: Spacing.sm,
+        right: Spacing.sm,
+        width: 24,
+        height: 24,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    cardIcon: {
+        marginTop: Spacing.sm,
+        marginBottom: Spacing.xs,
+    },
+    cardTitle: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: 'white',
+    },
+    liveRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: 4,
+        gap: 6,
+    },
+    liveDot: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: '#22C55E',
+    },
+    liveText: {
+        fontSize: 12,
+        color: 'rgba(255,255,255,0.9)',
+    },
+    premiumLabel: {
+        fontSize: 12,
+        color: 'rgba(255,255,255,0.9)',
+        marginTop: 4,
+    },
 });
