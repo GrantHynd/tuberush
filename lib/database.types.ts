@@ -82,7 +82,7 @@ export interface Database {
         Row: {
           id: string;
           user_id: string;
-          game_type: 'tictactoe' | 'crossword';
+          game_type: 'connections' | 'crossword' | 'tictactoe';
           state: Json;
           last_updated: string;
           version: number;
@@ -91,7 +91,7 @@ export interface Database {
         Insert: {
           id: string;
           user_id: string;
-          game_type: 'tictactoe' | 'crossword';
+          game_type: 'connections' | 'crossword' | 'tictactoe';
           state: Json;
           last_updated?: string;
           version?: number;
@@ -100,7 +100,7 @@ export interface Database {
         Update: {
           id?: string;
           user_id?: string;
-          game_type?: 'tictactoe' | 'crossword';
+          game_type?: 'connections' | 'crossword' | 'tictactoe';
           state?: Json;
           last_updated?: string;
           version?: number;

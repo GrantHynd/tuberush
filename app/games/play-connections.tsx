@@ -1,16 +1,16 @@
 import { Connections } from "@/components/games/Connections";
-import { HeaderBackButton } from "@/components/ui/HeaderBackButton";
 import { Leaderboard } from "@/components/ui/Leaderboard";
 import {
   ConnectionsPuzzle,
   getDailyPuzzle,
   getPuzzleByDate,
 } from "@/constants/ConnectionsData";
-import { Colors, Spacing, TFL } from "@/constants/theme";
+import { Colors, Spacing, TFL, Typography } from "@/constants/theme";
 import { leaderboard } from "@/lib/leaderboard";
 import { useAuthStore } from "@/stores/auth-store";
 import { useGameStore } from "@/stores/game-store";
 import { ConnectionsState } from "@/types/game";
+import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
@@ -23,6 +23,34 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+
+function formatDate(dateStr: string): string {
+  const date = new Date(dateStr + "T12:00:00");
+  const days = [
+    "Sunday",
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+  ];
+  const months = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
+  return `${days[date.getDay()]}, ${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
+}
 
 export default function PlayConnectionsScreen() {
   const router = useRouter();
@@ -41,8 +69,7 @@ export default function PlayConnectionsScreen() {
 
     const initGame = async () => {
       const puzzleDate = dateParam || new Date().toISOString().split("T")[0];
-      const targetPuzzle =
-        getPuzzleByDate(puzzleDate) ?? getDailyPuzzle();
+      const targetPuzzle = getPuzzleByDate(puzzleDate) ?? getDailyPuzzle();
       setPuzzle(targetPuzzle);
 
       const gameId = `connections_${user.id}_${targetPuzzle.date}`;
@@ -95,17 +122,24 @@ export default function PlayConnectionsScreen() {
             const endTime = Date.now();
             newState.endTime = endTime;
 
-            const timeTaken = Math.floor((endTime - newState.startTime) / 1000);
+            const timeTaken = Math.floor(
+              (endTime - newState.startTime) / 1000,
+            );
 
             if (user.borough) {
               leaderboard
                 .submitScore(user.id, user.borough, timeTaken, "connections")
-                .catch((err) => console.error("Failed to submit score", err));
+                .catch((err) =>
+                  console.error("Failed to submit score", err),
+                );
             }
           }
         }
       } else {
-        newState.mistakesRemaining = Math.max(0, state.mistakesRemaining - 1);
+        newState.mistakesRemaining = Math.max(
+          0,
+          state.mistakesRemaining - 1,
+        );
 
         if (newState.mistakesRemaining === 0) {
           newState.status = "lost";
@@ -124,10 +158,29 @@ export default function PlayConnectionsScreen() {
     [currentGame, puzzle, user, saveGame],
   );
 
+  const puzzleDate =
+    puzzle?.date || dateParam || new Date().toISOString().split("T")[0];
+
   if (loading || !puzzle || !currentGame) {
     return (
       <SafeAreaView style={styles.container} edges={["top"]}>
-        <HeaderBackButton title="Connections" />
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.backButton}
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+          >
+            <MaterialIcons
+              name="arrow-back"
+              size={24}
+              color={Colors.light.text}
+            />
+          </TouchableOpacity>
+          <View style={styles.headerText}>
+            <Text style={styles.headerTitle}>Connections</Text>
+          </View>
+        </View>
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={Colors.light.tint} />
         </View>
@@ -136,14 +189,36 @@ export default function PlayConnectionsScreen() {
   }
 
   const gameState = currentGame.state as ConnectionsState;
-  const isGameOver = gameState.status === "won" || gameState.status === "lost";
+  const isGameOver =
+    gameState.status === "won" || gameState.status === "lost";
   const timeTaken = gameState.endTime
     ? Math.floor((gameState.endTime - gameState.startTime) / 1000)
     : null;
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <HeaderBackButton title="Connections" />
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.backButton}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+        >
+          <MaterialIcons
+            name="arrow-back"
+            size={24}
+            color={Colors.light.text}
+          />
+        </TouchableOpacity>
+        <View style={styles.headerText}>
+          <Text style={styles.headerTitle}>Connections</Text>
+          <Text style={styles.headerSubtitle}>{formatDate(puzzleDate)}</Text>
+        </View>
+      </View>
+
+      {/* Instruction */}
+      <Text style={styles.instruction}>Create four groups of four!</Text>
 
       <Connections
         gameState={gameState}
@@ -208,6 +283,34 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.light.background,
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+  },
+  backButton: {
+    padding: Spacing.xs,
+    marginRight: Spacing.sm,
+  },
+  headerText: {
+    flexShrink: 1,
+  },
+  headerTitle: {
+    ...Typography.h1,
+    fontSize: 28,
+  },
+  headerSubtitle: {
+    fontSize: 15,
+    color: TFL.grey.dark,
+    marginTop: 2,
+  },
+  instruction: {
+    fontSize: 16,
+    color: TFL.grey.dark,
+    textAlign: "center",
+    paddingVertical: Spacing.sm,
   },
   centered: {
     flex: 1,

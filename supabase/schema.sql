@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS profiles (
 CREATE TABLE IF NOT EXISTS game_states (
   id TEXT PRIMARY KEY,
   user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
-  game_type TEXT NOT NULL CHECK (game_type IN ('tictactoe', 'crossword')),
+  game_type TEXT NOT NULL CHECK (game_type IN ('connections', 'crossword', 'tictactoe')),
   state JSONB NOT NULL,
   last_updated TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   version INTEGER DEFAULT 1,
