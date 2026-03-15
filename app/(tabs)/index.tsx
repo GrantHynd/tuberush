@@ -7,7 +7,7 @@ import type {
 } from '@/hooks/usePuzzleCarousel';
 import { Colors, Layout, Spacing, TFL, Typography } from '@/constants/theme';
 import { useAuthStore } from '@/stores/auth-store';
-import { useBoroughRank } from '@/hooks/useBoroughRank';
+import { useLocationRank } from '@/hooks/useLocationRank';
 import { usePuzzleCarousel } from '@/hooks/usePuzzleCarousel';
 import { useUserStats } from '@/hooks/useUserStats';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
@@ -39,7 +39,7 @@ export default function HomeScreen() {
         }, [refreshConnections, refreshCrossword])
     );
     const { stats } = useUserStats();
-    const { rank } = useBoroughRank();
+    const { rank } = useLocationRank();
 
     const handleGamePress = (gameId: string, isPremium: boolean) => {
         if (!user) {
@@ -180,13 +180,13 @@ export default function HomeScreen() {
                     </View>
                 </View>
 
-                {/* Your Borough section */}
+                {/* Your Area section */}
                 {rank && (
                     <TouchableOpacity
                         style={styles.boroughRow}
                         onPress={() => router.push('/(tabs)/trophy' as never)}
                         accessibilityRole="button"
-                        accessibilityLabel={`${rank.borough}, Rank #${rank.rank}`}
+                        accessibilityLabel={`${rank.location}, Rank #${rank.rank}`}
                     >
                         <MaterialIcons
                             name="location-on"
@@ -195,11 +195,11 @@ export default function HomeScreen() {
                             style={styles.boroughIcon}
                         />
                         <View style={styles.boroughContent}>
-                            <Text style={styles.boroughName}>{rank.borough}</Text>
+                            <Text style={styles.boroughName}>{rank.location}</Text>
                             <Text style={styles.boroughRank}>
                                 {rank.rank > 0
-                                    ? `Rank #${rank.rank} in your borough`
-                                    : 'No rank yet in your borough'}
+                                    ? `Rank #${rank.rank} in your area`
+                                    : 'No rank yet in your area'}
                             </Text>
                         </View>
                         <MaterialIcons

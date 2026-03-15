@@ -72,6 +72,7 @@ describe("PlayConnectionsScreen", () => {
     id: "user123",
     email: "test@example.com",
     isPremium: false,
+    city: "London",
     borough: "Westminster",
   };
 
@@ -340,6 +341,7 @@ describe("PlayConnectionsScreen", () => {
       await waitFor(() => {
         expect(leaderboard.submitScore).toHaveBeenCalledWith(
           "user123",
+          "London",
           "Westminster",
           expect.any(Number),
           "connections",
@@ -349,10 +351,10 @@ describe("PlayConnectionsScreen", () => {
       spy.mockRestore();
     });
 
-    it("does not submit score when user has no borough", async () => {
-      const userWithoutBorough = { ...mockUser, borough: undefined };
+    it("does not submit score when user has no city", async () => {
+      const userWithoutCity = { ...mockUser, city: undefined, borough: undefined };
       (useAuthStore as unknown as jest.Mock).mockReturnValue({
-        user: userWithoutBorough,
+        user: userWithoutCity,
       });
 
       const gameStateWithThreeGroups: ConnectionsState = {

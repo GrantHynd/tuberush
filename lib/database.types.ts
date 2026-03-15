@@ -14,6 +14,7 @@ export interface Database {
           id: string;
           email: string;
           is_premium: boolean;
+          city: string | null;
           borough: string | null;
           subscription_id: string | null;
           subscription_status: string | null;
@@ -26,6 +27,7 @@ export interface Database {
           id: string;
           email: string;
           is_premium?: boolean;
+          city?: string | null;
           borough?: string | null;
           subscription_id?: string | null;
           subscription_status?: string | null;
@@ -38,6 +40,7 @@ export interface Database {
           id?: string;
           email?: string;
           is_premium?: boolean;
+          city?: string | null;
           borough?: string | null;
           subscription_id?: string | null;
           subscription_status?: string | null;
@@ -52,7 +55,8 @@ export interface Database {
         Row: {
           id: string;
           user_id: string;
-          borough: string;
+          city: string;
+          borough: string | null;
           score: number;
           game_date: string;
           game_type: string;
@@ -61,7 +65,8 @@ export interface Database {
         Insert: {
           id?: string;
           user_id: string;
-          borough: string;
+          city: string;
+          borough?: string | null;
           score: number;
           game_date?: string;
           game_type: string;
@@ -70,7 +75,8 @@ export interface Database {
         Update: {
           id?: string;
           user_id?: string;
-          borough?: string;
+          city?: string;
+          borough?: string | null;
           score?: number;
           game_date?: string;
           game_type?: string;

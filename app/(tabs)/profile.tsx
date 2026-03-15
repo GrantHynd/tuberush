@@ -1,4 +1,5 @@
 import { HeaderBackButton } from '@/components/ui/HeaderBackButton';
+import { SearchSelect } from '@/components/ui/SearchSelect';
 import { useAuthStore } from '@/stores/auth-store';
 import { useGameStore } from '@/stores/game-store';
 import { useRouter } from 'expo-router';
@@ -16,14 +17,25 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, TFL, Typography, Spacing, Layout } from '@/constants/theme';
 import { BOROUGHS, Borough } from '@/constants/Boroughs';
+import { UK_CITIES, isLondon } from '@/constants/UKCities';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import Constants from 'expo-constants';
+
+function getLocationDisplayValue(user: { city?: string | null; borough?: string | null }): string {
+    if (!user.city) return 'Not set';
+    if (isLondon(user.city) && user.borough) {
+        return `London, ${user.borough}`;
+    }
+    return user.city;
+}
 
 export default function ProfileScreen() {
     const router = useRouter();
     const { user, signOut, updateProfile } = useAuthStore();
     const { syncNow } = useGameStore();
-    const [boroughModalVisible, setBoroughModalVisible] = useState(false);
+    const [locationModalVisible, setLocationModalVisible] = useState(false);
+    const [locationStep, setLocationStep] = useState<'city' | 'borough'>('city');
+    const [selectedCity, setSelectedCity] = useState<string | null>(null);
 
     const handleSignOut = () => {
         Alert.alert(
@@ -48,13 +60,44 @@ export default function ProfileScreen() {
         Alert.alert('Sync', 'Sync completed!');
     };
 
-    const handleBoroughSelect = async (borough: Borough) => {
-        try {
-            await updateProfile({ borough });
-            setBoroughModalVisible(false);
-        } catch {
-            Alert.alert('Error', 'Failed to update borough');
+    const handleCitySelect = (city: string) => {
+        if (isLondon(city)) {
+            setSelectedCity(city);
+            setLocationStep('borough');
+        } else {
+            handleLocationComplete(city, null);
         }
+    };
+
+    const handleBoroughSelect = async (borough: Borough) => {
+        handleLocationComplete('London', borough);
+    };
+
+    const handleLocationComplete = async (city: string, borough: Borough | null) => {
+        try {
+            await updateProfile({ city, borough });
+            setLocationModalVisible(false);
+            setLocationStep('city');
+            setSelectedCity(null);
+        } catch (err) {
+            console.error('Failed to update location:', err);
+            Alert.alert(
+                'Error',
+                'Failed to update location. The database may need the city column added. Run the migration in your Supabase project (see supabase/README.md).'
+            );
+        }
+    };
+
+    const handleLocationModalClose = () => {
+        setLocationModalVisible(false);
+        setLocationStep('city');
+        setSelectedCity(null);
+    };
+
+    const openLocationModal = () => {
+        setLocationStep('city');
+        setSelectedCity(null);
+        setLocationModalVisible(true);
     };
 
     if (!user) {
@@ -84,6 +127,8 @@ export default function ProfileScreen() {
         return user?.isPremium ? '1st Class' : 'Free';
     };
 
+    const showBoroughStep = locationModalVisible && locationStep === 'borough';
+
     return (
         <SafeAreaView style={styles.container} edges={['top']}>
         <ScrollView style={styles.scrollContainer}>
@@ -105,11 +150,20 @@ export default function ProfileScreen() {
                 <View style={styles.card}>
                     <TouchableOpacity
                         style={styles.cardRow}
-                        onPress={() => setBoroughModalVisible(true)}
+                        onPress={openLocationModal}
+                        accessibilityRole="button"
+                        accessibilityLabel={`City or town: ${getLocationDisplayValue(user)}`}
                     >
-                        <Text style={styles.rowLabel}>London Borough</Text>
+                        <Text style={styles.rowLabel}>City/Town</Text>
                         <View style={styles.rowRight}>
-                            <Text style={styles.rowValue}>{user.borough || 'Islington'}</Text>
+                            <Text
+                                style={styles.rowValueTruncatable}
+                                numberOfLines={1}
+                                ellipsizeMode="tail"
+                                accessibilityLabel={getLocationDisplayValue(user)}
+                            >
+                                {getLocationDisplayValue(user)}
+                            </Text>
                             <IconSymbol name="chevron.right" size={20} color={Colors.light.icon} />
                         </View>
                     </TouchableOpacity>
@@ -122,7 +176,9 @@ export default function ProfileScreen() {
                 <View style={styles.card}>
                     <View style={styles.cardRow}>
                         <Text style={styles.rowLabel}>Membership</Text>
-                        <Text style={styles.rowValue}>{getMembershipTier()}</Text>
+                        <Text style={styles.rowValueTruncatable} numberOfLines={1} ellipsizeMode="tail">
+                            {getMembershipTier()}
+                        </Text>
                     </View>
                     
                     <View style={styles.cardDivider} />
@@ -130,8 +186,10 @@ export default function ProfileScreen() {
                     <View style={styles.cardRow}>
                         <Text style={styles.rowLabel}>Sync Status</Text>
                         <View style={styles.rowRight}>
-                            <Text style={styles.rowValue}>Synced</Text>
-                            <TouchableOpacity onPress={handleSync} style={styles.syncButton}>
+                            <Text style={styles.rowValueTruncatable} numberOfLines={1} ellipsizeMode="tail">
+                                Synced
+                            </Text>
+                            <TouchableOpacity onPress={handleSync} style={styles.syncButton} accessibilityLabel="Sync now">
                                 <IconSymbol name="arrow.clockwise" size={20} color={Colors.light.tint} />
                             </TouchableOpacity>
                         </View>
@@ -150,32 +208,57 @@ export default function ProfileScreen() {
 
             <Text style={styles.version}>TubeRush v{Constants.expoConfig?.version || '1.0.0'}</Text>
 
+            {!showBoroughStep && (
+                <SearchSelect
+                    options={[...UK_CITIES]}
+                    value={user.city ?? null}
+                    onSelect={handleCitySelect}
+                    placeholder="Search cities..."
+                    accessibilityLabel="Search and select your city or town"
+                    modalTitle="Select City/Town"
+                    visible={locationModalVisible}
+                    onClose={handleLocationModalClose}
+                    closeOnSelect={(city) => !isLondon(city)}
+                />
+            )}
+
             <Modal
-                visible={boroughModalVisible}
+                visible={showBoroughStep}
                 animationType="slide"
                 presentationStyle="pageSheet"
+                onRequestClose={handleLocationModalClose}
             >
                 <SafeAreaView style={styles.modalContainer}>
                     <View style={styles.modalHeader}>
                         <Text style={styles.modalTitle}>Select Borough</Text>
-                        <TouchableOpacity onPress={() => setBoroughModalVisible(false)}>
+                        <TouchableOpacity
+                            onPress={handleLocationModalClose}
+                            accessibilityRole="button"
+                            accessibilityLabel="Close"
+                        >
                             <Text style={styles.closeButton}>Close</Text>
                         </TouchableOpacity>
                     </View>
                     <FlatList
                         data={BOROUGHS}
                         keyExtractor={(item) => item}
+                        accessibilityRole="list"
                         renderItem={({ item }) => (
                             <TouchableOpacity
                                 style={styles.boroughItem}
                                 onPress={() => handleBoroughSelect(item)}
+                                accessibilityRole="button"
+                                accessibilityLabel={item}
+                                accessibilityState={{
+                                    selected: user.borough === item,
+                                }}
                             >
                                 <Text style={[
                                     styles.boroughText,
                                     user.borough === item && styles.selectedBoroughText
                                 ]}>{item}</Text>
                                 {user.borough === item && (
-                                    <IconSymbol name="chevron.right" size={20} color={Colors.light.tint} /> // Use checkmark if available
+                                    <IconSymbol name="checkmark.circle.fill" size={22} color={Colors.light.tint} />
                                 )}
                             </TouchableOpacity>
                         )}
@@ -270,19 +353,31 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: Colors.light.text,
         fontWeight: '500',
+        flexShrink: 0,
     },
     rowValue: {
         fontSize: 16,
         color: Colors.light.icon,
         fontWeight: '400',
     },
+    rowValueTruncatable: {
+        fontSize: 16,
+        color: Colors.light.icon,
+        fontWeight: '400',
+        flex: 1,
+        minWidth: 0,
+        textAlign: 'right',
+    },
     rowRight: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 8,
+        gap: Spacing.sm,
+        flex: 1,
+        minWidth: 0,
     },
     syncButton: {
         marginLeft: 4,
+        flexShrink: 0,
     },
     signOutButton: {
         marginTop: Spacing.xl,
@@ -370,6 +465,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
+        minHeight: 56,
     },
     boroughText: {
         fontSize: 16,

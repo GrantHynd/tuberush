@@ -1,16 +1,37 @@
 import { supabase } from './supabase-client';
 import { LeaderboardEntry, GameType } from '@/types/game';
 import { Borough } from '@/constants/Boroughs';
+import type { User } from '@/types/game';
+
+export type LeaderboardFilter = 'all' | 'london' | 'area';
+
+/** Display string for a leaderboard entry: London → borough, else → city */
+export function getLocationDisplay(entry: {
+    city?: string | null;
+    borough?: string | null;
+}): string {
+    const city = entry.city ?? null;
+    const borough = entry.borough ?? null;
+    if (city === 'London' && borough) {
+        return borough;
+    }
+    return city || borough || '—';
+}
 
 export const leaderboard = {
     /**
      * Submit a score to the leaderboard.
      * Only updates if the new score is better (lower time) or if no score exists for today.
      */
-    async submitScore(userId: string, borough: Borough, score: number, gameType: GameType) {
+    async submitScore(
+        userId: string,
+        city: string,
+        borough: Borough | null,
+        score: number,
+        gameType: GameType
+    ) {
         const today = new Date().toISOString().split('T')[0];
 
-        // Check if score exists for today
         const { data: existingScore } = await supabase
             .from('leaderboard')
             .select('*')
@@ -19,51 +40,60 @@ export const leaderboard = {
             .eq('game_type', gameType)
             .single();
 
+        const payload = { city, borough, score };
+
         if (existingScore) {
-            // Update only if better (lower time)
             if (score < existingScore.score) {
                 const { error } = await supabase
                     .from('leaderboard')
-                    .update({ score, borough }) // Update borough in case user moved
+                    .update(payload)
                     .eq('id', existingScore.id);
 
                 if (error) throw error;
             }
         } else {
-            // Insert new score
-            const { error } = await supabase
-                .from('leaderboard')
-                .insert({
-                    user_id: userId,
-                    borough,
-                    score,
-                    game_type: gameType,
-                    game_date: today,
-                });
+            const { error } = await supabase.from('leaderboard').insert({
+                user_id: userId,
+                ...payload,
+                game_type: gameType,
+                game_date: today,
+            });
 
             if (error) throw error;
         }
     },
 
     /**
-     * Get leaderboard for a specific game and date, optionally filtered by borough.
+     * Get leaderboard for a specific game and date, with optional filter.
      */
-    async getLeaderboard(gameType: GameType, date?: string, borough?: Borough) {
+    async getLeaderboard(
+        gameType: GameType,
+        date?: string,
+        filter?: LeaderboardFilter,
+        user?: User | null
+    ) {
         const queryDate = date || new Date().toISOString().split('T')[0];
 
         let query = supabase
             .from('leaderboard')
-            .select(`
+            .select(
+                `
                 *,
                 profiles:user_id (email)
-            `)
+            `
+            )
             .eq('game_date', queryDate)
             .eq('game_type', gameType)
             .order('score', { ascending: true })
             .limit(50);
 
-        if (borough) {
-            query = query.eq('borough', borough);
+        if (filter === 'london') {
+            query = query.eq('city', 'London');
+        } else if (filter === 'area' && user?.city) {
+            query = query.eq('city', user.city);
+            if (user.city === 'London' && user.borough) {
+                query = query.eq('borough', user.borough);
+            }
         }
 
         const { data, error } = await query;
@@ -75,11 +105,17 @@ export const leaderboard = {
     /**
      * Get user's rank for today.
      */
-    async getUserRank(userId: string, gameType: GameType, date?: string, borough?: Borough) {
-        const data = await this.getLeaderboard(gameType, date, borough);
+    async getUserRank(
+        userId: string,
+        gameType: GameType,
+        date?: string,
+        filter?: LeaderboardFilter,
+        user?: User | null
+    ) {
+        const data = await this.getLeaderboard(gameType, date, filter, user);
         const index = data.findIndex(
             (entry: { user_id?: string; userId?: string }) =>
-                (entry.user_id ?? entry.userId) === userId,
+                (entry.user_id ?? entry.userId) === userId
         );
         return index !== -1 ? index + 1 : null;
     },

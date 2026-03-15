@@ -35,8 +35,8 @@ jest.mock('@/hooks/useUserStats', () => ({
   })),
 }));
 
-jest.mock('@/hooks/useBoroughRank', () => ({
-  useBoroughRank: jest.fn(() => ({
+jest.mock('@/hooks/useLocationRank', () => ({
+  useLocationRank: jest.fn(() => ({
     rank: null,
     loading: false,
     refresh: jest.fn(),

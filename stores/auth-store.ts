@@ -1,8 +1,18 @@
 import { hasActiveEntitlement, logInRevenueCat, logOutRevenueCat } from '@/lib/revenuecat';
 import { supabase } from '@/lib/supabase-client';
 import type { User } from '@/types/game';
+import { BOROUGHS } from '@/constants/Boroughs';
 import { Platform } from 'react-native';
 import { create } from 'zustand';
+
+/** Normalize profile: borough-only (legacy) → city=London, borough=value */
+function normalizeProfile(profile: { city?: string | null; borough?: string | null }) {
+    const city = profile.city ?? (profile.borough && BOROUGHS.includes(profile.borough as any) ? 'London' : null);
+    const borough = profile.borough && BOROUGHS.includes(profile.borough as any)
+        ? (profile.borough as import('@/constants/Boroughs').Borough)
+        : undefined;
+    return { city, borough };
+}
 
 interface AuthState {
     user: User | null;
@@ -91,7 +101,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                     subscriptionStatus: profile?.subscription_status,
                     expiresAt: profile?.expires_at,
                     appleOriginalTransactionId: profile?.apple_original_transaction_id,
-                    borough: profile?.borough,
+                    ...normalizeProfile(profile || {}),
                 },
                 session: data.session,
             });
@@ -145,7 +155,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                     subscriptionStatus: profile?.subscription_status,
                     expiresAt: profile?.expires_at,
                     appleOriginalTransactionId: profile?.apple_original_transaction_id,
-                    borough: profile?.borough,
+                    ...normalizeProfile(profile || {}),
                 },
                 session,
                 loading: false,
@@ -183,7 +193,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                     subscriptionStatus: profile.subscription_status,
                     expiresAt: profile.expires_at,
                     appleOriginalTransactionId: profile.apple_original_transaction_id,
-                    borough: profile.borough,
+                    ...normalizeProfile(profile),
                 },
             });
         }
@@ -212,8 +222,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
         // Map camelCase to snake_case if needed
         const dbUpdates: any = {};
+        if (updates.city !== undefined) dbUpdates.city = updates.city;
         if (updates.borough !== undefined) dbUpdates.borough = updates.borough;
-        // Add other fields as needed
 
         if (Object.keys(dbUpdates).length === 0) return;
 
