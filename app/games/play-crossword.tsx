@@ -2,6 +2,7 @@ import { Crossword } from '@/components/games/Crossword';
 import { HeaderBackButton } from '@/components/ui/HeaderBackButton';
 import { useAuthStore } from '@/stores/auth-store';
 import { useGameStore } from '@/stores/game-store';
+import { usePuzzle } from '@/hooks/usePuzzle';
 import { Colors } from '@/constants/theme';
 import type { CrosswordState, GameState } from '@/types/game';
 import { useRouter } from 'expo-router';
@@ -19,6 +20,7 @@ export default function PlayCrossword() {
     const router = useRouter();
     const user = useAuthStore(state => state.user);
     const { currentGame, saveGame, createNewGame } = useGameStore();
+    const puzzle = usePuzzle();
     const [gameState, setGameState] = useState<GameState | null>(null);
 
     useEffect(() => {
@@ -39,14 +41,15 @@ export default function PlayCrossword() {
             return;
         }
 
-        // Create new game or load existing
-        if (!currentGame || currentGame.gameType !== 'crossword') {
-            const newGame = createNewGame(user.id, 'crossword');
+        // Create new game or load existing for today's puzzle
+        const puzzleGameId = `crossword_${user.id}_${puzzle.id}`;
+        if (!currentGame || currentGame.id !== puzzleGameId) {
+            const newGame = createNewGame(user.id, 'crossword', puzzleGameId);
             setGameState(newGame);
         } else {
             setGameState(currentGame);
         }
-    }, [user]);
+    }, [user, puzzle]);
 
     const handleCellChange = async (row: number, col: number, value: string) => {
         if (!gameState) return;
