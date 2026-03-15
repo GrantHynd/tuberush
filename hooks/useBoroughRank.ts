@@ -25,7 +25,8 @@ export function useBoroughRank() {
                 user.id,
                 'connections',
                 today,
-                user.borough,
+                'area',
+                user,
             );
             if (userRank !== null) {
                 setRank({ borough: user.borough, rank: userRank });
@@ -38,7 +39,7 @@ export function useBoroughRank() {
         } finally {
             setLoading(false);
         }
-    }, [user?.id, user?.borough]);
+    }, [user]);
 
     useEffect(() => {
         load();

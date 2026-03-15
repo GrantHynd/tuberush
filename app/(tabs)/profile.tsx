@@ -35,6 +35,7 @@ export default function ProfileScreen() {
     const { syncNow } = useGameStore();
     const [locationModalVisible, setLocationModalVisible] = useState(false);
     const [locationStep, setLocationStep] = useState<'city' | 'borough'>('city');
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [selectedCity, setSelectedCity] = useState<string | null>(null);
 
     const handleSignOut = () => {
