@@ -22,12 +22,12 @@ export const Fonts = {
   mono: 'System',
 };
 
-/** Connections game group colours — consistent across sessions (difficulty 1→4) */
+/** Connections game group colours — standard difficulty colours (1→4) */
 export const ConnectionsGroupColors = {
-  amber: '#F59E0B',
-  emerald: '#10B981',
-  indigo: '#6366F1',
-  pink: '#EC4899',
+  yellow: '#F9DF6D',
+  green: '#A0C35A',
+  blue: '#B0C4EF',
+  purple: '#BA81C5',
 } as const;
 
 export const Colors = {
