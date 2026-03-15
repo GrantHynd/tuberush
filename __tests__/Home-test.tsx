@@ -22,6 +22,8 @@ jest.mock('@/hooks/usePuzzleCarousel', () => ({
         puzzleId: '1',
       },
     ],
+    loading: false,
+    refresh: jest.fn(),
   })),
 }));
 

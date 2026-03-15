@@ -6,9 +6,11 @@ import { usePuzzle } from '@/hooks/usePuzzle';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import type { CrosswordState, GameState } from '@/types/game';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+    ActivityIndicator,
     Alert,
+    ScrollView,
     StyleSheet,
     Text,
     TouchableOpacity,
@@ -29,18 +31,18 @@ export default function PlayCrossword() {
     const router = useRouter();
     const { puzzleId: puzzleIdParam } = useLocalSearchParams<{ puzzleId?: string }>();
     const user = useAuthStore(state => state.user);
-    const { currentGame, saveGame, createNewGame } = useGameStore();
+    const { currentGame, loadGame, saveGame, createNewGame } = useGameStore();
     const puzzle = usePuzzle(puzzleIdParam);
     const [gameState, setGameState] = useState<GameState | null>(null);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         if (!user) {
             return;
         }
 
-        // Check premium status
         if (!user.isPremium) {
-             Alert.alert(
+            Alert.alert(
                 'Premium Required',
                 'Crossword puzzles are only available for premium members.',
                 [
@@ -48,23 +50,36 @@ export default function PlayCrossword() {
                     { text: 'Cancel', onPress: () => router.back() },
                 ]
             );
+            setLoading(false);
             return;
         }
 
-        // Create new game or load existing for the selected puzzle
-        const puzzleGameId = `crossword_${user.id}_${puzzle.id}`;
-        if (!currentGame || currentGame.id !== puzzleGameId) {
-            const newGame = createNewGame(
-                user.id,
-                'crossword',
-                puzzleGameId,
-                puzzle.id,
-            );
-            setGameState(newGame);
-        } else {
-            setGameState(currentGame);
-        }
-    }, [user, puzzle, puzzleIdParam]);
+        const initGame = async () => {
+            const puzzleGameId = `crossword_${user.id}_${puzzle.id}`;
+            try {
+                let game = await loadGame(puzzleGameId, user.id);
+
+                if (!game) {
+                    game = createNewGame(
+                        user.id,
+                        'crossword',
+                        puzzleGameId,
+                        puzzle.id,
+                    );
+                }
+
+                setGameState(game);
+            } catch (error) {
+                console.error('Failed to init crossword game:', error);
+                Alert.alert('Error', 'Failed to load game');
+                router.back();
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        initGame();
+    }, [user, puzzle.id]);
 
     const handleCellChange = async (row: number, col: number, value: string) => {
         if (!gameState) return;
@@ -90,11 +105,67 @@ export default function PlayCrossword() {
         await saveGame(updatedGame);
     };
 
+    const isFullyFilled = useMemo(() => {
+        if (!gameState) return false;
+        const state = gameState.state as CrosswordState;
+        const grid = state.grid;
+        for (let r = 0; r < grid.length; r++) {
+            for (let c = 0; c < grid[r].length; c++) {
+                const cell = grid[r][c];
+                if (!cell.isBlack && cell.letter !== null) {
+                    const key = `${r}-${c}`;
+                    const ans = state.userAnswers[key]?.toUpperCase().trim();
+                    if (!ans) return false;
+                }
+            }
+        }
+        return true;
+    }, [gameState]);
+
+    const checkAnswers = useCallback(() => {
+        if (!gameState) return;
+        const state = gameState.state as CrosswordState;
+        const grid = state.grid;
+        let allCorrect = true;
+        for (let r = 0; r < grid.length; r++) {
+            for (let c = 0; c < grid[r].length; c++) {
+                const cell = grid[r][c];
+                if (!cell.isBlack && cell.letter !== null) {
+                    const key = `${r}-${c}`;
+                    const correct = (cell.letter ?? '').toUpperCase();
+                    const userAns = (state.userAnswers[key] ?? '').toUpperCase().trim();
+                    if (userAns !== correct) {
+                        allCorrect = false;
+                        break;
+                    }
+                }
+            }
+            if (!allCorrect) break;
+        }
+
+        if (allCorrect) {
+            const newState: CrosswordState = { ...state, completed: true };
+            const updatedGame: GameState = {
+                ...gameState,
+                state: newState,
+                lastUpdated: new Date().toISOString(),
+            };
+            setGameState(updatedGame);
+            saveGame(updatedGame);
+        } else {
+            Alert.alert(
+                'Not quite!',
+                "There's a wrong answer somewhere. Keep going!",
+                [{ text: 'OK' }]
+            );
+        }
+    }, [gameState, saveGame]);
+
     if (!user?.isPremium) {
         return null;
     }
 
-    if (!gameState) {
+    if (loading || !gameState) {
         return (
             <SafeAreaView style={styles.container} edges={['top']}>
                 <View style={styles.header}>
@@ -110,13 +181,14 @@ export default function PlayCrossword() {
                     <View style={styles.headerRight} />
                 </View>
                 <View style={styles.centered}>
-                    <Text>Loading...</Text>
+                    <ActivityIndicator size="large" color={Colors.light.tint} />
                 </View>
             </SafeAreaView>
         );
     }
 
     const state = gameState.state as CrosswordState;
+    const isCompleted = state.completed;
 
     return (
         <SafeAreaView style={styles.container} edges={['top']}>
@@ -141,11 +213,55 @@ export default function PlayCrossword() {
                 <Text style={styles.headerDate}>{formatPuzzleDate(puzzle.date)}</Text>
             </View>
 
-            <Crossword
-                puzzle={puzzle}
-                gameState={state}
-                onCellChange={handleCellChange}
-            />
+            <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
+                <Crossword
+                    puzzle={puzzle}
+                    gameState={state}
+                    onCellChange={handleCellChange}
+                    disabled={isCompleted}
+                />
+
+                {!isCompleted && (
+                    <View style={styles.checkSection}>
+                        <TouchableOpacity
+                            style={[
+                                styles.checkButton,
+                                !isFullyFilled && styles.checkButtonDisabled,
+                            ]}
+                            onPress={checkAnswers}
+                            disabled={!isFullyFilled}
+                            accessibilityRole="button"
+                            accessibilityLabel="Check answers"
+                        >
+                            <Text
+                                style={[
+                                    styles.checkButtonText,
+                                    !isFullyFilled && styles.checkButtonTextDisabled,
+                                ]}
+                            >
+                                Check
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
+                )}
+
+                {isCompleted && (
+                    <View style={styles.gameOverContainer}>
+                        <Text style={styles.gameOverTitle}>Well done!</Text>
+                        <Text style={styles.gameOverSubtitle}>You completed the puzzle!</Text>
+                        <TouchableOpacity
+                            style={[styles.checkButton, styles.checkButtonPrimary]}
+                            onPress={() => router.back()}
+                            accessibilityRole="button"
+                            accessibilityLabel="Return home"
+                        >
+                            <Text style={[styles.checkButtonText, styles.checkButtonTextPrimary]}>
+                                Home
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
+                )}
+            </ScrollView>
         </SafeAreaView>
     );
 }
@@ -198,5 +314,58 @@ const styles = StyleSheet.create({
         ...Typography.caption,
         color: TFL.grey.dark,
         marginRight: Spacing.sm,
+    },
+    scroll: {
+        flex: 1,
+    },
+    scrollContent: {
+        flexGrow: 1,
+        paddingBottom: Spacing.xl,
+    },
+    checkSection: {
+        paddingHorizontal: Spacing.md,
+        paddingTop: Spacing.lg,
+        alignItems: 'center',
+    },
+    checkButton: {
+        paddingVertical: 12,
+        paddingHorizontal: 32,
+        borderRadius: 24,
+        borderWidth: 1,
+        borderColor: Colors.light.text,
+    },
+    checkButtonDisabled: {
+        borderColor: TFL.grey.dark,
+        opacity: 0.6,
+    },
+    checkButtonPrimary: {
+        backgroundColor: Colors.light.text,
+    },
+    checkButtonText: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: Colors.light.text,
+    },
+    checkButtonTextDisabled: {
+        color: TFL.grey.dark,
+    },
+    checkButtonTextPrimary: {
+        color: Colors.light.background,
+    },
+    gameOverContainer: {
+        paddingHorizontal: Spacing.md,
+        paddingTop: Spacing.lg,
+        alignItems: 'center',
+    },
+    gameOverTitle: {
+        fontSize: 20,
+        fontWeight: '700',
+        color: Colors.light.text,
+        marginBottom: 4,
+    },
+    gameOverSubtitle: {
+        fontSize: 15,
+        color: TFL.grey.dark,
+        marginBottom: Spacing.md,
     },
 });

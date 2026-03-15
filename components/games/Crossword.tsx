@@ -2,7 +2,6 @@ import type { CrosswordClue, CrosswordPuzzle, CrosswordState } from '@/types/gam
 import { Colors, Layout, Spacing, TFL, Typography } from '@/constants/theme';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
-    FlatList,
     StyleSheet,
     Text,
     TextInput,
@@ -322,14 +321,16 @@ export function Crossword({ puzzle, gameState, onCellChange, disabled = false }:
                 </TouchableOpacity>
             </View>
 
-            {/* Clue list */}
-            <FlatList
-                data={cluesForDirection}
-                renderItem={renderClueItem}
-                keyExtractor={item => `${direction}-${item.number}`}
-                style={styles.clueList}
-                contentContainerStyle={styles.clueListContent}
-            />
+            {/* Clue list - use View + map to avoid nesting VirtualizedList inside ScrollView */}
+            <View style={styles.clueList}>
+                <View style={styles.clueListContent}>
+                    {cluesForDirection.map((item) => (
+                        <View key={`${direction}-${item.number}`}>
+                            {renderClueItem({ item })}
+                        </View>
+                    ))}
+                </View>
+            </View>
         </View>
     );
 }

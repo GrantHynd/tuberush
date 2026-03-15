@@ -11,8 +11,8 @@ import { useBoroughRank } from '@/hooks/useBoroughRank';
 import { usePuzzleCarousel } from '@/hooks/usePuzzleCarousel';
 import { useUserStats } from '@/hooks/useUserStats';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { useRouter } from 'expo-router';
-import React from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import React, { useCallback } from 'react';
 import {
     FlatList,
     ScrollView,
@@ -29,8 +29,15 @@ const CARD_GAP = 12;
 export default function HomeScreen() {
     const router = useRouter();
     const { user } = useAuthStore();
-    const { items: connectionsItems } = usePuzzleCarousel('connections');
-    const { items: crosswordItems } = usePuzzleCarousel('crossword');
+    const { items: connectionsItems, refresh: refreshConnections } = usePuzzleCarousel('connections');
+    const { items: crosswordItems, refresh: refreshCrossword } = usePuzzleCarousel('crossword');
+
+    useFocusEffect(
+        useCallback(() => {
+            refreshConnections();
+            refreshCrossword();
+        }, [refreshConnections, refreshCrossword])
+    );
     const { stats } = useUserStats();
     const { rank } = useBoroughRank();
 
