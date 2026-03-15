@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { Colors, Typography, Spacing, Layout } from '@/constants/theme';
 import { leaderboard, getLocationDisplay, LeaderboardFilter } from '@/lib/leaderboard';
@@ -16,11 +16,7 @@ export function Leaderboard({ gameType, date, onClose }: LeaderboardProps) {
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState<LeaderboardFilter>('all');
 
-    useEffect(() => {
-        loadLeaderboard();
-    }, [gameType, date, filter, user?.id, user?.city, user?.borough]);
-
-    const loadLeaderboard = async () => {
+    const loadLeaderboard = useCallback(async () => {
         setLoading(true);
         try {
             const data = await leaderboard.getLeaderboard(
@@ -35,7 +31,11 @@ export function Leaderboard({ gameType, date, onClose }: LeaderboardProps) {
         } finally {
             setLoading(false);
         }
-    };
+    }, [gameType, date, filter, user]);
+
+    useEffect(() => {
+        loadLeaderboard();
+    }, [loadLeaderboard]);
 
     const formatTime = (seconds: number) => {
         const mins = Math.floor(seconds / 60);

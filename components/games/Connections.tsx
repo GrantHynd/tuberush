@@ -133,7 +133,7 @@ export function Connections({
       ]).start();
     }
     prevMistakes.current = gameState.mistakesRemaining;
-  }, [gameState.mistakesRemaining]);
+  }, [gameState.mistakesRemaining, shakeAnim]);
 
   // Detect correct guess
   const prevCompletedGroups = useRef(gameState.completedGroups.length);
