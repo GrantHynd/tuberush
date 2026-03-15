@@ -35,7 +35,7 @@ export class CrosswordErrorBoundary extends React.Component<Props, State> {
                     <MaterialIcons name="error-outline" size={48} color={TFL.grey.dark} />
                     <Text style={styles.title}>Something went wrong</Text>
                     <Text style={styles.subtitle}>
-                        This puzzle couldn't be loaded. Please try again.
+                        This puzzle couldn&apos;t be loaded. Please try again.
                     </Text>
                     <TouchableOpacity
                         style={styles.button}
