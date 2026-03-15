@@ -30,6 +30,9 @@ export interface PuzzleCarouselItem {
     commuteCount?: number;
     date: string;
     puzzleId: string;
+    completionTime?: string;
+    score?: string;
+    isWon?: boolean;
 }
 
 export interface ConnectionsCarouselItem extends PuzzleCarouselItem {
@@ -40,10 +43,17 @@ export interface CrosswordCarouselItem extends PuzzleCarouselItem {
     puzzle: CrosswordPuzzle;
 }
 
+function formatTime(seconds: number): string {
+    const minutes = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${minutes}:${secs.toString().padStart(2, '0')}`;
+}
+
 async function loadConnectionsCarousel(
     userId: string,
+    limit: number = 7,
 ): Promise<ConnectionsCarouselItem[]> {
-    const puzzles = getConnectionsRecent(7);
+    const puzzles = getConnectionsRecent(limit);
     const today = new Date().toISOString().split('T')[0];
     const items: ConnectionsCarouselItem[] = [];
 
@@ -52,8 +62,18 @@ async function loadConnectionsCarousel(
         const gameId = `connections_${userId}_${puzzle.date}`;
         const game = await offlineSyncManager.loadGameState(gameId, userId);
         const state = game?.state as ConnectionsState | undefined;
-        const isCompleted = state?.status === 'won';
+        const isCompleted = state?.status === 'won' || state?.status === 'lost';
+        const isWon = state?.status === 'won';
         const commuteCount = state?.history?.length;
+
+        let completionTime: string | undefined;
+        let score: string | undefined;
+
+        if (isCompleted && state?.startTime && state?.endTime) {
+            const duration = Math.floor((state.endTime - state.startTime) / 1000);
+            completionTime = formatTime(duration);
+            score = `${state.mistakesRemaining}/4`;
+        }
 
         items.push({
             puzzle,
@@ -64,6 +84,9 @@ async function loadConnectionsCarousel(
             commuteCount: isCompleted ? undefined : commuteCount,
             date: puzzle.date,
             puzzleId: puzzle.id,
+            completionTime,
+            score,
+            isWon,
         });
     }
     return items;
