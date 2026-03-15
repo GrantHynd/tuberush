@@ -193,8 +193,9 @@ describe("PlayConnectionsScreen", () => {
         expect(spy).toHaveBeenCalled();
       });
 
-      const onSubmitGuess =
-        spy.mock.calls[spy.mock.calls.length - 1][0].onSubmitGuess;
+      const onSubmitGuess = (
+        spy.mock.calls[spy.mock.calls.length - 1][0] as any
+      ).onSubmitGuess;
 
       // Call the handler directly
       await act(async () => {
@@ -225,8 +226,9 @@ describe("PlayConnectionsScreen", () => {
         expect(spy).toHaveBeenCalled();
       });
 
-      const onSubmitGuess =
-        spy.mock.calls[spy.mock.calls.length - 1][0].onSubmitGuess;
+      const onSubmitGuess = (
+        spy.mock.calls[spy.mock.calls.length - 1][0] as any
+      ).onSubmitGuess;
       const correctGuess = ["BAKERLOO", "CENTRAL", "DISTRICT", "NORTHERN"];
 
       await act(async () => {
@@ -268,8 +270,9 @@ describe("PlayConnectionsScreen", () => {
         expect(spy).toHaveBeenCalled();
       });
 
-      const onSubmitGuess =
-        spy.mock.calls[spy.mock.calls.length - 1][0].onSubmitGuess;
+      const onSubmitGuess = (
+        spy.mock.calls[spy.mock.calls.length - 1][0] as any
+      ).onSubmitGuess;
       const lastGroupGuess = ["VINE", "BOW", "FLEET", "STRAND"];
 
       await act(async () => {
@@ -320,8 +323,9 @@ describe("PlayConnectionsScreen", () => {
         expect(spy).toHaveBeenCalled();
       });
 
-      const onSubmitGuess =
-        spy.mock.calls[spy.mock.calls.length - 1][0].onSubmitGuess;
+      const onSubmitGuess = (
+        spy.mock.calls[spy.mock.calls.length - 1][0] as any
+      ).onSubmitGuess;
 
       await act(async () => {
         await onSubmitGuess(["VINE", "BOW", "FLEET", "STRAND"]);
@@ -366,8 +370,9 @@ describe("PlayConnectionsScreen", () => {
         expect(spy).toHaveBeenCalled();
       });
 
-      const onSubmitGuess =
-        spy.mock.calls[spy.mock.calls.length - 1][0].onSubmitGuess;
+      const onSubmitGuess = (
+        spy.mock.calls[spy.mock.calls.length - 1][0] as any
+      ).onSubmitGuess;
 
       await act(async () => {
         await onSubmitGuess(["VINE", "BOW", "FLEET", "STRAND"]);
@@ -392,8 +397,9 @@ describe("PlayConnectionsScreen", () => {
         expect(spy).toHaveBeenCalled();
       });
 
-      const onSubmitGuess =
-        spy.mock.calls[spy.mock.calls.length - 1][0].onSubmitGuess;
+      const onSubmitGuess = (
+        spy.mock.calls[spy.mock.calls.length - 1][0] as any
+      ).onSubmitGuess;
 
       await act(async () => {
         await onSubmitGuess(["BAKERLOO", "HYDE", "HEATHROW", "VINE"]);
@@ -435,8 +441,9 @@ describe("PlayConnectionsScreen", () => {
         expect(spy).toHaveBeenCalled();
       });
 
-      const onSubmitGuess =
-        spy.mock.calls[spy.mock.calls.length - 1][0].onSubmitGuess;
+      const onSubmitGuess = (
+        spy.mock.calls[spy.mock.calls.length - 1][0] as any
+      ).onSubmitGuess;
 
       await act(async () => {
         await onSubmitGuess(["BAKERLOO", "HYDE", "HEATHROW", "VINE"]);
@@ -647,8 +654,9 @@ describe("PlayConnectionsScreen", () => {
 
       const connections = require("@/components/games/Connections");
       const spy = jest.spyOn(connections, "Connections");
-      const onSubmitGuess =
-        spy.mock.calls[spy.mock.calls.length - 1][0].onSubmitGuess;
+      const onSubmitGuess = (
+        spy.mock.calls[spy.mock.calls.length - 1][0] as any
+      ).onSubmitGuess;
 
       const callCountBefore = mockSaveGame.mock.calls.length;
 
@@ -673,8 +681,9 @@ describe("PlayConnectionsScreen", () => {
         expect(spy).toHaveBeenCalled();
       });
 
-      const onSubmitGuess =
-        spy.mock.calls[spy.mock.calls.length - 1][0].onSubmitGuess;
+      const onSubmitGuess = (
+        spy.mock.calls[spy.mock.calls.length - 1][0] as any
+      ).onSubmitGuess;
 
       // Make correct guess twice
       await act(async () => {

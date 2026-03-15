@@ -119,6 +119,6 @@ jest.mock("react-native-purchases-ui", () => ({
 }));
 
 // Mock Alert
-global.Alert = {
+(global as any).Alert = {
   alert: jest.fn(),
-} as any;
+};
