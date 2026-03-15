@@ -116,6 +116,62 @@ export const CROSSWORD_DATA: CrosswordPuzzle[] = [
             ],
         },
     },
+    {
+        id: '2',
+        date: '2025-03-16',
+        title: 'London Parks',
+        rows: 5,
+        cols: 5,
+        grid: [
+            [
+                { letter: 'P', number: 1, isBlack: false },
+                { letter: 'A', isBlack: false },
+                { letter: 'R', number: 2, isBlack: false },
+                { letter: 'K', isBlack: false },
+                { letter: null, isBlack: true },
+            ],
+            [
+                { letter: 'I', isBlack: false },
+                { letter: null, isBlack: true },
+                { letter: 'I', isBlack: false },
+                { letter: null, isBlack: true },
+                { letter: 'P', number: 3, isBlack: false },
+            ],
+            [
+                { letter: 'N', number: 4, isBlack: false },
+                { letter: 'A', isBlack: false },
+                { letter: 'V', isBlack: false },
+                { letter: 'E', isBlack: false },
+                { letter: 'L', isBlack: false },
+            ],
+            [
+                { letter: 'T', isBlack: false },
+                { letter: null, isBlack: true },
+                { letter: 'E', isBlack: false },
+                { letter: null, isBlack: true },
+                { letter: 'U', isBlack: false },
+            ],
+            [
+                { letter: null, isBlack: true },
+                { letter: 'D', number: 5, isBlack: false },
+                { letter: 'R', isBlack: false },
+                { letter: 'U', isBlack: false },
+                { letter: 'G', isBlack: false },
+            ],
+        ],
+        clues: {
+            across: [
+                { number: 1, clue: 'Green space in the city', answer: 'PARK', row: 0, col: 0, length: 4 },
+                { number: 4, clue: 'Belly button', answer: 'NAVEL', row: 2, col: 0, length: 5 },
+                { number: 5, clue: 'Pharmacy purchase', answer: 'DRUG', row: 4, col: 1, length: 4 },
+            ],
+            down: [
+                { number: 1, clue: 'Beer measure in a London pub', answer: 'PINT', row: 0, col: 0, length: 4 },
+                { number: 2, clue: 'Thames, for one', answer: 'RIVER', row: 0, col: 2, length: 5 },
+                { number: 3, clue: 'Connect to charge', answer: 'PLUG', row: 1, col: 4, length: 4 },
+            ],
+        },
+    },
 ];
 
 /** Returns the puzzle matching the given date, or the first puzzle as a fallback */
