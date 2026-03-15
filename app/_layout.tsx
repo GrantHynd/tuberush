@@ -77,6 +77,8 @@ export default function RootLayout() {
         <Stack.Screen name="subscribe" options={{ presentation: 'modal', title: 'Subscribe' }} />
         <Stack.Screen name="games/play-crossword" options={{ headerShown: false }} />
         <Stack.Screen name="games/play-connections" options={{ headerShown: false }} />
+        <Stack.Screen name="games/connections-list" options={{ headerShown: false }} />
+        <Stack.Screen name="games/crossword-list" options={{ headerShown: false }} />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>

@@ -81,3 +81,15 @@ export const getDailyPuzzle = (): ConnectionsPuzzle => {
     const puzzle = CONNECTIONS_DATA.find(p => p.date === today);
     return puzzle || CONNECTIONS_DATA[0]; // Fallback to first puzzle if none found for today
 };
+
+/** Returns a puzzle by date, or undefined if not found */
+export const getPuzzleByDate = (date: string): ConnectionsPuzzle | undefined => {
+    return CONNECTIONS_DATA.find(p => p.date === date);
+};
+
+/** Returns recent puzzles sorted by date (most recent first), for carousel display */
+export const getRecentPuzzles = (limit = 7): ConnectionsPuzzle[] => {
+    return [...CONNECTIONS_DATA]
+        .sort((a, b) => b.date.localeCompare(a.date))
+        .slice(0, limit);
+};

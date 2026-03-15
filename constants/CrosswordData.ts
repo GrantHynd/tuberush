@@ -185,3 +185,15 @@ export const getDailyPuzzle = (): CrosswordPuzzle => {
 export const getPuzzleById = (id: string): CrosswordPuzzle | undefined => {
     return CROSSWORD_DATA.find(p => p.id === id);
 };
+
+/** Returns a puzzle by date, or undefined if not found */
+export const getPuzzleByDate = (date: string): CrosswordPuzzle | undefined => {
+    return CROSSWORD_DATA.find(p => p.date === date);
+};
+
+/** Returns recent puzzles sorted by date (most recent first), for carousel display */
+export const getRecentPuzzles = (limit = 7): CrosswordPuzzle[] => {
+    return [...CROSSWORD_DATA]
+        .sort((a, b) => b.date.localeCompare(a.date))
+        .slice(0, limit);
+};

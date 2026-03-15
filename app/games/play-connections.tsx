@@ -1,13 +1,17 @@
 import { Connections } from "@/components/games/Connections";
 import { HeaderBackButton } from "@/components/ui/HeaderBackButton";
 import { Leaderboard } from "@/components/ui/Leaderboard";
-import { ConnectionsPuzzle, getDailyPuzzle } from "@/constants/ConnectionsData";
+import {
+  ConnectionsPuzzle,
+  getDailyPuzzle,
+  getPuzzleByDate,
+} from "@/constants/ConnectionsData";
 import { Colors, Spacing, TFL } from "@/constants/theme";
 import { leaderboard } from "@/lib/leaderboard";
 import { useAuthStore } from "@/stores/auth-store";
 import { useGameStore } from "@/stores/game-store";
 import { ConnectionsState } from "@/types/game";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -22,6 +26,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function PlayConnectionsScreen() {
   const router = useRouter();
+  const { date: dateParam } = useLocalSearchParams<{ date?: string }>();
   const { user } = useAuthStore();
   const { currentGame, loadGame, createNewGame, saveGame } = useGameStore();
   const [loading, setLoading] = useState(true);
@@ -35,11 +40,12 @@ export default function PlayConnectionsScreen() {
     }
 
     const initGame = async () => {
-      const dailyPuzzle = getDailyPuzzle();
-      setPuzzle(dailyPuzzle);
+      const puzzleDate = dateParam || new Date().toISOString().split("T")[0];
+      const targetPuzzle =
+        getPuzzleByDate(puzzleDate) ?? getDailyPuzzle();
+      setPuzzle(targetPuzzle);
 
-      const today = new Date().toISOString().split("T")[0];
-      const gameId = `connections_${user.id}_${today}`;
+      const gameId = `connections_${user.id}_${targetPuzzle.date}`;
 
       try {
         let game = await loadGame(gameId, user.id);
@@ -57,7 +63,7 @@ export default function PlayConnectionsScreen() {
     };
 
     initGame();
-  }, [user]);
+  }, [user, dateParam]);
 
   const handleSubmitGuess = useCallback(
     async (items: string[]) => {
