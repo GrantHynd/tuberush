@@ -41,18 +41,6 @@ export default function HomeScreen() {
     const { stats } = useUserStats();
     const { rank } = useLocationRank();
 
-    const handleGamePress = (gameId: string, isPremium: boolean) => {
-        if (!user) {
-            router.push('/auth');
-            return;
-        }
-        if (isPremium && !user.isPremium) {
-            router.push('/subscribe');
-            return;
-        }
-        router.push(`/games/play-${gameId}` as never);
-    };
-
     const handleConnectionsCardPress = (date: string) => {
         if (!user) {
             router.push('/auth');

@@ -1,4 +1,4 @@
-import { Layout, Spacing, TFL } from '@/constants/theme';
+import { Layout, Spacing } from '@/constants/theme';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import React from 'react';
 import {

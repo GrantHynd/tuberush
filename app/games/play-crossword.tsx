@@ -31,7 +31,7 @@ export default function PlayCrossword() {
     const router = useRouter();
     const { puzzleId: puzzleIdParam } = useLocalSearchParams<{ puzzleId?: string }>();
     const user = useAuthStore(state => state.user);
-    const { currentGame, loadGame, saveGame, createNewGame } = useGameStore();
+    const { loadGame, saveGame, createNewGame } = useGameStore();
     const puzzle = usePuzzle(puzzleIdParam);
     const [gameState, setGameState] = useState<GameState | null>(null);
     const [loading, setLoading] = useState(true);
@@ -79,7 +79,7 @@ export default function PlayCrossword() {
         };
 
         initGame();
-    }, [user, puzzle.id]);
+    }, [user, puzzle.id, loadGame, createNewGame, router]);
 
     const handleCellChange = async (row: number, col: number, value: string) => {
         if (!gameState) return;

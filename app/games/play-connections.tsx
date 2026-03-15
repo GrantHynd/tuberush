@@ -90,7 +90,7 @@ export default function PlayConnectionsScreen() {
     };
 
     initGame();
-  }, [user, dateParam]);
+  }, [user, dateParam, loadGame, createNewGame, router]);
 
   const handleSubmitGuess = useCallback(
     async (items: string[]) => {

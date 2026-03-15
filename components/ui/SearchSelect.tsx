@@ -1,19 +1,18 @@
-import React, { useState, useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
+    FlatList,
     Modal,
-    View,
+    StyleSheet,
     Text,
     TextInput,
-    FlatList,
     TouchableOpacity,
-    StyleSheet,
-    Platform,
+    View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, Typography, Spacing, Layout } from '@/constants/theme';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 
-interface SearchSelectProps {
+export interface SearchSelectProps {
     options: readonly string[];
     value: string | null;
     onSelect: (value: string) => void;
@@ -22,57 +21,78 @@ interface SearchSelectProps {
     modalTitle?: string;
     visible: boolean;
     onClose: () => void;
-    closeOnSelect?: (value: string) => boolean;
+    /** If false or returns false for the selected value, the modal will not close on select (e.g. for multi-step flows). Default: true */
+    closeOnSelect?: boolean | ((value: string) => boolean);
 }
+
+const DEBOUNCE_MS = 150;
 
 export function SearchSelect({
     options,
     value,
     onSelect,
     placeholder = 'Search...',
-    accessibilityLabel,
+    accessibilityLabel = 'Search and select',
     modalTitle = 'Select',
     visible,
     onClose,
-    closeOnSelect = () => true,
+    closeOnSelect = true,
 }: SearchSelectProps) {
-    const [searchQuery, setSearchQuery] = useState('');
+    const [query, setQuery] = useState('');
+    const [debouncedQuery, setDebouncedQuery] = useState('');
+
+    const updateDebouncedQuery = useCallback(() => {
+        const timer = setTimeout(() => {
+            setDebouncedQuery(query.trim().toLowerCase());
+        }, DEBOUNCE_MS);
+        return () => clearTimeout(timer);
+    }, [query]);
+
+    React.useEffect(() => {
+        const cleanup = updateDebouncedQuery();
+        return cleanup;
+    }, [query, updateDebouncedQuery]);
+
+    React.useEffect(() => {
+        if (!visible) {
+            setQuery('');
+            setDebouncedQuery('');
+        }
+    }, [visible]);
 
     const filteredOptions = useMemo(() => {
-        if (!searchQuery.trim()) {
-            return options;
+        if (!debouncedQuery) {
+            return [...options];
         }
-        const query = searchQuery.toLowerCase();
-        return options.filter((option) =>
-            option.toLowerCase().includes(query)
+        return options.filter((opt) =>
+            opt.toLowerCase().includes(debouncedQuery)
         );
-    }, [options, searchQuery]);
+    }, [options, debouncedQuery]);
 
-    const handleSelect = (selectedValue: string) => {
-        onSelect(selectedValue);
-        setSearchQuery('');
-        if (closeOnSelect(selectedValue)) {
-            onClose();
-        }
-    };
-
-    const handleClose = () => {
-        setSearchQuery('');
-        onClose();
-    };
+    const handleSelect = useCallback(
+        (item: string) => {
+            onSelect(item);
+            const shouldClose =
+                typeof closeOnSelect === 'function' ? closeOnSelect(item) : closeOnSelect;
+            if (shouldClose) {
+                onClose();
+            }
+        },
+        [onSelect, onClose, closeOnSelect]
+    );
 
     return (
         <Modal
             visible={visible}
             animationType="slide"
             presentationStyle="pageSheet"
-            onRequestClose={handleClose}
+            onRequestClose={onClose}
         >
             <SafeAreaView style={styles.container}>
                 <View style={styles.header}>
                     <Text style={styles.title}>{modalTitle}</Text>
                     <TouchableOpacity
-                        onPress={handleClose}
+                        onPress={onClose}
                         accessibilityRole="button"
                         accessibilityLabel="Close"
                     >
@@ -81,44 +101,47 @@ export function SearchSelect({
                 </View>
 
                 <View style={styles.searchContainer}>
-                    <IconSymbol name="magnifyingglass" size={20} color={Colors.light.icon} />
                     <TextInput
                         style={styles.searchInput}
-                        value={searchQuery}
-                        onChangeText={setSearchQuery}
+                        value={query}
+                        onChangeText={setQuery}
                         placeholder={placeholder}
                         placeholderTextColor={Colors.light.icon}
-                        accessibilityLabel={accessibilityLabel}
                         autoCapitalize="none"
                         autoCorrect={false}
-                        clearButtonMode="while-editing"
+                        accessibilityLabel={accessibilityLabel}
+                        accessibilityRole="search"
+                        accessibilityState={{ disabled: false }}
                     />
                 </View>
 
                 <FlatList
                     data={filteredOptions}
                     keyExtractor={(item) => item}
-                    accessibilityRole="list"
                     keyboardShouldPersistTaps="handled"
+                    accessibilityRole="list"
                     ListEmptyComponent={
-                        <View style={styles.emptyState}>
-                            <Text style={styles.emptyText}>No results found</Text>
-                        </View>
+                        <Text style={styles.emptyText}>No results found</Text>
                     }
                     renderItem={({ item }) => (
                         <TouchableOpacity
-                            style={styles.optionItem}
+                            style={styles.item}
                             onPress={() => handleSelect(item)}
                             accessibilityRole="button"
                             accessibilityLabel={item}
                             accessibilityState={{
                                 selected: value === item,
                             }}
+                            accessibilityHint={
+                                value === item
+                                    ? 'Selected. Double tap to change.'
+                                    : 'Double tap to select'
+                            }
                         >
                             <Text
                                 style={[
-                                    styles.optionText,
-                                    value === item && styles.selectedOptionText,
+                                    styles.itemText,
+                                    value === item && styles.selectedItemText,
                                 ]}
                             >
                                 {item}
@@ -160,24 +183,22 @@ const styles = StyleSheet.create({
         fontWeight: '600',
     },
     searchContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: Colors.light.card,
-        marginHorizontal: Spacing.md,
-        marginVertical: Spacing.md,
-        paddingHorizontal: Spacing.md,
-        borderRadius: Layout.borderRadius.md,
-        borderWidth: 1,
-        borderColor: Colors.light.border,
-        gap: Spacing.sm,
+        padding: Spacing.md,
+        borderBottomWidth: 1,
+        borderBottomColor: Colors.light.border,
     },
     searchInput: {
-        flex: 1,
+        backgroundColor: Colors.light.card,
+        borderWidth: 1,
+        borderColor: Colors.light.border,
+        borderRadius: Layout.borderRadius.md,
+        paddingHorizontal: Spacing.md,
+        paddingVertical: Spacing.sm,
         fontSize: 16,
         color: Colors.light.text,
-        paddingVertical: Platform.OS === 'ios' ? Spacing.md : Spacing.sm,
+        minHeight: 44,
     },
-    optionItem: {
+    item: {
         padding: Spacing.md,
         borderBottomWidth: 1,
         borderBottomColor: Colors.light.border,
@@ -186,20 +207,19 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         minHeight: 56,
     },
-    optionText: {
+    itemText: {
         fontSize: 16,
         color: Colors.light.text,
+        flex: 1,
     },
-    selectedOptionText: {
+    selectedItemText: {
         color: Colors.light.tint,
         fontWeight: '600',
     },
-    emptyState: {
-        padding: Spacing.xl,
-        alignItems: 'center',
-    },
     emptyText: {
-        fontSize: 16,
+        textAlign: 'center',
         color: Colors.light.icon,
+        padding: Spacing.xl,
+        fontSize: 16,
     },
 });
