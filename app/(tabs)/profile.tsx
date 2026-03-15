@@ -1,4 +1,3 @@
-import { PremiumBadge } from '@/components/ui/PremiumBadge';
 import { HeaderBackButton } from '@/components/ui/HeaderBackButton';
 import { useAuthStore } from '@/stores/auth-store';
 import { useGameStore } from '@/stores/game-store';
@@ -6,7 +5,6 @@ import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
     Alert,
-    Platform,
     ScrollView,
     StyleSheet,
     Text,
@@ -15,7 +13,6 @@ import {
     Modal,
     FlatList,
 } from 'react-native';
-import RevenueCatUI from 'react-native-purchases-ui';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, TFL, Typography, Spacing, Layout } from '@/constants/theme';
 import { BOROUGHS, Borough } from '@/constants/Boroughs';
@@ -25,7 +22,7 @@ import Constants from 'expo-constants';
 export default function ProfileScreen() {
     const router = useRouter();
     const { user, signOut, updateProfile } = useAuthStore();
-    const { syncNow, syncStatus } = useGameStore();
+    const { syncNow } = useGameStore();
     const [boroughModalVisible, setBoroughModalVisible] = useState(false);
 
     const handleSignOut = () => {
@@ -55,7 +52,7 @@ export default function ProfileScreen() {
         try {
             await updateProfile({ borough });
             setBoroughModalVisible(false);
-        } catch (error) {
+        } catch {
             Alert.alert('Error', 'Failed to update borough');
         }
     };
