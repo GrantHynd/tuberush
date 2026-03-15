@@ -23,38 +23,44 @@ jest.mock("@/lib/leaderboard", () => ({
   },
 }));
 
+const mockPuzzle = {
+  id: "1",
+  date: "2024-03-14",
+  groups: [
+    {
+      category: "TUBE LINES",
+      items: ["BAKERLOO", "CENTRAL", "DISTRICT", "NORTHERN"],
+      color: "#DC241F",
+      difficulty: 1,
+    },
+    {
+      category: "ROYAL PARKS",
+      items: ["HYDE", "REGENT", "GREEN", "ST JAMES"],
+      color: "#00A166",
+      difficulty: 2,
+    },
+    {
+      category: "LONDON AIRPORTS",
+      items: ["HEATHROW", "GATWICK", "STANSTED", "LUTON"],
+      color: "#0019A8",
+      difficulty: 3,
+    },
+    {
+      category: "MONOPOLY STREETS",
+      items: ["VINE", "BOW", "FLEET", "STRAND"],
+      color: "#FFD300",
+      difficulty: 4,
+    },
+  ],
+};
+
 jest.mock("@/constants/ConnectionsData", () => ({
-  getDailyPuzzle: jest.fn(() => ({
-    id: "1",
-    date: "2024-03-14",
-    groups: [
-      {
-        category: "TUBE LINES",
-        items: ["BAKERLOO", "CENTRAL", "DISTRICT", "NORTHERN"],
-        color: "#DC241F",
-        difficulty: 1,
-      },
-      {
-        category: "ROYAL PARKS",
-        items: ["HYDE", "REGENT", "GREEN", "ST JAMES"],
-        color: "#00A166",
-        difficulty: 2,
-      },
-      {
-        category: "LONDON AIRPORTS",
-        items: ["HEATHROW", "GATWICK", "STANSTED", "LUTON"],
-        color: "#0019A8",
-        difficulty: 3,
-      },
-      {
-        category: "MONOPOLY STREETS",
-        items: ["VINE", "BOW", "FLEET", "STRAND"],
-        color: "#FFD300",
-        difficulty: 4,
-      },
-    ],
-  })),
-}));
+  getDailyPuzzle: jest.fn(() => mockPuzzle),
+  getPuzzleByDate: jest.fn((date: string) =>
+    date === "2024-03-14" ? mockPuzzle : undefined
+  ),
+  CONNECTIONS_DATA: [],
+})),
 
 describe("PlayConnectionsScreen", () => {
   const mockRouter = {

@@ -76,10 +76,28 @@ export const leaderboard = {
      * Get user's rank for today.
      */
     async getUserRank(userId: string, gameType: GameType, date?: string, borough?: Borough) {
-        // This is complex to do efficiently without window functions in simple queries,
-        // but for MVP we can fetch the leaderboard and find the index.
         const data = await this.getLeaderboard(gameType, date, borough);
-        const index = data.findIndex(entry => entry.userId === userId);
+        const index = data.findIndex(
+            (entry: { user_id?: string; userId?: string }) =>
+                (entry.user_id ?? entry.userId) === userId,
+        );
         return index !== -1 ? index + 1 : null;
-    }
+    },
+
+    /**
+     * Get user's best (lowest) score across all time for a game type.
+     */
+    async getUserBestScore(userId: string, gameType: GameType): Promise<number | null> {
+        const { data, error } = await supabase
+            .from('leaderboard')
+            .select('score')
+            .eq('user_id', userId)
+            .eq('game_type', gameType)
+            .order('score', { ascending: true })
+            .limit(1)
+            .single();
+
+        if (error || !data) return null;
+        return data.score;
+    },
 };

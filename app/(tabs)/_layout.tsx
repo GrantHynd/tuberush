@@ -2,6 +2,7 @@ import { Tabs } from 'expo-router';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import React from 'react';
 
+import { TFL } from '@/constants/theme';
 import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 
@@ -11,12 +12,13 @@ export default function TabLayout() {
       screenOptions={{
         headerShown: false,
         tabBarButton: HapticTab,
-        tabBarStyle: { display: 'none' },
+        tabBarActiveTintColor: TFL.blue,
+        tabBarInactiveTintColor: TFL.grey.medium,
       }}>
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
+          title: 'Games',
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
         }}
       />
@@ -30,15 +32,15 @@ export default function TabLayout() {
       <Tabs.Screen
         name="trophy"
         options={{
-          title: 'Trophy',
+          title: 'Board',
           tabBarIcon: ({ color }) => <MaterialIcons name="emoji-events" size={26} color={color} />,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Settings',
-          tabBarIcon: ({ color }) => <MaterialIcons name="settings" size={26} color={color} />,
+          title: 'Profile',
+          tabBarIcon: ({ color }) => <MaterialIcons name="person" size={26} color={color} />,
         }}
       />
     </Tabs>

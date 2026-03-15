@@ -1,11 +1,20 @@
-import { GAMES } from '@/constants/Games';
+import { PuzzleCard } from '@/components/home/PuzzleCard';
+import { SectionHeader } from '@/components/home/SectionHeader';
+import { StatCard } from '@/components/home/StatCard';
+import type {
+    ConnectionsCarouselItem,
+    CrosswordCarouselItem,
+} from '@/hooks/usePuzzleCarousel';
 import { Colors, Layout, Spacing, TFL, Typography } from '@/constants/theme';
 import { useAuthStore } from '@/stores/auth-store';
+import { useBoroughRank } from '@/hooks/useBoroughRank';
+import { usePuzzleCarousel } from '@/hooks/usePuzzleCarousel';
+import { useUserStats } from '@/hooks/useUserStats';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import {
-    Dimensions,
+    FlatList,
     ScrollView,
     StyleSheet,
     Text,
@@ -14,27 +23,47 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const CARD_GAP = 12;
 const HORIZONTAL_PADDING = 20;
-const CARD_WIDTH = (SCREEN_WIDTH - HORIZONTAL_PADDING * 2 - CARD_GAP) / 2;
+const CARD_GAP = 12;
 
 export default function HomeScreen() {
     const router = useRouter();
     const { user } = useAuthStore();
+    const { items: connectionsItems } = usePuzzleCarousel('connections');
+    const { items: crosswordItems } = usePuzzleCarousel('crossword');
+    const { stats } = useUserStats();
+    const { rank } = useBoroughRank();
 
     const handleGamePress = (gameId: string, isPremium: boolean) => {
         if (!user) {
             router.push('/auth');
             return;
         }
-
         if (isPremium && !user.isPremium) {
             router.push('/subscribe');
             return;
         }
-
         router.push(`/games/play-${gameId}` as never);
+    };
+
+    const handleConnectionsCardPress = (date: string) => {
+        if (!user) {
+            router.push('/auth');
+            return;
+        }
+        router.push(`/games/play-connections?date=${date}` as never);
+    };
+
+    const handleCrosswordCardPress = (puzzleId: string) => {
+        if (!user) {
+            router.push('/auth');
+            return;
+        }
+        if (!user.isPremium) {
+            router.push('/subscribe');
+            return;
+        }
+        router.push(`/games/play-crossword?puzzleId=${puzzleId}` as never);
     };
 
     return (
@@ -52,7 +81,7 @@ export default function HomeScreen() {
                         </View>
                         <View>
                             <Text style={styles.title}>TubeRush</Text>
-                            <Text style={styles.tagline}>Beat the commute</Text>
+                            <Text style={styles.tagline}>Beat the commute.</Text>
                         </View>
                     </View>
                     <TouchableOpacity
@@ -69,52 +98,110 @@ export default function HomeScreen() {
                     </TouchableOpacity>
                 </View>
 
-                {/* Game Cards - side by side */}
-                <View style={styles.cardsRow}>
-                    {/* Connections */}
-                    <TouchableOpacity
-                        testID="game-card-connections"
-                        style={[styles.gameCard, styles.connectionsCard]}
-                        onPress={() => handleGamePress('connections', false)}
-                        activeOpacity={0.85}
-                        accessibilityRole="button"
-                        accessibilityLabel="Connections, 12.4k live"
-                    >
-                        <MaterialIcons
-                            name="hub"
-                            size={36}
-                            color="white"
-                            style={styles.cardIcon}
-                        />
-                        <Text style={styles.cardTitle}>Connections</Text>
-                        <View style={styles.liveRow}>
-                            <View style={styles.liveDot} />
-                            <Text style={styles.liveText}>12.4k live</Text>
-                        </View>
-                    </TouchableOpacity>
-
-                    {/* Crossword */}
-                    <TouchableOpacity
-                        testID="game-card-crossword"
-                        style={[styles.gameCard, styles.crosswordCard]}
-                        onPress={() => handleGamePress('crossword', true)}
-                        activeOpacity={0.85}
-                        accessibilityRole="button"
-                        accessibilityLabel="Crossword Puzzle, Premium"
-                    >
-                        <View style={styles.crownBadge}>
-                            <MaterialIcons name="star" size={18} color="#FFD700" />
-                        </View>
-                        <MaterialIcons
-                            name="grid-on"
-                            size={36}
-                            color="white"
-                            style={styles.cardIcon}
-                        />
-                        <Text style={styles.cardTitle}>Crossword</Text>
-                        <Text style={styles.premiumLabel}>Premium</Text>
-                    </TouchableOpacity>
+                {/* Connections section */}
+                <View style={styles.section}>
+                    <SectionHeader
+                        icon="hub"
+                        title="Connections"
+                        onSeeAllPress={() => router.push('/games/connections-list' as never)}
+                    />
+                    <FlatList
+                        data={connectionsItems as ConnectionsCarouselItem[]}
+                        horizontal
+                        keyExtractor={(item) => item.date}
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={styles.carouselContent}
+                        ItemSeparatorComponent={() => <View style={{ width: CARD_GAP }} />}
+                        renderItem={({ item }) => (
+                            <PuzzleCard
+                                puzzleNumber={item.puzzleNumber}
+                                label={item.label}
+                                isNew={item.isNew}
+                                isCompleted={item.isCompleted}
+                                commuteCount={item.commuteCount}
+                                backgroundColor={TFL.blue}
+                                onPress={() => handleConnectionsCardPress(item.date)}
+                            />
+                        )}
+                    />
                 </View>
+
+                {/* Crossword section */}
+                <View style={styles.section}>
+                    <SectionHeader
+                        icon="grid-on"
+                        title="Crossword"
+                        badge={user?.isPremium ? '1st Class' : undefined}
+                        onSeeAllPress={() => router.push('/games/crossword-list' as never)}
+                    />
+                    <FlatList
+                        data={crosswordItems as CrosswordCarouselItem[]}
+                        horizontal
+                        keyExtractor={(item) => item.date}
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={styles.carouselContent}
+                        ItemSeparatorComponent={() => <View style={{ width: CARD_GAP }} />}
+                        renderItem={({ item }) => (
+                            <PuzzleCard
+                                puzzleNumber={item.puzzleNumber}
+                                label={item.label}
+                                isNew={item.isNew}
+                                isCompleted={item.isCompleted}
+                                commuteCount={item.commuteCount}
+                                backgroundColor={TFL.red}
+                                onPress={() => handleCrosswordCardPress(item.puzzleId)}
+                            />
+                        )}
+                    />
+                </View>
+
+                {/* Your Stats section */}
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Your Stats</Text>
+                    <View style={styles.statsRow}>
+                        <StatCard
+                            icon="timer"
+                            label="Best Time"
+                            value={stats.bestTime ?? '—'}
+                        />
+                        <View style={styles.statCardSpacer} />
+                        <StatCard
+                            icon="local-fire-department"
+                            label="Streak"
+                            value={String(stats.streak)}
+                        />
+                    </View>
+                </View>
+
+                {/* Your Borough section */}
+                {rank && (
+                    <TouchableOpacity
+                        style={styles.boroughRow}
+                        onPress={() => router.push('/(tabs)/trophy' as never)}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${rank.borough}, Rank #${rank.rank}`}
+                    >
+                        <MaterialIcons
+                            name="location-on"
+                            size={24}
+                            color={Colors.light.icon}
+                            style={styles.boroughIcon}
+                        />
+                        <View style={styles.boroughContent}>
+                            <Text style={styles.boroughName}>{rank.borough}</Text>
+                            <Text style={styles.boroughRank}>
+                                {rank.rank > 0
+                                    ? `Rank #${rank.rank} in your borough`
+                                    : 'No rank yet in your borough'}
+                            </Text>
+                        </View>
+                        <MaterialIcons
+                            name="chevron-right"
+                            size={24}
+                            color={TFL.grey.dark}
+                        />
+                    </TouchableOpacity>
+                )}
             </ScrollView>
         </SafeAreaView>
     );
@@ -188,61 +275,43 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         color: 'white',
     },
-    cardsRow: {
+    section: {
+        marginTop: Spacing.lg,
+    },
+    sectionTitle: {
+        ...Typography.h3,
+        marginBottom: Spacing.sm,
+    },
+    carouselContent: {
+        paddingVertical: Spacing.xs,
+    },
+    statsRow: {
         flexDirection: 'row',
         gap: CARD_GAP,
-        marginTop: Spacing.sm,
     },
-    gameCard: {
-        width: CARD_WIDTH,
-        borderRadius: Layout.borderRadius.lg,
-        padding: Spacing.md,
-        minHeight: 140,
-        ...Layout.shadow.md,
+    statCardSpacer: {
+        width: CARD_GAP,
     },
-    connectionsCard: {
-        backgroundColor: TFL.blue,
-    },
-    crosswordCard: {
-        backgroundColor: TFL.red,
-    },
-    crownBadge: {
-        position: 'absolute',
-        top: Spacing.sm,
-        right: Spacing.sm,
-        width: 24,
-        height: 24,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    cardIcon: {
-        marginTop: Spacing.sm,
-        marginBottom: Spacing.xs,
-    },
-    cardTitle: {
-        fontSize: 16,
-        fontWeight: '700',
-        color: 'white',
-    },
-    liveRow: {
+    boroughRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginTop: 4,
-        gap: 6,
+        backgroundColor: Colors.light.card,
+        borderRadius: Layout.borderRadius.lg,
+        padding: Spacing.md,
+        marginTop: Spacing.lg,
     },
-    liveDot: {
-        width: 8,
-        height: 8,
-        borderRadius: 4,
-        backgroundColor: '#22C55E',
+    boroughIcon: {
+        marginRight: Spacing.sm,
     },
-    liveText: {
-        fontSize: 12,
-        color: 'rgba(255,255,255,0.9)',
+    boroughContent: {
+        flex: 1,
     },
-    premiumLabel: {
-        fontSize: 12,
-        color: 'rgba(255,255,255,0.9)',
-        marginTop: 4,
+    boroughName: {
+        ...Typography.body,
+        fontWeight: '600',
+    },
+    boroughRank: {
+        ...Typography.caption,
+        marginTop: 2,
     },
 });

@@ -1,4 +1,4 @@
-import { getDailyPuzzle } from '@/constants/CrosswordData';
+import { getDailyPuzzle, getPuzzleById } from '@/constants/CrosswordData';
 import { offlineSyncManager, SyncStatus } from '@/lib/offline-sync-manager';
 import { GameState, GameType, ConnectionsState, CrosswordState } from '@/types/game';
 import { create } from 'zustand';
@@ -9,7 +9,7 @@ interface GameStoreState {
     syncStatus: SyncStatus;
     loadGame: (gameId: string, userId: string) => Promise<GameState | null>;
     saveGame: (gameState: GameState) => Promise<void>;
-    createNewGame: (userId: string, gameType: GameType, gameId?: string) => GameState;
+    createNewGame: (userId: string, gameType: GameType, gameId?: string, crosswordPuzzleId?: string) => GameState;
     deleteGame: (gameId: string) => Promise<void>;
     syncNow: () => Promise<void>;
 }
@@ -34,7 +34,7 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
         await offlineSyncManager.saveGameState(gameState);
     },
 
-    createNewGame: (userId: string, gameType: GameType, gameId?: string) => {
+    createNewGame: (userId: string, gameType: GameType, gameId?: string, crosswordPuzzleId?: string) => {
         const id = gameId || `${gameType}_${userId}_${Date.now()}`;
 
         let initialState: ConnectionsState | CrosswordState;
@@ -49,8 +49,10 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
                 status: 'playing',
             };
         } else {
-            // Crossword — initialise from the daily puzzle data
-            const puzzle = getDailyPuzzle();
+            // Crossword — initialise from puzzle data (specific puzzle or daily)
+            const puzzle = crosswordPuzzleId
+                ? (getPuzzleById(crosswordPuzzleId) ?? getDailyPuzzle())
+                : getDailyPuzzle();
             const cluesMap = {
                 across: Object.fromEntries(puzzle.clues.across.map(c => [c.number, c.clue])),
                 down: Object.fromEntries(puzzle.clues.down.map(c => [c.number, c.clue])),

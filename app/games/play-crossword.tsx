@@ -5,7 +5,7 @@ import { useGameStore } from '@/stores/game-store';
 import { usePuzzle } from '@/hooks/usePuzzle';
 import { Colors } from '@/constants/theme';
 import type { CrosswordState, GameState } from '@/types/game';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
     Alert,
@@ -18,9 +18,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function PlayCrossword() {
     const router = useRouter();
+    const { puzzleId: puzzleIdParam } = useLocalSearchParams<{ puzzleId?: string }>();
     const user = useAuthStore(state => state.user);
     const { currentGame, saveGame, createNewGame } = useGameStore();
-    const puzzle = usePuzzle();
+    const puzzle = usePuzzle(puzzleIdParam);
     const [gameState, setGameState] = useState<GameState | null>(null);
 
     useEffect(() => {
@@ -41,15 +42,20 @@ export default function PlayCrossword() {
             return;
         }
 
-        // Create new game or load existing for today's puzzle
+        // Create new game or load existing for the selected puzzle
         const puzzleGameId = `crossword_${user.id}_${puzzle.id}`;
         if (!currentGame || currentGame.id !== puzzleGameId) {
-            const newGame = createNewGame(user.id, 'crossword', puzzleGameId);
+            const newGame = createNewGame(
+                user.id,
+                'crossword',
+                puzzleGameId,
+                puzzle.id,
+            );
             setGameState(newGame);
         } else {
             setGameState(currentGame);
         }
-    }, [user, puzzle]);
+    }, [user, puzzle, puzzleIdParam]);
 
     const handleCellChange = async (row: number, col: number, value: string) => {
         if (!gameState) return;
