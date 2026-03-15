@@ -1,9 +1,9 @@
 import { Crossword } from '@/components/games/Crossword';
-import { HeaderBackButton } from '@/components/ui/HeaderBackButton';
+import { Colors, Layout, Spacing, TFL, Typography } from '@/constants/theme';
 import { useAuthStore } from '@/stores/auth-store';
 import { useGameStore } from '@/stores/game-store';
 import { usePuzzle } from '@/hooks/usePuzzle';
-import { Colors } from '@/constants/theme';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import type { CrosswordState, GameState } from '@/types/game';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -15,6 +15,15 @@ import {
     View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+/** Format a YYYY-MM-DD date string as "15 Mar 2026" */
+function formatPuzzleDate(dateStr: string): string {
+    const date = new Date(dateStr + 'T00:00:00');
+    const day = date.getDate();
+    const month = date.toLocaleString('en-GB', { month: 'short' });
+    const year = date.getFullYear();
+    return `${day} ${month} ${year}`;
+}
 
 export default function PlayCrossword() {
     const router = useRouter();
@@ -81,13 +90,6 @@ export default function PlayCrossword() {
         await saveGame(updatedGame);
     };
 
-    const handleNewPuzzle = () => {
-        if (!user) return;
-        const newGame = createNewGame(user.id, 'crossword');
-        setGameState(newGame);
-        saveGame(newGame);
-    };
-
     if (!user?.isPremium) {
         return null;
     }
@@ -95,7 +97,18 @@ export default function PlayCrossword() {
     if (!gameState) {
         return (
             <SafeAreaView style={styles.container} edges={['top']}>
-                <HeaderBackButton title="Crossword" />
+                <View style={styles.header}>
+                    <TouchableOpacity
+                        onPress={() => router.back()}
+                        style={styles.backButton}
+                        accessibilityRole="button"
+                        accessibilityLabel="Go back"
+                    >
+                        <MaterialIcons name="arrow-back" size={24} color={Colors.light.text} />
+                    </TouchableOpacity>
+                    <Text style={styles.headerTitle}>Crossword</Text>
+                    <View style={styles.headerRight} />
+                </View>
                 <View style={styles.centered}>
                     <Text>Loading...</Text>
                 </View>
@@ -107,27 +120,32 @@ export default function PlayCrossword() {
 
     return (
         <SafeAreaView style={styles.container} edges={['top']}>
-            <HeaderBackButton title="Crossword" />
+            {/* Header */}
+            <View style={styles.header}>
+                <TouchableOpacity
+                    onPress={() => router.back()}
+                    style={styles.backButton}
+                    accessibilityRole="button"
+                    accessibilityLabel="Go back"
+                >
+                    <MaterialIcons name="arrow-back" size={24} color={Colors.light.text} />
+                </TouchableOpacity>
+
+                <View style={styles.headerCenter}>
+                    <Text style={styles.headerTitle}>Crossword</Text>
+                    <View style={styles.badge}>
+                        <Text style={styles.badgeText}>1st Class</Text>
+                    </View>
+                </View>
+
+                <Text style={styles.headerDate}>{formatPuzzleDate(puzzle.date)}</Text>
+            </View>
+
             <Crossword
+                puzzle={puzzle}
                 gameState={state}
                 onCellChange={handleCellChange}
             />
-
-            <View style={styles.actions}>
-                <TouchableOpacity
-                    style={styles.button}
-                    onPress={handleNewPuzzle}
-                >
-                    <Text style={styles.buttonText}>New Puzzle</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                    style={[styles.button, styles.buttonSecondary]}
-                    onPress={() => router.back()}
-                >
-                    <Text style={styles.buttonTextSecondary}>Back to Home</Text>
-                </TouchableOpacity>
-            </View>
         </SafeAreaView>
     );
 }
@@ -142,29 +160,43 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
     },
-    actions: {
-        padding: 20,
-        gap: 10,
-    },
-    button: {
-        backgroundColor: Colors.light.tint,
-        paddingVertical: 15,
-        borderRadius: 10,
+    header: {
+        flexDirection: 'row',
         alignItems: 'center',
+        paddingHorizontal: Spacing.sm,
+        paddingVertical: Spacing.sm,
     },
-    buttonText: {
-        color: '#fff',
-        fontSize: 16,
-        fontWeight: 'bold',
+    backButton: {
+        padding: Spacing.xs,
+        marginLeft: Spacing.xs,
     },
-    buttonSecondary: {
-        backgroundColor: 'transparent',
-        borderWidth: 2,
-        borderColor: Colors.light.tint,
+    headerCenter: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginLeft: Spacing.sm,
+        flex: 1,
     },
-    buttonTextSecondary: {
-        color: Colors.light.tint,
-        fontSize: 16,
-        fontWeight: 'bold',
+    headerTitle: {
+        ...Typography.h2,
+    },
+    badge: {
+        backgroundColor: TFL.yellow,
+        paddingHorizontal: Spacing.sm,
+        paddingVertical: 2,
+        borderRadius: Layout.borderRadius.xl,
+        marginLeft: Spacing.sm,
+    },
+    badgeText: {
+        fontSize: 11,
+        fontWeight: '700',
+        color: Colors.light.text,
+    },
+    headerRight: {
+        width: 80,
+    },
+    headerDate: {
+        ...Typography.caption,
+        color: TFL.grey.dark,
+        marginRight: Spacing.sm,
     },
 });

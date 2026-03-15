@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
 import { Crossword } from '@/components/games/Crossword';
-import type { CrosswordState, CrosswordCell } from '@/types/game';
+import type { CrosswordState, CrosswordCell, CrosswordPuzzle } from '@/types/game';
 
 describe('Crossword Component', () => {
   const mockOnCellChange = jest.fn();
@@ -28,6 +28,25 @@ describe('Crossword Component', () => {
     ],
   ];
 
+  const testPuzzle: CrosswordPuzzle = {
+    id: 'test-1',
+    date: '2026-03-15',
+    title: 'Test Puzzle',
+    rows: 3,
+    cols: 3,
+    grid: testGrid,
+    clues: {
+      across: [
+        { number: 1, clue: 'First across clue', answer: 'AB', row: 0, col: 0, length: 2 },
+        { number: 3, clue: 'Second across clue', answer: 'EF', row: 2, col: 1, length: 2 },
+      ],
+      down: [
+        { number: 1, clue: 'First down clue', answer: 'AC', row: 0, col: 0, length: 2 },
+        { number: 2, clue: 'Second down clue', answer: 'DF', row: 1, col: 2, length: 2 },
+      ],
+    },
+  };
+
   const baseGameState: CrosswordState = {
     puzzleId: 'test-1',
     grid: testGrid,
@@ -44,41 +63,33 @@ describe('Crossword Component', () => {
   });
 
   describe('Rendering', () => {
-    it('renders the title', () => {
+    it('renders across clues in the default tab', () => {
       const { getByText } = render(
-        <Crossword gameState={baseGameState} onCellChange={mockOnCellChange} />
-      );
-
-      expect(getByText('Premium Crossword Puzzle')).toBeTruthy();
-    });
-
-    it('renders across clues section', () => {
-      const { getByText } = render(
-        <Crossword gameState={baseGameState} onCellChange={mockOnCellChange} />
+        <Crossword puzzle={testPuzzle} gameState={baseGameState} onCellChange={mockOnCellChange} />
       );
 
       expect(getByText('Across')).toBeTruthy();
-      expect(getByText('1. First across clue')).toBeTruthy();
-      expect(getByText('3. Second across clue')).toBeTruthy();
+      expect(getByText('First across clue')).toBeTruthy();
+      expect(getByText('Second across clue')).toBeTruthy();
     });
 
-    it('renders down clues section', () => {
+    it('renders down clues when Down tab is pressed', () => {
       const { getByText } = render(
-        <Crossword gameState={baseGameState} onCellChange={mockOnCellChange} />
+        <Crossword puzzle={testPuzzle} gameState={baseGameState} onCellChange={mockOnCellChange} />
       );
 
-      expect(getByText('Down')).toBeTruthy();
-      expect(getByText('1. First down clue')).toBeTruthy();
-      expect(getByText('2. Second down clue')).toBeTruthy();
+      fireEvent.press(getByText('Down'));
+
+      expect(getByText('First down clue')).toBeTruthy();
+      expect(getByText('Second down clue')).toBeTruthy();
     });
 
     it('renders cell numbers for numbered cells', () => {
       const { getAllByText } = render(
-        <Crossword gameState={baseGameState} onCellChange={mockOnCellChange} />
+        <Crossword puzzle={testPuzzle} gameState={baseGameState} onCellChange={mockOnCellChange} />
       );
 
-      // Numbers 1, 2, 3 should appear in numbered cells
-      // Note: number 1 appears in both across and down clues sections too
+      // Numbers 1, 2, 3 should appear in numbered cells (and possibly in clue list)
       expect(getAllByText('1').length).toBeGreaterThanOrEqual(1);
       expect(getAllByText('2').length).toBeGreaterThanOrEqual(1);
       expect(getAllByText('3').length).toBeGreaterThanOrEqual(1);
@@ -91,73 +102,11 @@ describe('Crossword Component', () => {
       };
 
       const { getAllByText } = render(
-        <Crossword gameState={gameStateWithAnswers} onCellChange={mockOnCellChange} />
+        <Crossword puzzle={testPuzzle} gameState={gameStateWithAnswers} onCellChange={mockOnCellChange} />
       );
 
       expect(getAllByText('A').length).toBeGreaterThanOrEqual(1);
       expect(getAllByText('B').length).toBeGreaterThanOrEqual(1);
-    });
-
-    it('does not show input when no cell is selected', () => {
-      const { queryByPlaceholderText } = render(
-        <Crossword gameState={baseGameState} onCellChange={mockOnCellChange} />
-      );
-
-      expect(queryByPlaceholderText('Enter letter')).toBeNull();
-    });
-  });
-
-  describe('Cell interaction', () => {
-    it('shows input field when a non-black cell is pressed', () => {
-      const { UNSAFE_getAllByType, queryByPlaceholderText } = render(
-        <Crossword gameState={baseGameState} onCellChange={mockOnCellChange} />
-      );
-
-      // Find all TouchableOpacity elements (cells)
-      const touchables = UNSAFE_getAllByType(
-        require('react-native').TouchableOpacity
-      );
-
-      // Press the first cell (non-black, row 0 col 0)
-      fireEvent.press(touchables[0]);
-
-      expect(queryByPlaceholderText('Enter letter')).toBeTruthy();
-    });
-
-    it('calls onCellChange with uppercase value when input is provided', () => {
-      const { UNSAFE_getAllByType, getByPlaceholderText } = render(
-        <Crossword gameState={baseGameState} onCellChange={mockOnCellChange} />
-      );
-
-      const touchables = UNSAFE_getAllByType(
-        require('react-native').TouchableOpacity
-      );
-
-      // Press cell at row 0, col 0
-      fireEvent.press(touchables[0]);
-
-      const input = getByPlaceholderText('Enter letter');
-      fireEvent.changeText(input, 'a');
-
-      expect(mockOnCellChange).toHaveBeenCalledWith(0, 0, 'A');
-    });
-
-    it('does not call onCellChange when disabled', () => {
-      const { UNSAFE_getAllByType } = render(
-        <Crossword
-          gameState={baseGameState}
-          onCellChange={mockOnCellChange}
-          disabled={true}
-        />
-      );
-
-      const touchables = UNSAFE_getAllByType(
-        require('react-native').TouchableOpacity
-      );
-
-      // All non-black cells should be disabled
-      const firstNonBlackCell = touchables[0];
-      expect(firstNonBlackCell.props.disabled).toBe(true);
     });
   });
 
@@ -165,6 +114,7 @@ describe('Crossword Component', () => {
     it('disables all non-black cells when disabled prop is true', () => {
       const { UNSAFE_getAllByType } = render(
         <Crossword
+          puzzle={testPuzzle}
           gameState={baseGameState}
           onCellChange={mockOnCellChange}
           disabled={true}
@@ -175,15 +125,17 @@ describe('Crossword Component', () => {
         require('react-native').TouchableOpacity
       );
 
-      // Every touchable should be disabled (black cells are always disabled, white cells disabled via prop)
-      touchables.forEach((touchable) => {
-        expect(touchable.props.disabled).toBe(true);
-      });
+      // All grid cell touchables should be disabled
+      // (tabs and clue rows are also TouchableOpacity but they don't have disabled prop)
+      const gridCells = touchables.filter((t) => t.props.disabled === true);
+      // 9 cells total: 6 non-black (disabled via prop) + 3 black (always disabled)
+      expect(gridCells.length).toBe(9);
     });
 
     it('enables non-black cells when disabled prop is false', () => {
       const { UNSAFE_getAllByType } = render(
         <Crossword
+          puzzle={testPuzzle}
           gameState={baseGameState}
           onCellChange={mockOnCellChange}
           disabled={false}
@@ -194,8 +146,8 @@ describe('Crossword Component', () => {
         require('react-native').TouchableOpacity
       );
 
-      // 3 black cells should be disabled in our 3x3 test grid
-      const disabledCells = touchables.filter((t) => t.props.disabled);
+      // Only 3 black cells should be disabled
+      const disabledCells = touchables.filter((t) => t.props.disabled === true);
       expect(disabledCells.length).toBe(3);
     });
   });
@@ -217,13 +169,59 @@ describe('Crossword Component', () => {
 
       const { getByText } = render(
         <Crossword
+          puzzle={testPuzzle}
           gameState={completedState}
           onCellChange={mockOnCellChange}
         />
       );
 
-      // Should still render correctly even when completed
-      expect(getByText('Premium Crossword Puzzle')).toBeTruthy();
+      // Should render the clue tabs
+      expect(getByText('Across')).toBeTruthy();
+      expect(getByText('Down')).toBeTruthy();
+    });
+  });
+
+  describe('Active clue panel', () => {
+    it('shows the active clue when a cell is tapped', () => {
+      const { UNSAFE_getAllByType, getByText } = render(
+        <Crossword puzzle={testPuzzle} gameState={baseGameState} onCellChange={mockOnCellChange} />
+      );
+
+      const touchables = UNSAFE_getAllByType(
+        require('react-native').TouchableOpacity
+      );
+
+      // Press first cell (row 0, col 0)
+      fireEvent.press(touchables[0]);
+
+      // Should show the active clue for 1 Across
+      expect(getByText('First across clue')).toBeTruthy();
+    });
+  });
+
+  describe('Clue completion', () => {
+    it('applies strikethrough style to completed clues', () => {
+      const gameStateWithCompleted: CrosswordState = {
+        ...baseGameState,
+        userAnswers: {
+          '0-0': 'A',
+          '0-1': 'B', // completes clue 1 across (AB)
+        },
+      };
+
+      const { getByText } = render(
+        <Crossword
+          puzzle={testPuzzle}
+          gameState={gameStateWithCompleted}
+          onCellChange={mockOnCellChange}
+        />
+      );
+
+      const firstClueText = getByText('First across clue');
+      const flatStyle = Array.isArray(firstClueText.props.style)
+        ? Object.assign({}, ...firstClueText.props.style)
+        : firstClueText.props.style;
+      expect(flatStyle.textDecorationLine).toBe('line-through');
     });
   });
 });
