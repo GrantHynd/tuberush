@@ -1,6 +1,8 @@
 import { hasActiveEntitlement, logInRevenueCat, logOutRevenueCat } from '@/lib/revenuecat';
 import { supabase } from '@/lib/supabase-client';
+import type { Tables } from '@/lib/database.types';
 import type { User } from '@/types/game';
+import type { Session } from '@supabase/supabase-js';
 import { BOROUGHS } from '@/constants/Boroughs';
 import { Platform } from 'react-native';
 import { create } from 'zustand';
@@ -16,7 +18,7 @@ function normalizeProfile(profile: { city?: string | null; borough?: string | nu
 
 interface AuthState {
     user: User | null;
-    session: any;
+    session: Session | null;
     loading: boolean;
     pendingPasswordReset: boolean;
     signUp: (email: string, password: string, username?: string) => Promise<void>;
@@ -228,7 +230,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         if (!user) return;
 
         // Map camelCase to snake_case if needed
-        const dbUpdates: any = {};
+        const dbUpdates: Tables<'profiles'>['Update'] = {};
         if (updates.city !== undefined) dbUpdates.city = updates.city;
         if (updates.borough !== undefined) dbUpdates.borough = updates.borough;
 

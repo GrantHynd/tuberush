@@ -1,4 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import type { GameState, SyncOperation } from '@/types/game';
+
+export interface UserPreferences {
+    soundEnabled?: boolean;
+    notificationsEnabled?: boolean;
+    theme?: 'light' | 'dark' | 'system';
+}
 
 const STORAGE_KEYS = {
     GAME_STATE: 'game_state_',
@@ -11,7 +18,7 @@ export class StorageManager {
     /**
      * Save game state to local storage
      */
-    static async saveGameState(gameId: string, state: any): Promise<void> {
+    static async saveGameState(gameId: string, state: GameState): Promise<void> {
         try {
             const key = `${STORAGE_KEYS.GAME_STATE}${gameId}`;
             await AsyncStorage.setItem(key, JSON.stringify(state));
@@ -24,7 +31,7 @@ export class StorageManager {
     /**
      * Get game state from local storage
      */
-    static async getGameState(gameId: string): Promise<any | null> {
+    static async getGameState(gameId: string): Promise<GameState | null> {
         try {
             const key = `${STORAGE_KEYS.GAME_STATE}${gameId}`;
             const data = await AsyncStorage.getItem(key);
@@ -38,12 +45,12 @@ export class StorageManager {
     /**
      * Get multiple game states in a single batch (uses multiGet for performance)
      */
-    static async getGameStatesBatch(gameIds: string[]): Promise<Map<string, any>> {
+    static async getGameStatesBatch(gameIds: string[]): Promise<Map<string, GameState>> {
         if (gameIds.length === 0) return new Map();
         try {
             const keys = gameIds.map(id => `${STORAGE_KEYS.GAME_STATE}${id}`);
             const pairs = await AsyncStorage.multiGet(keys);
-            const result = new Map<string, any>();
+            const result = new Map<string, GameState>();
             pairs.forEach(([key, value], i) => {
                 const gameId = gameIds[i];
                 if (value) {
@@ -64,7 +71,7 @@ export class StorageManager {
     /**
      * Get all game states
      */
-    static async getAllGameStates(): Promise<any[]> {
+    static async getAllGameStates(): Promise<GameState[]> {
         try {
             const keys = await AsyncStorage.getAllKeys();
             const gameKeys = keys.filter(key => key.startsWith(STORAGE_KEYS.GAME_STATE));
@@ -94,7 +101,7 @@ export class StorageManager {
     /**
      * Add operation to sync queue
      */
-    static async addToSyncQueue(operation: any): Promise<void> {
+    static async addToSyncQueue(operation: SyncOperation): Promise<void> {
         try {
             const queue = await this.getSyncQueue();
             queue.push(operation);
@@ -108,7 +115,7 @@ export class StorageManager {
     /**
      * Get sync queue
      */
-    static async getSyncQueue(): Promise<any[]> {
+    static async getSyncQueue(): Promise<SyncOperation[]> {
         try {
             const data = await AsyncStorage.getItem(STORAGE_KEYS.SYNC_QUEUE);
             return data ? JSON.parse(data) : [];
@@ -155,7 +162,7 @@ export class StorageManager {
     /**
      * Save user preferences
      */
-    static async saveUserPreferences(preferences: any): Promise<void> {
+    static async saveUserPreferences(preferences: UserPreferences): Promise<void> {
         try {
             await AsyncStorage.setItem(STORAGE_KEYS.USER_PREFERENCES, JSON.stringify(preferences));
         } catch (error) {
@@ -167,7 +174,7 @@ export class StorageManager {
     /**
      * Get user preferences
      */
-    static async getUserPreferences(): Promise<any> {
+    static async getUserPreferences(): Promise<UserPreferences> {
         try {
             const data = await AsyncStorage.getItem(STORAGE_KEYS.USER_PREFERENCES);
             return data ? JSON.parse(data) : {};

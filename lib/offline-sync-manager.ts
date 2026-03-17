@@ -1,4 +1,5 @@
 import type { GameState, SyncOperation } from '@/types/game';
+import type { Tables } from '@/lib/database.types';
 import NetInfo from '@react-native-community/netinfo';
 import { StorageManager } from './storage-manager';
 import { supabase } from './supabase-client';
@@ -217,7 +218,7 @@ class OfflineSyncManager {
     /**
      * Handle sync conflicts (last-write-wins strategy)
      */
-    private async handleConflict(localState: GameState, serverState: any): Promise<void> {
+    private async handleConflict(localState: GameState, serverState: Tables<'game_states'>['Row']): Promise<void> {
         const localTimestamp = new Date(localState.lastUpdated).getTime();
         const serverTimestamp = new Date(serverState.last_updated).getTime();
 
@@ -240,7 +241,7 @@ class OfflineSyncManager {
             localState.syncStatus = 'synced';
         } else {
             // Server is newer, update local
-            localState.state = serverState.state;
+            localState.state = serverState.state as GameState['state'];
             localState.version = serverState.version;
             localState.lastUpdated = serverState.last_updated;
             localState.syncStatus = 'synced';
