@@ -7,16 +7,25 @@ class OfflineSyncManager {
     private isOnline: boolean = false;
     private isSyncing: boolean = false;
     private syncListeners: Array<(status: SyncStatus) => void> = [];
+    private unsubscribeNetworkListener: (() => void) | null = null;
 
     constructor() {
         this.initializeNetworkListener();
     }
 
     /**
+     * Remove the NetInfo listener. Call this when the manager is no longer needed.
+     */
+    destroy() {
+        this.unsubscribeNetworkListener?.();
+        this.unsubscribeNetworkListener = null;
+    }
+
+    /**
      * Initialize network status listener
      */
     private initializeNetworkListener() {
-        NetInfo.addEventListener(state => {
+        this.unsubscribeNetworkListener = NetInfo.addEventListener(state => {
             const wasOffline = !this.isOnline;
             this.isOnline = state.isConnected ?? false;
 
@@ -29,6 +38,7 @@ class OfflineSyncManager {
             }
         });
     }
+
 
     /**
      * Get current network status
