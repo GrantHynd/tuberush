@@ -1,4 +1,5 @@
 import { hasActiveEntitlement, logInRevenueCat, logOutRevenueCat } from '@/lib/revenuecat';
+import { APP_SCHEME } from '@/constants/Games';
 import { supabase } from '@/lib/supabase-client';
 import type { User } from '@/types/game';
 import { BOROUGHS } from '@/constants/Boroughs';
@@ -246,7 +247,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     resetPasswordForEmail: async (email: string) => {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
-            redirectTo: 'tuberushv2://',
+            redirectTo: `${APP_SCHEME}://`,
         });
         if (error) throw error;
     },
