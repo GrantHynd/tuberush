@@ -43,6 +43,14 @@ export default {
           },
         },
       ],
+      [
+        '@sentry/react-native/expo',
+        {
+          organization: process.env.SENTRY_ORG || '',
+          project: process.env.SENTRY_PROJECT || '',
+          url: 'https://sentry.io/',
+        },
+      ],
     ],
     experiments: {
       typedRoutes: true,
@@ -52,6 +60,7 @@ export default {
       supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL ?? '',
       supabasePublishableKey: process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? '',
       posthogApiKey: process.env.EXPO_PUBLIC_POSTHOG_API_KEY ?? '',
+      sentryDsn: process.env.SENTRY_DSN ?? '',
     },
   },
 };

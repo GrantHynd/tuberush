@@ -2,6 +2,7 @@ import { HeaderBackButton } from '@/components/ui/HeaderBackButton';
 import { SearchSelect } from '@/components/ui/SearchSelect';
 import { useAuthStore } from '@/stores/auth-store';
 import { useGameStore } from '@/stores/game-store';
+import { triggerTestError } from '@/lib/sentry';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
@@ -59,6 +60,23 @@ export default function ProfileScreen() {
     const handleSync = async () => {
         await syncNow();
         Alert.alert('Sync', 'Sync completed!');
+    };
+
+    const handleTestError = () => {
+        Alert.alert(
+            'Test Sentry Error',
+            'This will trigger a test error to verify Sentry integration. Note: Sentry is disabled in development mode.',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Trigger Error',
+                    style: 'destructive',
+                    onPress: () => {
+                        triggerTestError();
+                    },
+                },
+            ]
+        );
     };
 
     const handleCitySelect = (city: string) => {
@@ -195,6 +213,23 @@ export default function ProfileScreen() {
                             </TouchableOpacity>
                         </View>
                     </View>
+                    
+                    <View style={styles.cardDivider} />
+                    
+                    <TouchableOpacity
+                        style={styles.cardRow}
+                        onPress={handleTestError}
+                        accessibilityRole="button"
+                        accessibilityLabel="Test Sentry error reporting"
+                    >
+                        <Text style={styles.rowLabel}>Test Sentry</Text>
+                        <View style={styles.rowRight}>
+                            <Text style={styles.rowValueTruncatable} numberOfLines={1} ellipsizeMode="tail">
+                                Trigger Test Error
+                            </Text>
+                            <IconSymbol name="exclamationmark.triangle.fill" size={20} color={Colors.light.warning} />
+                        </View>
+                    </TouchableOpacity>
                 </View>
             </View>
 
