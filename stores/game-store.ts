@@ -1,5 +1,6 @@
 import { getDailyPuzzle, getPuzzleById } from '@/constants/CrosswordData';
 import { offlineSyncManager, SyncStatus } from '@/lib/offline-sync-manager';
+import { StorageManager } from '@/lib/storage-manager';
 import { GameState, GameType, ConnectionsState, CrosswordState } from '@/types/game';
 import { create } from 'zustand';
 
@@ -81,9 +82,12 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
     },
 
     deleteGame: async (gameId: string) => {
-        // Implementation for deleting games
-        const history = get().gameHistory.filter(g => g.id !== gameId);
-        set({ gameHistory: history });
+        await StorageManager.deleteGameState(gameId);
+        const { currentGame, gameHistory } = get();
+        set({
+            gameHistory: gameHistory.filter(g => g.id !== gameId),
+            currentGame: currentGame?.id === gameId ? null : currentGame,
+        });
     },
 
     syncNow: async () => {
