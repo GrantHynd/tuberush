@@ -1,3 +1,4 @@
+import { prefetchDailyGames } from '@/lib/daily-games';
 import { initPostHog, capture, flush } from '@/lib/posthog';
 import { configureRevenueCat } from '@/lib/revenuecat';
 import { supabase } from '@/lib/supabase-client';
@@ -68,6 +69,10 @@ export default function RootLayout() {
       }
 
       checkSession();
+
+      // Prefetch daily games in background (fire-and-forget)
+      prefetchDailyGames('connections', 7).catch(() => {});
+      prefetchDailyGames('crossword', 7).catch(() => {});
     };
     init();
   }, [checkSession]);

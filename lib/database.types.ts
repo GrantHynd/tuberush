@@ -84,6 +84,36 @@ export interface Database {
         };
         Relationships: [];
       };
+      daily_games: {
+        Row: {
+          id: string;
+          game_type: 'connections' | 'crossword';
+          game_date: string;
+          puzzle_data: Json;
+          is_published: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          game_type: 'connections' | 'crossword';
+          game_date: string;
+          puzzle_data: Json;
+          is_published?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          game_type?: 'connections' | 'crossword';
+          game_date?: string;
+          puzzle_data?: Json;
+          is_published?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       game_states: {
         Row: {
           id: string;
@@ -117,6 +147,10 @@ export interface Database {
     };
     Views: Record<string, never>;
     Functions: {
+      nextval_text: {
+        Args: { seq_name: string };
+        Returns: string;
+      };
       get_connections_play_count: {
         Args: { puzzle_date: string };
         Returns: number;

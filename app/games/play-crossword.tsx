@@ -48,7 +48,7 @@ export default function PlayCrossword() {
     const { puzzleId: puzzleIdParam } = useLocalSearchParams<{ puzzleId?: string }>();
     const user = useAuthStore(state => state.user);
     const { loadGame, saveGame, createNewGame } = useGameStore();
-    const puzzle = usePuzzle(puzzleIdParam);
+    const { puzzle, loading: puzzleLoading } = usePuzzle(puzzleIdParam);
     const [gameState, setGameState] = useState<GameState | null>(null);
     const [loading, setLoading] = useState(true);
     const [showLeaderboard, setShowLeaderboard] = useState(false);
@@ -69,6 +69,10 @@ export default function PlayCrossword() {
                 ]
             );
             setLoading(false);
+            return;
+        }
+
+        if (!puzzle || puzzleLoading) {
             return;
         }
 
@@ -98,7 +102,7 @@ export default function PlayCrossword() {
         };
 
         initGame();
-    }, [user, puzzle.id, loadGame, createNewGame, router]);
+    }, [user, puzzle, puzzleLoading, loadGame, createNewGame, router]);
 
     const timerRef = React.useRef<{ accumulatedPause: number }>({ accumulatedPause: 0 });
 
@@ -146,7 +150,7 @@ export default function PlayCrossword() {
     }, [gameState]);
 
     const checkAnswers = useCallback(async () => {
-        if (!gameState) return;
+        if (!gameState || !puzzle) return;
         const state = gameState.state as CrosswordState;
         const grid = state.grid;
         let allCorrect = true;
@@ -234,7 +238,7 @@ export default function PlayCrossword() {
                 [{ text: 'OK' }]
             );
         }
-    }, [gameState, saveGame, user, puzzle.id]);
+    }, [gameState, saveGame, user, puzzle]);
 
     const crosswordState = (gameState?.state ?? null) as CrosswordState | null;
     const timer = useCrosswordTimer(crosswordState ?? {
@@ -247,7 +251,7 @@ export default function PlayCrossword() {
         return null;
     }
 
-    if (loading || !gameState) {
+    if (loading || puzzleLoading || !puzzle || !gameState) {
         return (
             <SafeAreaView style={styles.container} edges={['top']}>
                 <View style={styles.header}>
