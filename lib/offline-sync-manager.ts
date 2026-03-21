@@ -141,6 +141,7 @@ class OfflineSyncManager {
         this.notifyListeners({ status: 'syncing', message: `Syncing ${queue.length} changes...` });
 
         const operationsToRemove: string[] = [];
+        let failedCount = 0;
 
         for (const operation of queue) {
             try {
@@ -151,10 +152,11 @@ class OfflineSyncManager {
                 // Increment retry count
                 operation.retryCount += 1;
 
-                // If too many retries, skip for now
+                // If too many retries, drop the operation and track as failed
                 if (operation.retryCount > 3) {
                     console.error('Operation failed after 3 retries, removing from queue:', operation);
                     operationsToRemove.push(operation.id);
+                    failedCount += 1;
                 }
             }
         }
@@ -165,7 +167,15 @@ class OfflineSyncManager {
 
         await StorageManager.updateLastSyncTimestamp();
         this.isSyncing = false;
-        this.notifyListeners({ status: 'synced', message: 'All changes synced' });
+
+        if (failedCount > 0) {
+            this.notifyListeners({
+                status: 'error',
+                message: `${failedCount} change${failedCount > 1 ? 's' : ''} could not be synced`,
+            });
+        } else {
+            this.notifyListeners({ status: 'synced', message: 'All changes synced' });
+        }
     }
 
     /**
