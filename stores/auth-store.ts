@@ -5,6 +5,21 @@ import { BOROUGHS } from '@/constants/Boroughs';
 import { Platform } from 'react-native';
 import { create } from 'zustand';
 
+/**
+ * Resolve the user's premium status.
+ * On native platforms RevenueCat is the source of truth; Supabase is the fallback.
+ */
+async function resolvePremiumStatus(supabaseValue: boolean): Promise<boolean> {
+    if (Platform.OS === 'ios' || Platform.OS === 'android') {
+        try {
+            return await hasActiveEntitlement();
+        } catch {
+            // Fall back to Supabase value on error
+        }
+    }
+    return supabaseValue;
+}
+
 /** Normalize profile: borough-only (legacy) → city=London, borough=value */
 function normalizeProfile(profile: { city?: string | null; borough?: string | null }) {
     const city = profile.city ?? (profile.borough && BOROUGHS.includes(profile.borough as any) ? 'London' : null);
@@ -90,14 +105,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 .single();
 
             // Check RevenueCat entitlement (source of truth for premium on native)
-            let isPremium = profile?.is_premium || false;
-            if (Platform.OS === 'ios' || Platform.OS === 'android') {
-                try {
-                    isPremium = await hasActiveEntitlement();
-                } catch {
-                    // Fall back to Supabase if RevenueCat fails
-                }
-            }
+            const isPremium = await resolvePremiumStatus(profile?.is_premium || false);
 
             set({
                 user: {
@@ -144,14 +152,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 .eq('id', session.user.id)
                 .single();
 
-            let isPremium = profile?.is_premium || false;
-            if (Platform.OS === 'ios' || Platform.OS === 'android') {
-                try {
-                    isPremium = await hasActiveEntitlement();
-                } catch {
-                    // Fall back to Supabase
-                }
-            }
+            const isPremium = await resolvePremiumStatus(profile?.is_premium || false);
 
             set({
                 user: {
@@ -182,14 +183,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             .eq('id', user.id)
             .single();
 
-        let isPremium = profile?.is_premium ?? false;
-        if (Platform.OS === 'ios' || Platform.OS === 'android') {
-            try {
-                isPremium = await hasActiveEntitlement();
-            } catch {
-                // Keep Supabase value on error
-            }
-        }
+        const isPremium = await resolvePremiumStatus(profile?.is_premium ?? false);
 
         if (profile) {
             set({
