@@ -51,6 +51,7 @@ export default {
     extra: {
       supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL ?? '',
       supabasePublishableKey: process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? '',
+      posthogApiKey: process.env.EXPO_PUBLIC_POSTHOG_API_KEY ?? '',
     },
   },
 };

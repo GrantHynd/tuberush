@@ -1,3 +1,4 @@
+import { initPostHog, capture, flush } from '@/lib/posthog';
 import { configureRevenueCat } from '@/lib/revenuecat';
 import { supabase } from '@/lib/supabase-client';
 import { useAuthStore } from '@/stores/auth-store';
@@ -57,6 +58,15 @@ export default function RootLayout() {
           console.warn('[App] RevenueCat init failed:', e);
         }
       }
+
+      try {
+        await initPostHog();
+        capture('app_launched');
+        await flush();
+      } catch (e) {
+        console.warn('[App] PostHog init failed:', e);
+      }
+
       checkSession();
     };
     init();

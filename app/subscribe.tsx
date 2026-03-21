@@ -1,7 +1,8 @@
+import { capture } from '@/lib/posthog';
 import { supabase } from '@/lib/supabase-client';
 import { useAuthStore } from '@/stores/auth-store';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
@@ -19,6 +20,10 @@ export default function SubscribeScreen() {
     const [loading, setLoading] = useState(false);
 
     const isNative = Platform.OS === 'ios' || Platform.OS === 'android';
+
+    useEffect(() => {
+        capture('subscribe_screen_viewed');
+    }, []);
 
     const handleSubscribe = async () => {
         if (!user) {
@@ -65,6 +70,7 @@ export default function SubscribeScreen() {
             }
 
             // RevenueCat Paywall - presents native paywall UI
+            capture('paywall_presented');
             const result = await RevenueCatUI.presentPaywall({
                 displayCloseButton: true,
             });
@@ -72,15 +78,17 @@ export default function SubscribeScreen() {
             await refreshPremiumStatusFromRevenueCat();
 
             if (result === PAYWALL_RESULT.PURCHASED) {
+                capture('subscription_purchased');
                 Alert.alert('Success', 'Premium membership activated!', [
                     { text: 'OK', onPress: () => router.back() },
                 ]);
             } else if (result === PAYWALL_RESULT.RESTORED) {
+                capture('subscription_restored');
                 Alert.alert('Success', 'Purchases restored!', [
                     { text: 'OK', onPress: () => router.back() },
                 ]);
             } else if (result === PAYWALL_RESULT.CANCELLED) {
-                // User dismissed without purchasing - do nothing
+                capture('paywall_dismissed');
             } else if (result === PAYWALL_RESULT.NOT_PRESENTED) {
                 // User already has entitlement - paywall wasn't shown
                 Alert.alert('Info', 'You already have premium access.', [
