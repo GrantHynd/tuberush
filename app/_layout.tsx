@@ -1,6 +1,7 @@
 import { prefetchDailyGames } from '@/lib/daily-games';
 import { initPostHog, capture, flush } from '@/lib/posthog';
 import { configureRevenueCat } from '@/lib/revenuecat';
+import { initSentry } from '@/lib/sentry';
 import { supabase } from '@/lib/supabase-client';
 import { useAuthStore } from '@/stores/auth-store';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
@@ -52,6 +53,13 @@ export default function RootLayout() {
 
   useEffect(() => {
     const init = async () => {
+      // Initialize Sentry first to catch errors during initialization
+      try {
+        initSentry();
+      } catch (e) {
+        console.warn('[App] Sentry init failed:', e);
+      }
+
       if (Platform.OS === 'ios' || Platform.OS === 'android') {
         try {
           await configureRevenueCat();
