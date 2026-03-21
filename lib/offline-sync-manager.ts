@@ -119,7 +119,7 @@ class OfflineSyncManager {
             retryCount: 0,
         };
 
-        await StorageManager.addToSyncQueue(operation);
+        const pendingCount = await StorageManager.addToSyncQueue(operation);
 
         // Update game state sync status
         gameState.syncStatus = 'pending';
@@ -127,7 +127,7 @@ class OfflineSyncManager {
 
         this.notifyListeners({
             status: 'pending',
-            message: `${await this.getPendingOperationsCount()} changes pending`,
+            message: `${pendingCount} change${pendingCount !== 1 ? 's' : ''} pending`,
         });
     }
 

@@ -94,11 +94,13 @@ export class StorageManager {
     /**
      * Add operation to sync queue
      */
-    static async addToSyncQueue(operation: any): Promise<void> {
+    /** Appends an operation to the sync queue and returns the new queue length. */
+    static async addToSyncQueue(operation: any): Promise<number> {
         try {
             const queue = await this.getSyncQueue();
             queue.push(operation);
             await AsyncStorage.setItem(STORAGE_KEYS.SYNC_QUEUE, JSON.stringify(queue));
+            return queue.length;
         } catch (error) {
             console.error('Error adding to sync queue:', error);
             throw error;
