@@ -1,10 +1,11 @@
 import { Connections } from "@/components/games/Connections";
 import { Leaderboard } from "@/components/ui/Leaderboard";
+import type { ConnectionsPuzzle } from "@/constants/ConnectionsData";
 import {
-  ConnectionsPuzzle,
-  getDailyPuzzle,
-  getPuzzleByDate,
+  getDailyPuzzle as getConnectionsFallback,
+  getPuzzleByDate as getConnectionsByDateFallback,
 } from "@/constants/ConnectionsData";
+import { getDailyGame, getGameByDate } from "@/lib/daily-games";
 import { Colors, Spacing, TFL, Typography } from "@/constants/theme";
 import { leaderboard } from "@/lib/leaderboard";
 import { useAuthStore } from "@/stores/auth-store";
@@ -69,7 +70,13 @@ export default function PlayConnectionsScreen() {
 
     const initGame = async () => {
       const puzzleDate = dateParam || new Date().toISOString().split("T")[0];
-      const targetPuzzle = getPuzzleByDate(puzzleDate) ?? getDailyPuzzle();
+      let targetPuzzle: ConnectionsPuzzle;
+      if (dateParam) {
+        const dbPuzzle = await getGameByDate("connections", dateParam);
+        targetPuzzle = (dbPuzzle as ConnectionsPuzzle) ?? getConnectionsByDateFallback(dateParam) ?? getConnectionsFallback();
+      } else {
+        targetPuzzle = (await getDailyGame("connections")) as ConnectionsPuzzle;
+      }
       setPuzzle(targetPuzzle);
 
       const gameId = `connections_${user.id}_${targetPuzzle.date}`;

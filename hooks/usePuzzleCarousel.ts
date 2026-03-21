@@ -4,6 +4,7 @@ import {
 } from '@/constants/ConnectionsData';
 import { getRecentPuzzles as getCrosswordRecent } from '@/constants/CrosswordData';
 import type { CrosswordPuzzle } from '@/types/game';
+import { getRecentAndUpcomingGames } from '@/lib/daily-games';
 import { offlineSyncManager } from '@/lib/offline-sync-manager';
 import { supabase } from '@/lib/supabase-client';
 import { useAuthStore } from '@/stores/auth-store';
@@ -66,7 +67,11 @@ async function loadConnectionsCarousel(
     userId: string,
     limit: number = 7,
 ): Promise<ConnectionsCarouselItem[]> {
-    const puzzles = getConnectionsRecent(limit);
+    const dbPuzzles = await getRecentAndUpcomingGames('connections', limit, 0);
+    const puzzles = (dbPuzzles.length > 0
+        ? dbPuzzles as ConnectionsPuzzle[]
+        : getConnectionsRecent(limit)
+    ).slice(0, limit);
     const playCounts = await Promise.all(
         puzzles.map(p => getConnectionsPlayCount(p.date))
     );
@@ -109,7 +114,11 @@ async function loadConnectionsCarousel(
 }
 
 async function loadCrosswordCarousel(userId: string): Promise<CrosswordCarouselItem[]> {
-    const puzzles = getCrosswordRecent(7);
+    const dbPuzzles = await getRecentAndUpcomingGames('crossword', 7, 0);
+    const puzzles = (dbPuzzles.length > 0
+        ? dbPuzzles as CrosswordPuzzle[]
+        : getCrosswordRecent(7)
+    ).slice(0, 7);
     const today = new Date().toISOString().split('T')[0];
     const items: CrosswordCarouselItem[] = [];
 

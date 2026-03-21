@@ -47,7 +47,7 @@ export default function PlayCrossword() {
     const { puzzleId: puzzleIdParam } = useLocalSearchParams<{ puzzleId?: string }>();
     const user = useAuthStore(state => state.user);
     const { loadGame, saveGame, createNewGame } = useGameStore();
-    const puzzle = usePuzzle(puzzleIdParam);
+    const { puzzle, loading: puzzleLoading } = usePuzzle(puzzleIdParam);
     const [gameState, setGameState] = useState<GameState | null>(null);
     const [loading, setLoading] = useState(true);
     const [showLeaderboard, setShowLeaderboard] = useState(false);
@@ -67,6 +67,10 @@ export default function PlayCrossword() {
                 ]
             );
             setLoading(false);
+            return;
+        }
+
+        if (!puzzle || puzzleLoading) {
             return;
         }
 
@@ -95,7 +99,7 @@ export default function PlayCrossword() {
         };
 
         initGame();
-    }, [user, puzzle.id, loadGame, createNewGame, router]);
+    }, [user, puzzle?.id, puzzleLoading, loadGame, createNewGame, router]);
 
     const timerRef = React.useRef<{ accumulatedPause: number }>({ accumulatedPause: 0 });
 
@@ -216,7 +220,7 @@ export default function PlayCrossword() {
         return null;
     }
 
-    if (loading || !gameState) {
+    if (loading || puzzleLoading || !puzzle || !gameState) {
         return (
             <SafeAreaView style={styles.container} edges={['top']}>
                 <View style={styles.header}>
