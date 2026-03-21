@@ -1,3 +1,4 @@
+import { capture, identify, resetIdentity } from '@/lib/posthog';
 import { hasActiveEntitlement, logInRevenueCat, logOutRevenueCat } from '@/lib/revenuecat';
 import { APP_SCHEME } from '@/constants/Games';
 import { supabase } from '@/lib/supabase-client';
@@ -68,6 +69,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         // The trigger creates with default values.
 
         if (data.user) {
+            capture('sign_up', { method: 'email' });
              set({
                 user: {
                     id: data.user.id,
@@ -97,6 +99,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             } catch (rcError) {
                 console.warn('[Auth] RevenueCat login failed:', rcError);
             }
+
+            identify(data.user.id, { email: data.user.email });
+            capture('sign_in', { method: 'email' });
 
             // Fetch profile
             const { data: profile } = await supabase
@@ -130,6 +135,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         } catch {
             // Ignore RevenueCat logout errors
         }
+        capture('sign_out');
+        resetIdentity();
         await supabase.auth.signOut();
         set({ user: null, session: null });
     },
@@ -145,6 +152,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             } catch {
                 // Ignore if already logged in or RevenueCat not configured
             }
+
+            identify(session.user.id, { email: session.user.email });
 
             // Fetch profile
             const { data: profile } = await supabase
@@ -235,6 +244,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             .eq('id', user.id);
 
         if (error) throw error;
+
+        if (updates.city) {
+            capture('location_updated', {
+                city: updates.city,
+                borough: updates.borough ?? null,
+            });
+        }
 
         set({ user: { ...user, ...updates } });
     },

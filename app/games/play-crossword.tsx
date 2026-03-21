@@ -3,6 +3,7 @@ import { CrosswordErrorBoundary } from '@/components/games/CrosswordErrorBoundar
 import { Leaderboard } from '@/components/ui/Leaderboard';
 import { Colors, Layout, Spacing, TFL, Typography } from '@/constants/theme';
 import { leaderboard } from '@/lib/leaderboard';
+import { capture } from '@/lib/posthog';
 import { useAuthStore } from '@/stores/auth-store';
 import { useGameStore } from '@/stores/game-store';
 import { useCrosswordTimer } from '@/hooks/useCrosswordTimer';
@@ -58,6 +59,7 @@ export default function PlayCrossword() {
         }
 
         if (!user.isPremium) {
+            capture('premium_gate_shown', { source: 'crossword_play' });
             Alert.alert(
                 'Premium Required',
                 'Crossword puzzles are only available for premium members.',
@@ -89,6 +91,7 @@ export default function PlayCrossword() {
                 }
 
                 setGameState(game);
+                capture('game_started', { game_type: 'crossword', puzzle_id: puzzle.id });
             } catch (error) {
                 console.error('Failed to init crossword game:', error);
                 Alert.alert('Error', 'Failed to load game');
@@ -99,7 +102,7 @@ export default function PlayCrossword() {
         };
 
         initGame();
-    }, [user, puzzle?.id, puzzleLoading, loadGame, createNewGame, router]);
+    }, [user, puzzle, puzzleLoading, loadGame, createNewGame, router]);
 
     const timerRef = React.useRef<{ accumulatedPause: number }>({ accumulatedPause: 0 });
 
@@ -147,10 +150,11 @@ export default function PlayCrossword() {
     }, [gameState]);
 
     const checkAnswers = useCallback(async () => {
-        if (!gameState) return;
+        if (!gameState || !puzzle) return;
         const state = gameState.state as CrosswordState;
         const grid = state.grid;
         let allCorrect = true;
+        let incorrectCells = 0;
         for (let r = 0; r < grid.length; r++) {
             for (let c = 0; c < grid[r].length; c++) {
                 const cell = grid[r][c];
@@ -160,12 +164,25 @@ export default function PlayCrossword() {
                     const userAns = (state.userAnswers[key] ?? '').toUpperCase().trim();
                     if (userAns !== correct) {
                         allCorrect = false;
-                        break;
+                        incorrectCells += 1;
                     }
                 }
             }
-            if (!allCorrect) break;
         }
+
+        const elapsedSeconds =
+            state.startTime != null
+                ? Math.floor(
+                      (Date.now() - state.startTime - (timerRef.current.accumulatedPause ?? 0)) / 1000,
+                  )
+                : undefined;
+
+        capture('crossword_answers_checked', {
+            puzzle_id: puzzle.id,
+            check_result: allCorrect ? 'all_correct' : 'has_errors',
+            incorrect_cell_count: allCorrect ? 0 : incorrectCells,
+            elapsed_seconds: elapsedSeconds,
+        });
 
         if (allCorrect) {
             const endTime = Date.now();
@@ -185,6 +202,20 @@ export default function PlayCrossword() {
             await saveGame(updatedGame);
 
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+            const completionSecs = newState.startTime
+                ? Math.floor((endTime - newState.startTime - (newState.accumulatedPause ?? 0)) / 1000)
+                : null;
+            capture('game_completed', {
+                game_type: 'crossword',
+                result: 'won',
+                time_taken_seconds: completionSecs,
+            });
+            capture('game_marked_complete', {
+                game_type: 'crossword',
+                puzzle_id: puzzle.id,
+                time_taken_seconds: completionSecs,
+            });
 
             if (user?.city && newState.startTime) {
                 const pauseMs = newState.accumulatedPause ?? 0;
@@ -207,7 +238,7 @@ export default function PlayCrossword() {
                 [{ text: 'OK' }]
             );
         }
-    }, [gameState, saveGame, user]);
+    }, [gameState, saveGame, user, puzzle]);
 
     const crosswordState = (gameState?.state ?? null) as CrosswordState | null;
     const timer = useCrosswordTimer(crosswordState ?? {
@@ -253,6 +284,7 @@ export default function PlayCrossword() {
         if (completionTimeSecs == null) return;
         const dateStr = formatPuzzleDate(puzzle.date);
         const timeStr = formatTime(completionTimeSecs);
+        capture('game_shared', { game_type: 'crossword' });
         try {
             await Share.share({
                 message: `TubeRush Crossword - ${dateStr} - Solved in ${timeStr}`,

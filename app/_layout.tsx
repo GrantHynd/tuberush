@@ -1,4 +1,5 @@
 import { prefetchDailyGames } from '@/lib/daily-games';
+import { initPostHog, capture, flush } from '@/lib/posthog';
 import { configureRevenueCat } from '@/lib/revenuecat';
 import { supabase } from '@/lib/supabase-client';
 import { useAuthStore } from '@/stores/auth-store';
@@ -58,6 +59,15 @@ export default function RootLayout() {
           console.warn('[App] RevenueCat init failed:', e);
         }
       }
+
+      try {
+        await initPostHog();
+        capture('app_launched');
+        await flush();
+      } catch (e) {
+        console.warn('[App] PostHog init failed:', e);
+      }
+
       checkSession();
 
       // Prefetch daily games in background (fire-and-forget)

@@ -8,6 +8,7 @@ import {
 import { getDailyGame, getGameByDate } from "@/lib/daily-games";
 import { Colors, Spacing, TFL, Typography } from "@/constants/theme";
 import { leaderboard } from "@/lib/leaderboard";
+import { capture } from "@/lib/posthog";
 import { useAuthStore } from "@/stores/auth-store";
 import { useGameStore } from "@/stores/game-store";
 import { ConnectionsState } from "@/types/game";
@@ -69,7 +70,6 @@ export default function PlayConnectionsScreen() {
     }
 
     const initGame = async () => {
-      const puzzleDate = dateParam || new Date().toISOString().split("T")[0];
       let targetPuzzle: ConnectionsPuzzle;
       if (dateParam) {
         const dbPuzzle = await getGameByDate("connections", dateParam);
@@ -88,6 +88,7 @@ export default function PlayConnectionsScreen() {
           game = createNewGame(user.id, "connections", gameId);
         }
 
+        capture("game_started", { game_type: "connections", puzzle_date: targetPuzzle.date });
         setLoading(false);
       } catch (error) {
         console.error("Failed to init game:", error);
@@ -133,6 +134,19 @@ export default function PlayConnectionsScreen() {
               (endTime - newState.startTime) / 1000,
             );
 
+            capture("game_completed", {
+              game_type: "connections",
+              result: "won",
+              time_taken_seconds: timeTaken,
+              mistakes: 4 - newState.mistakesRemaining,
+            });
+            capture("game_marked_complete", {
+              game_type: "connections",
+              puzzle_date: puzzle.date,
+              time_taken_seconds: timeTaken,
+              mistakes_used: 4 - newState.mistakesRemaining,
+            });
+
             if (user.city) {
               leaderboard
                 .submitScore(
@@ -157,6 +171,11 @@ export default function PlayConnectionsScreen() {
         if (newState.mistakesRemaining === 0) {
           newState.status = "lost";
           newState.endTime = Date.now();
+          capture("game_completed", {
+            game_type: "connections",
+            result: "lost",
+            groups_found: newState.completedGroups.length,
+          });
         }
       }
 
