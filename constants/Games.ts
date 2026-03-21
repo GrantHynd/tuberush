@@ -1,5 +1,8 @@
 import { TFL } from './theme';
 
+/** Deep-link scheme as defined in app.config.ts → expo.scheme */
+export const APP_SCHEME = 'tuberushv2';
+
 export const GAMES = {
     connections: {
         id: 'connections',
