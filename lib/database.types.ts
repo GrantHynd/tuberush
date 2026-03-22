@@ -84,7 +84,7 @@ export interface Database {
         };
         Relationships: [];
       };
-      daily_games: {
+      games: {
         Row: {
           id: string;
           game_type: 'connections' | 'crossword';

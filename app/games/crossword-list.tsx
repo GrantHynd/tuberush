@@ -1,14 +1,13 @@
-import { CrosswordGridPreview } from '@/components/games/CrosswordGridPreview';
+import { CrosswordListGridPreview } from '@/components/games/CrosswordListGridPreview';
 import { GameHistoryListScreen } from '@/components/games/GameHistoryListScreen';
 import { crosswordGameHistoryConfig } from '@/config/gameHistoryConfigs';
-import { getPuzzleById } from '@/constants/CrosswordData';
 import { useGameHistoryList } from '@/hooks/useGameHistoryList';
 import { useAuthStore } from '@/stores/auth-store';
 import { TFL } from '@/constants/theme';
 import type { GameHistoryListItem } from '@/types/game-history';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback } from 'react';
-import { Alert, View } from 'react-native';
+import { Alert } from 'react-native';
 
 export default function CrosswordListScreen() {
     const router = useRouter();
@@ -44,13 +43,7 @@ export default function CrosswordListScreen() {
 
     const renderGridPreview = useCallback((item: GameHistoryListItem) => {
         if (!item.isCompleted) return null;
-        const puzzle = getPuzzleById(item.navigateKey);
-        if (!puzzle) return null;
-        return (
-            <View style={{ marginRight: 8 }}>
-                <CrosswordGridPreview grid={puzzle.grid} size={36} />
-            </View>
-        );
+        return <CrosswordListGridPreview puzzleId={item.navigateKey} size={36} />;
     }, []);
 
     return (

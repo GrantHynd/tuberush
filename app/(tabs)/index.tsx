@@ -104,13 +104,12 @@ export default function HomeScreen() {
                     <FlatList
                         data={connectionsItems as ConnectionsCarouselItem[]}
                         horizontal
-                        keyExtractor={(item) => item.date}
+                        keyExtractor={(item) => item.puzzleId}
                         showsHorizontalScrollIndicator={false}
                         contentContainerStyle={styles.carouselContent}
                         ItemSeparatorComponent={() => <View style={{ width: CARD_GAP }} />}
                         renderItem={({ item }) => (
                             <PuzzleCard
-                                puzzleNumber={item.puzzleNumber}
                                 label={item.label}
                                 isNew={item.isNew}
                                 isCompleted={item.isCompleted}
@@ -133,13 +132,12 @@ export default function HomeScreen() {
                     <FlatList
                         data={crosswordItems as CrosswordCarouselItem[]}
                         horizontal
-                        keyExtractor={(item) => item.date}
+                        keyExtractor={(item) => item.puzzleId}
                         showsHorizontalScrollIndicator={false}
                         contentContainerStyle={styles.carouselContent}
                         ItemSeparatorComponent={() => <View style={{ width: CARD_GAP }} />}
                         renderItem={({ item }) => (
                             <PuzzleCard
-                                puzzleNumber={item.puzzleNumber}
                                 label={item.label}
                                 isNew={item.isNew}
                                 isCompleted={item.isCompleted}

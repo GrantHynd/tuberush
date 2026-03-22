@@ -34,7 +34,7 @@ export interface GameHistoryStats {
 export interface GameHistoryConfig<P extends BasePuzzle = BasePuzzle> {
     gameType: 'connections' | 'crossword';
     totalPuzzleCount: number;
-    getPuzzlesWithOffset: (limit: number, offset: number) => P[];
+    getPuzzlesWithOffset: (limit: number, offset: number) => P[] | Promise<P[]>;
     getGameId: (userId: string, puzzle: P) => string;
     getPuzzleDate: (puzzle: P) => string;
     /** Parse game state to extract completion info */

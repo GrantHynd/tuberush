@@ -1,4 +1,5 @@
 import { useGameStore } from '@/stores/game-store';
+import type { CrosswordPuzzle } from '@/types/game';
 import type { CrosswordState, GameState } from '@/types/game';
 
 // Mock offline sync manager
@@ -12,37 +13,33 @@ jest.mock('@/lib/offline-sync-manager', () => ({
   SyncStatus: {},
 }));
 
-// Mock CrosswordData
-jest.mock('@/constants/CrosswordData', () => ({
-  getDailyPuzzle: jest.fn(() => ({
-    id: 'puzzle-1',
-    date: '2026-03-14',
-    title: 'Test Puzzle',
-    rows: 5,
-    cols: 5,
-    grid: [
-      [
-        { letter: 'T', number: 1, isBlack: false },
-        { letter: 'A', isBlack: false },
-        { letter: 'B', number: 2, isBlack: false },
-        { letter: 'S', isBlack: false },
-        { letter: null, isBlack: true },
-      ],
+const mockCrosswordPuzzle: CrosswordPuzzle = {
+  id: 'puzzle-1',
+  date: '2026-03-14',
+  title: 'Test Puzzle',
+  rows: 5,
+  cols: 5,
+  grid: [
+    [
+      { letter: 'T', number: 1, isBlack: false },
+      { letter: 'A', isBlack: false },
+      { letter: 'B', number: 2, isBlack: false },
+      { letter: 'S', isBlack: false },
+      { letter: null, isBlack: true },
     ],
-    clues: {
-      across: [
-        { number: 1, clue: 'Test across clue', answer: 'TABS', row: 0, col: 0, length: 4 },
-      ],
-      down: [
-        { number: 2, clue: 'Test down clue', answer: 'BIG', row: 0, col: 2, length: 3 },
-      ],
-    },
-  })),
-}));
+  ],
+  clues: {
+    across: [
+      { number: 1, clue: 'Test across clue', answer: 'TABS', row: 0, col: 0, length: 4 },
+    ],
+    down: [
+      { number: 2, clue: 'Test down clue', answer: 'BIG', row: 0, col: 2, length: 3 },
+    ],
+  },
+};
 
 describe('Game Store - Crossword', () => {
   beforeEach(() => {
-    // Reset zustand store state between tests
     useGameStore.setState({
       currentGame: null,
       gameHistory: [],
@@ -52,8 +49,14 @@ describe('Game Store - Crossword', () => {
   });
 
   describe('createNewGame for crossword', () => {
+    it('throws when crossword puzzle template is missing', () => {
+      expect(() =>
+        useGameStore.getState().createNewGame('user-1', 'crossword'),
+      ).toThrow('crosswordPuzzle is required');
+    });
+
     it('creates a new crossword game with correct structure', () => {
-      const game = useGameStore.getState().createNewGame('user-1', 'crossword');
+      const game = useGameStore.getState().createNewGame('user-1', 'crossword', undefined, mockCrosswordPuzzle);
 
       expect(game).toBeDefined();
       expect(game.gameType).toBe('crossword');
@@ -66,20 +69,21 @@ describe('Game Store - Crossword', () => {
       const game = useGameStore.getState().createNewGame(
         'user-1',
         'crossword',
-        'custom-game-id'
+        'custom-game-id',
+        mockCrosswordPuzzle,
       );
 
       expect(game.id).toBe('custom-game-id');
     });
 
     it('generates a default gameId when none provided', () => {
-      const game = useGameStore.getState().createNewGame('user-1', 'crossword');
+      const game = useGameStore.getState().createNewGame('user-1', 'crossword', undefined, mockCrosswordPuzzle);
 
       expect(game.id).toContain('crossword_user-1_');
     });
 
-    it('initialises crossword state from daily puzzle data', () => {
-      const game = useGameStore.getState().createNewGame('user-1', 'crossword');
+    it('initialises crossword state from puzzle template', () => {
+      const game = useGameStore.getState().createNewGame('user-1', 'crossword', undefined, mockCrosswordPuzzle);
       const state = game.state as CrosswordState;
 
       expect(state.puzzleId).toBe('puzzle-1');
@@ -90,7 +94,7 @@ describe('Game Store - Crossword', () => {
     });
 
     it('converts clue arrays to keyed objects', () => {
-      const game = useGameStore.getState().createNewGame('user-1', 'crossword');
+      const game = useGameStore.getState().createNewGame('user-1', 'crossword', undefined, mockCrosswordPuzzle);
       const state = game.state as CrosswordState;
 
       expect(state.clues.across).toEqual({ 1: 'Test across clue' });
@@ -98,13 +102,13 @@ describe('Game Store - Crossword', () => {
     });
 
     it('sets the current game in store', () => {
-      const game = useGameStore.getState().createNewGame('user-1', 'crossword');
+      const game = useGameStore.getState().createNewGame('user-1', 'crossword', undefined, mockCrosswordPuzzle);
 
       expect(useGameStore.getState().currentGame).toBe(game);
     });
 
     it('sets lastUpdated to a valid ISO date string', () => {
-      const game = useGameStore.getState().createNewGame('user-1', 'crossword');
+      const game = useGameStore.getState().createNewGame('user-1', 'crossword', undefined, mockCrosswordPuzzle);
 
       expect(game.lastUpdated).toBeDefined();
       const parsed = new Date(game.lastUpdated);
@@ -117,7 +121,7 @@ describe('Game Store - Crossword', () => {
       const { offlineSyncManager } = require('@/lib/offline-sync-manager');
       offlineSyncManager.saveGameState.mockResolvedValue(undefined);
 
-      const game = useGameStore.getState().createNewGame('user-1', 'crossword');
+      const game = useGameStore.getState().createNewGame('user-1', 'crossword', undefined, mockCrosswordPuzzle);
       const state = game.state as CrosswordState;
 
       const updatedGame: GameState = {
@@ -140,7 +144,7 @@ describe('Game Store - Crossword', () => {
       const { offlineSyncManager } = require('@/lib/offline-sync-manager');
       offlineSyncManager.saveGameState.mockResolvedValue(undefined);
 
-      const game = useGameStore.getState().createNewGame('user-1', 'crossword');
+      const game = useGameStore.getState().createNewGame('user-1', 'crossword', undefined, mockCrosswordPuzzle);
 
       await useGameStore.getState().saveGame(game);
 

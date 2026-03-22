@@ -1,0 +1,88 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: TubeRush - nightly daily game generation Lambda
+Parameters:
+  SecretName:
+    Type: String
+    Default: tuberush/daily-games
+    Description: Name of the Secrets Manager secret containing API keys
+  ScheduleExpression:
+    Type: String
+    Default: cron(0 2 * * ? *)
+    Description: EventBridge schedule (default 2am UTC daily)
+Globals:
+  Function:
+    Runtime: nodejs22.x
+    Timeout: 300
+    MemorySize: 512
+    Architectures:
+    - arm64
+Resources:
+  DailyGamesSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name:
+        Ref: SecretName
+      Description: API keys for TubeRush nightly game generation
+      SecretString:
+        Fn::Sub: "{\n  \"ANTHROPIC_API_KEY\": \"\",\n  \"SUPABASE_URL\": \"\",\n \
+          \ \"SUPABASE_SERVICE_ROLE_KEY\": \"\",\n  \"ANTHROPIC_DAILY_PUZZLE_SKILL_ID\"\
+          : \"\",\n  \"ANTHROPIC_DAILY_PUZZLE_SKILL_VERSION\": \"latest\",\n  \"DISABLE_CLAUDE_SKILL\"\
+          : \"\"\n}\n"
+  ScheduleDailyGamesFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: tuberush-schedule-daily-games
+      CodeUri: ScheduleDailyGamesFunction
+      Handler: index.handler
+      Description: Generates daily connections + crossword puzzles via Claude
+      Environment:
+        Variables:
+          SECRET_ARN:
+            Ref: DailyGamesSecret
+          NODE_OPTIONS: --enable-source-maps
+      Policies:
+      - Statement:
+        - Effect: Allow
+          Action: secretsmanager:GetSecretValue
+          Resource:
+            Ref: DailyGamesSecret
+      Events:
+        NightlySchedule:
+          Type: ScheduleV2
+          Properties:
+            ScheduleExpression:
+              Ref: ScheduleExpression
+            Name: tuberush-nightly-game-generation
+            Description: Generate daily games at 2am UTC
+            State: ENABLED
+            RetryPolicy:
+              MaximumRetryAttempts: 2
+              MaximumEventAgeInSeconds: 3600
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        EntryPoints:
+        - src/index.ts
+        External:
+        - '@aws-sdk/client-secrets-manager'
+        Minify: false
+        Sourcemap: true
+        Target: es2022
+      SamResourceId: ScheduleDailyGamesFunction
+Outputs:
+  FunctionName:
+    Description: Lambda function name
+    Value:
+      Ref: ScheduleDailyGamesFunction
+  FunctionArn:
+    Description: Lambda function ARN
+    Value:
+      Fn::GetAtt:
+      - ScheduleDailyGamesFunction
+      - Arn
+  SecretArn:
+    Description: "Secrets Manager secret ARN \u2014 update this with real values after\
+      \ deploy"
+    Value:
+      Ref: DailyGamesSecret

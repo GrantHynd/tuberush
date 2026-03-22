@@ -107,10 +107,9 @@ export function useGameHistoryList(config: GameHistoryConfig) {
 
         setLoading(true);
         try {
-            const puzzles = config.getPuzzlesWithOffset(DAYS_PER_BATCH, 0);
+            const puzzles = await Promise.resolve(config.getPuzzlesWithOffset(DAYS_PER_BATCH, 0));
             const gameIds = puzzles.map(p => config.getGameId(user.id, p));
             let gameStatesMap = await StorageManager.getGameStatesBatch(gameIds);
-            // Fallback: load any missing games via offlineSyncManager (catches server-synced data)
             const missingIds = gameIds.filter(id => !gameStatesMap.has(id));
             if (missingIds.length > 0 && user.id) {
                 const loaded = await Promise.all(
@@ -199,7 +198,7 @@ export function useGameHistoryList(config: GameHistoryConfig) {
 
         setLoadingMore(true);
         try {
-            const puzzles = config.getPuzzlesWithOffset(DAYS_PER_BATCH, loadedCount);
+            const puzzles = await Promise.resolve(config.getPuzzlesWithOffset(DAYS_PER_BATCH, loadedCount));
             if (puzzles.length === 0) return;
 
             const gameIds = puzzles.map(p => config.getGameId(user.id, p));

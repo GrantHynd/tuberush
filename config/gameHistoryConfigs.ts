@@ -1,19 +1,51 @@
-import {
-  CONNECTIONS_PUZZLE_COUNT,
-  getRecentPuzzlesWithOffset as getConnectionsWithOffset,
-} from "@/constants/ConnectionsData";
-import {
-  CROSSWORD_PUZZLE_COUNT,
-  getRecentPuzzlesWithOffset as getCrosswordWithOffset,
-} from "@/constants/CrosswordData";
 import { supabase } from "@/lib/supabase-client";
 import type { ConnectionsState, CrosswordState } from "@/types/game";
-import type { GameHistoryConfig } from "@/types/game-history";
+import type { BasePuzzle, GameHistoryConfig } from "@/types/game-history";
 
 function formatTime(seconds: number): string {
   const minutes = Math.floor(seconds / 60);
   const secs = seconds % 60;
   return `${minutes}:${secs.toString().padStart(2, "0")}`;
+}
+
+function toLocalDateStr(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+async function fetchPuzzlesFromDB(
+  gameType: "connections" | "crossword",
+  limit: number,
+  offset: number,
+): Promise<BasePuzzle[]> {
+  try {
+    const today = new Date();
+    const startDate = new Date(today);
+    startDate.setDate(startDate.getDate() - offset);
+    const endDate = new Date(startDate);
+    endDate.setDate(endDate.getDate() - limit);
+
+    const { data, error } = await supabase
+      .from("games")
+      .select("game_date, puzzle_data")
+      .eq("game_type", gameType)
+      .eq("is_published", true)
+      .lte("game_date", toLocalDateStr(startDate))
+      .gte("game_date", toLocalDateStr(endDate))
+      .order("game_date", { ascending: false })
+      .limit(limit);
+
+    if (error || !data || data.length === 0) return [];
+
+    return data.map((row) => {
+      const pd = row.puzzle_data as { id: string };
+      return { id: pd.id, date: row.game_date } as BasePuzzle;
+    });
+  } catch {
+    return [];
+  }
 }
 
 async function getConnectionsPlayCounts(dates: string[]): Promise<number[]> {
@@ -44,8 +76,10 @@ async function getConnectionsPlayCounts(dates: string[]): Promise<number[]> {
 
 export const connectionsGameHistoryConfig: GameHistoryConfig = {
   gameType: "connections",
-  totalPuzzleCount: CONNECTIONS_PUZZLE_COUNT,
-  getPuzzlesWithOffset: getConnectionsWithOffset,
+  totalPuzzleCount: 365,
+  getPuzzlesWithOffset: async (limit, offset) => {
+    return fetchPuzzlesFromDB("connections", limit, offset);
+  },
   getGameId: (userId, puzzle) => `connections_${userId}_${puzzle.date}`,
   getPuzzleDate: (puzzle) => puzzle.date,
   parseState: (game) => {
@@ -94,8 +128,10 @@ async function getCrosswordPlayCounts(puzzleIds: string[]): Promise<number[]> {
 
 export const crosswordGameHistoryConfig: GameHistoryConfig = {
   gameType: "crossword",
-  totalPuzzleCount: CROSSWORD_PUZZLE_COUNT,
-  getPuzzlesWithOffset: getCrosswordWithOffset,
+  totalPuzzleCount: 365,
+  getPuzzlesWithOffset: async (limit, offset) => {
+    return fetchPuzzlesFromDB("crossword", limit, offset);
+  },
   getGameId: (userId, puzzle) => `crossword_${userId}_${puzzle.id}`,
   getPuzzleDate: (puzzle) => puzzle.date,
   getPlayCountIdentifier: (puzzle) => puzzle.id,

@@ -125,14 +125,14 @@ export function useUserStats() {
 /** Load game states for both connections and crossword, compute streak from wins per day */
 async function loadUserStreak(userId: string): Promise<number> {
     const DAYS_TO_CHECK = 60; // Check last 60 days for streak
-    const connPuzzles = connectionsGameHistoryConfig.getPuzzlesWithOffset(
+    const connPuzzles = await Promise.resolve(connectionsGameHistoryConfig.getPuzzlesWithOffset(
         DAYS_TO_CHECK,
         0
-    );
-    const crossPuzzles = crosswordGameHistoryConfig.getPuzzlesWithOffset(
+    ));
+    const crossPuzzles = await Promise.resolve(crosswordGameHistoryConfig.getPuzzlesWithOffset(
         DAYS_TO_CHECK,
         0
-    );
+    ));
 
     const connGameIds = connPuzzles.map(p =>
         connectionsGameHistoryConfig.getGameId(userId, p)

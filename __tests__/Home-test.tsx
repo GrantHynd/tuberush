@@ -13,7 +13,6 @@ jest.mock('@/hooks/usePuzzleCarousel', () => ({
   usePuzzleCarousel: jest.fn(() => ({
     items: [
       {
-        puzzleNumber: '#1',
         label: 'Today',
         isNew: true,
         isCompleted: false,

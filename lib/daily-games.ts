@@ -1,15 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { ConnectionsPuzzle } from '@/constants/ConnectionsData';
-import {
-  getDailyPuzzle as getConnectionsDailyFallback,
-  getPuzzleByDate as getConnectionsByDateFallback,
-  getRecentPuzzlesWithOffset as getConnectionsRecentFallback,
-} from '@/constants/ConnectionsData';
-import {
-  getDailyPuzzle as getCrosswordDailyFallback,
-  getPuzzleByDate as getCrosswordByDateFallback,
-  getRecentPuzzlesWithOffset as getCrosswordRecentFallback,
-} from '@/constants/CrosswordData';
 import type { CrosswordPuzzle } from '@/types/game';
 import { supabase } from './supabase-client';
 
@@ -25,7 +15,8 @@ interface DailyGameRow {
   updated_at: string;
 }
 
-const CACHE_KEY_PREFIX = 'daily_games_cache_';
+/** Bump when cache shape or source-of-truth changes (invalidates old AsyncStorage rows). */
+const CACHE_KEY_PREFIX = 'games_cache_v3_';
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 6 hours
 
 interface CacheEntry {
@@ -86,7 +77,7 @@ async function fetchFromSupabase(
     const futureStr = toLocalDateStr(future);
 
     const { data, error } = await supabase
-      .from('daily_games')
+      .from('games')
       .select('*')
       .eq('game_type', gameType)
       .eq('is_published', true)
@@ -116,7 +107,7 @@ async function fetchRecentAndUpcoming(
     const futureStr = toLocalDateStr(future);
 
     const { data, error } = await supabase
-      .from('daily_games')
+      .from('games')
       .select('*')
       .eq('game_type', gameType)
       .eq('is_published', true)
@@ -129,6 +120,16 @@ async function fetchRecentAndUpcoming(
   } catch {
     return null;
   }
+}
+
+function filterCachedByDateRange(
+  cached: CacheEntry,
+  pastStr: string,
+  futureStr: string,
+): DailyGameRow[] {
+  return cached.games
+    .filter(g => g.game_date >= pastStr && g.game_date <= futureStr)
+    .sort((a, b) => b.game_date.localeCompare(a.game_date));
 }
 
 // ---------------------------------------------------------------------------
@@ -154,27 +155,13 @@ export async function prefetchDailyGames(
 }
 
 /**
- * Get today's game. Cache-first, falls back to network, then constants.
+ * Get today's game. Network first, then cache. No bundled fallbacks.
  */
 export async function getDailyGame(
   gameType: GameType,
-): Promise<ConnectionsPuzzle | CrosswordPuzzle> {
+): Promise<ConnectionsPuzzle | CrosswordPuzzle | undefined> {
   const today = toLocalDateStr(new Date());
 
-  // 1. Try cache
-  const cached = await readCache(gameType);
-  if (cached) {
-    const match = cached.games.find(g => g.game_date === today);
-    if (match) {
-      // Refresh cache in background if stale
-      if (!isCacheValid(cached)) {
-        prefetchDailyGames(gameType).catch(() => {});
-      }
-      return match.puzzle_data;
-    }
-  }
-
-  // 2. Try network
   const games = await fetchFromSupabase(gameType, 7);
   if (games && games.length > 0) {
     writeCache(gameType, games).catch(() => {});
@@ -182,31 +169,30 @@ export async function getDailyGame(
     if (match) return match.puzzle_data;
   }
 
-  // 3. Fallback to constants
-  if (gameType === 'connections') {
-    return getConnectionsDailyFallback();
+  const cached = await readCache(gameType);
+  if (cached) {
+    const match = cached.games.find(g => g.game_date === today);
+    if (match) {
+      if (!isCacheValid(cached)) {
+        prefetchDailyGames(gameType).catch(() => {});
+      }
+      return match.puzzle_data;
+    }
   }
-  return getCrosswordDailyFallback();
+
+  return undefined;
 }
 
 /**
- * Get a game by specific date.
+ * Get a game by specific date. Network first, then cache. No bundled fallbacks.
  */
 export async function getGameByDate(
   gameType: GameType,
   date: string,
 ): Promise<ConnectionsPuzzle | CrosswordPuzzle | undefined> {
-  // 1. Try cache
-  const cached = await readCache(gameType);
-  if (cached) {
-    const match = cached.games.find(g => g.game_date === date);
-    if (match) return match.puzzle_data;
-  }
-
-  // 2. Try network
   try {
     const { data, error } = await supabase
-      .from('daily_games')
+      .from('games')
       .select('puzzle_data')
       .eq('game_type', gameType)
       .eq('game_date', date)
@@ -217,35 +203,82 @@ export async function getGameByDate(
       return data.puzzle_data as ConnectionsPuzzle | CrosswordPuzzle;
     }
   } catch {
-    // Fall through to constants
+    // Fall through
   }
 
-  // 3. Fallback to constants
-  if (gameType === 'connections') {
-    return getConnectionsByDateFallback(date);
+  const cached = await readCache(gameType);
+  if (cached) {
+    const match = cached.games.find(g => g.game_date === date);
+    if (match) return match.puzzle_data;
   }
-  return getCrosswordByDateFallback(date);
+
+  return undefined;
 }
 
 /**
- * Get recent past and upcoming games for carousel display.
- * Returns puzzles sorted most-recent-first.
+ * Load a crossword by puzzle_data.id (DB / carousel). Network, then cache scan.
  */
+export async function getCrosswordByPuzzleId(
+  puzzleId: string,
+): Promise<GameWithDate<CrosswordPuzzle> | undefined> {
+  if (!puzzleId) return undefined;
+  try {
+    const { data, error } = await supabase
+      .from('games')
+      .select('game_date, puzzle_data')
+      .eq('game_type', 'crossword')
+      .eq('is_published', true)
+      .contains('puzzle_data', { id: puzzleId })
+      .maybeSingle();
+
+    if (!error && data?.puzzle_data) {
+      return { game_date: data.game_date, puzzle_data: data.puzzle_data as CrosswordPuzzle };
+    }
+  } catch {
+    // Fall through to cache
+  }
+
+  const cached = await readCache('crossword');
+  if (cached?.games) {
+    for (const row of cached.games) {
+      const p = row.puzzle_data as CrosswordPuzzle;
+      if (p?.id === puzzleId) return { game_date: row.game_date, puzzle_data: p };
+    }
+  }
+
+  return undefined;
+}
+
+/**
+ * Recent / upcoming puzzles for carousels. Network, then cache slice. Empty if neither.
+ */
+export interface GameWithDate<T = ConnectionsPuzzle | CrosswordPuzzle> {
+  game_date: string;
+  puzzle_data: T;
+}
+
 export async function getRecentAndUpcomingGames(
   gameType: GameType,
   pastDays: number = 7,
   futureDays: number = 0,
-): Promise<(ConnectionsPuzzle | CrosswordPuzzle)[]> {
-  // 1. Try network
+): Promise<GameWithDate[]> {
+  const past = new Date();
+  past.setDate(past.getDate() - pastDays);
+  const pastStr = toLocalDateStr(past);
+
+  const future = new Date();
+  future.setDate(future.getDate() + futureDays);
+  const futureStr = toLocalDateStr(future);
+
   const games = await fetchRecentAndUpcoming(gameType, pastDays, futureDays);
   if (games && games.length > 0) {
-    return games.map(g => g.puzzle_data);
+    return games.map(g => ({ game_date: g.game_date, puzzle_data: g.puzzle_data }));
   }
 
-  // 2. Fallback to constants
-  const limit = pastDays + futureDays;
-  if (gameType === 'connections') {
-    return getConnectionsRecentFallback(limit, 0);
+  const cached = await readCache(gameType);
+  if (cached?.games?.length) {
+    return filterCachedByDateRange(cached, pastStr, futureStr).map(g => ({ game_date: g.game_date, puzzle_data: g.puzzle_data }));
   }
-  return getCrosswordRecentFallback(limit, 0);
+
+  return [];
 }
