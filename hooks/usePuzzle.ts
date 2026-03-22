@@ -1,59 +1,56 @@
-import { useEffect, useMemo, useState } from 'react';
-import { getDailyPuzzle, getPuzzleById } from '@/constants/CrosswordData';
-import { getDailyGame, getGameByDate } from '@/lib/daily-games';
+import { useEffect, useState } from 'react';
+import {
+    getCrosswordByPuzzleId,
+    getDailyGame,
+} from '@/lib/daily-games';
 import type { CrosswordPuzzle } from '@/types/game';
 
-/**
- * Hook that loads and exposes crossword puzzle data.
- * Pass a puzzleId to load a specific puzzle, or omit it to get today's daily puzzle.
- *
- * Loads from the daily_games DB/cache first, falls back to constants.
- */
-export function usePuzzle(puzzleId?: string): { puzzle: CrosswordPuzzle | null; loading: boolean } {
-    // Synchronous fallback for immediate render
-    const fallback = useMemo(() => {
-        if (puzzleId) {
-            return getPuzzleById(puzzleId) ?? getDailyPuzzle();
-        }
-        return getDailyPuzzle();
-    }, [puzzleId]);
+function normalizePuzzleId(puzzleId?: string | string[]): string | undefined {
+    if (puzzleId == null) return undefined;
+    return Array.isArray(puzzleId) ? puzzleId[0] : puzzleId;
+}
 
-    const [puzzle, setPuzzle] = useState<CrosswordPuzzle | null>(fallback);
+/**
+ * Loads crossword puzzle from `games` (network + cache). No bundled puzzle fallbacks.
+ */
+export function usePuzzle(puzzleId?: string | string[]): { puzzle: CrosswordPuzzle | null; gameDate: string | null; loading: boolean } {
+    const id = normalizePuzzleId(puzzleId);
+    const [puzzle, setPuzzle] = useState<CrosswordPuzzle | null>(null);
+    const [gameDate, setGameDate] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         let cancelled = false;
 
         async function load() {
+            setLoading(true);
             try {
-                let result: CrosswordPuzzle;
-                if (puzzleId) {
-                    // Try to find by looking up the puzzle's date from the fallback
-                    const fb = getPuzzleById(puzzleId);
-                    if (fb) {
-                        const dbPuzzle = await getGameByDate('crossword', fb.date);
-                        result = (dbPuzzle as CrosswordPuzzle) ?? fb;
-                    } else {
-                        result = fallback;
+                if (id) {
+                    const result = await getCrosswordByPuzzleId(id);
+                    if (!cancelled) {
+                        setPuzzle(result?.puzzle_data ?? null);
+                        setGameDate(result?.game_date ?? null);
                     }
                 } else {
-                    result = (await getDailyGame('crossword')) as CrosswordPuzzle;
-                }
-                if (!cancelled) {
-                    setPuzzle(result);
+                    const result = (await getDailyGame('crossword')) as CrosswordPuzzle | undefined;
+                    if (!cancelled) {
+                        setPuzzle(result ?? null);
+                        setGameDate(result ? new Date().toISOString().split('T')[0] : null);
+                    }
                 }
             } catch {
-                // Keep fallback
-            } finally {
                 if (!cancelled) {
-                    setLoading(false);
+                    setPuzzle(null);
+                    setGameDate(null);
                 }
+            } finally {
+                if (!cancelled) setLoading(false);
             }
         }
 
         load();
         return () => { cancelled = true; };
-    }, [puzzleId, fallback]);
+    }, [id]);
 
-    return { puzzle, loading };
+    return { puzzle, gameDate, loading };
 }

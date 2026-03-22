@@ -1,8 +1,4 @@
-import {
-    getRecentPuzzles as getConnectionsRecent,
-    type ConnectionsPuzzle,
-} from '@/constants/ConnectionsData';
-import { getRecentPuzzles as getCrosswordRecent } from '@/constants/CrosswordData';
+import type { ConnectionsPuzzle } from '@/constants/ConnectionsData';
 import type { CrosswordPuzzle } from '@/types/game';
 import { getRecentAndUpcomingGames } from '@/lib/daily-games';
 import { offlineSyncManager } from '@/lib/offline-sync-manager';
@@ -37,7 +33,6 @@ function formatPuzzleDate(dateStr: string): string {
 }
 
 export interface PuzzleCarouselItem {
-    puzzleNumber: string;
     label: string;
     isNew: boolean;
     isCompleted: boolean;
@@ -63,25 +58,30 @@ function formatTime(seconds: number): string {
     return `${minutes}:${secs.toString().padStart(2, '0')}`;
 }
 
+function toLocalDateStr(d: Date): string {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+}
+
 async function loadConnectionsCarousel(
     userId: string,
     limit: number = 7,
 ): Promise<ConnectionsCarouselItem[]> {
-    const dbPuzzles = await getRecentAndUpcomingGames('connections', limit, 0);
-    const puzzles = (dbPuzzles.length > 0
-        ? dbPuzzles as ConnectionsPuzzle[]
-        : getConnectionsRecent(limit)
-    ).slice(0, limit);
+    const games = await getRecentAndUpcomingGames('connections', limit, 0);
+    const sliced = games.slice(0, limit);
     const playCounts = await Promise.all(
-        puzzles.map(p => getConnectionsPlayCount(p.date))
+        sliced.map(g => getConnectionsPlayCount(g.game_date))
     );
-    const today = new Date().toISOString().split('T')[0];
+    const today = toLocalDateStr(new Date());
     const items: ConnectionsCarouselItem[] = [];
 
-    for (let i = 0; i < puzzles.length; i++) {
-        const puzzle = puzzles[i];
+    for (let i = 0; i < sliced.length; i++) {
+        const { game_date, puzzle_data } = sliced[i];
+        const puzzle = puzzle_data as ConnectionsPuzzle;
         const playCount = playCounts[i];
-        const gameId = `connections_${userId}_${puzzle.date}`;
+        const gameId = `connections_${userId}_${game_date}`;
         const game = await offlineSyncManager.loadGameState(gameId, userId);
         const state = game?.state as ConnectionsState | undefined;
         const isCompleted = state?.status === 'won' || state?.status === 'lost';
@@ -98,12 +98,11 @@ async function loadConnectionsCarousel(
 
         items.push({
             puzzle,
-            puzzleNumber: `#${puzzle.id}`,
-            label: formatPuzzleDate(puzzle.date),
-            isNew: puzzle.date === today,
+            label: formatPuzzleDate(game_date),
+            isNew: game_date === today,
             isCompleted,
             commuteCount: isCompleted ? undefined : playCount,
-            date: puzzle.date,
+            date: game_date,
             puzzleId: puzzle.id,
             completionTime,
             score,
@@ -114,16 +113,14 @@ async function loadConnectionsCarousel(
 }
 
 async function loadCrosswordCarousel(userId: string): Promise<CrosswordCarouselItem[]> {
-    const dbPuzzles = await getRecentAndUpcomingGames('crossword', 7, 0);
-    const puzzles = (dbPuzzles.length > 0
-        ? dbPuzzles as CrosswordPuzzle[]
-        : getCrosswordRecent(7)
-    ).slice(0, 7);
-    const today = new Date().toISOString().split('T')[0];
+    const games = await getRecentAndUpcomingGames('crossword', 7, 0);
+    const sliced = games.slice(0, 7);
+    const today = toLocalDateStr(new Date());
     const items: CrosswordCarouselItem[] = [];
 
-    for (let i = 0; i < puzzles.length; i++) {
-        const puzzle = puzzles[i];
+    for (let i = 0; i < sliced.length; i++) {
+        const { game_date, puzzle_data } = sliced[i];
+        const puzzle = puzzle_data as CrosswordPuzzle;
         const gameId = `crossword_${userId}_${puzzle.id}`;
         const game = await offlineSyncManager.loadGameState(gameId, userId);
         const state = game?.state as CrosswordState | undefined;
@@ -131,12 +128,11 @@ async function loadCrosswordCarousel(userId: string): Promise<CrosswordCarouselI
 
         items.push({
             puzzle,
-            puzzleNumber: `#${puzzle.id}`,
-            label: formatPuzzleDate(puzzle.date),
-            isNew: puzzle.date === today,
+            label: formatPuzzleDate(game_date),
+            isNew: game_date === today,
             isCompleted,
             commuteCount: isCompleted ? undefined : 0,
-            date: puzzle.date,
+            date: game_date,
             puzzleId: puzzle.id,
         });
     }

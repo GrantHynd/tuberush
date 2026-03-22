@@ -15,7 +15,6 @@ const HORIZONTAL_PADDING = 20;
 const CARD_WIDTH = (SCREEN_WIDTH - HORIZONTAL_PADDING * 2 - CARD_GAP) * 0.45;
 
 export interface PuzzleCardProps {
-    puzzleNumber: string;
     label: string;
     isNew?: boolean;
     isCompleted?: boolean;
@@ -27,7 +26,6 @@ export interface PuzzleCardProps {
 }
 
 export function PuzzleCard({
-    puzzleNumber,
     label,
     isNew = false,
     isCompleted = false,
@@ -56,19 +54,16 @@ export function PuzzleCard({
             onPress={onPress}
             activeOpacity={0.85}
             accessibilityRole="button"
-            accessibilityLabel={`Puzzle ${puzzleNumber}, ${label}${isCompleted ? ', completed' : ''}`}
+            accessibilityLabel={`${label}${isCompleted ? ', completed' : ''}`}
         >
             <View style={styles.header}>
-                <Text style={styles.puzzleNumber}>{puzzleNumber}</Text>
+                <Text style={styles.label} numberOfLines={1}>{label}</Text>
                 {isNew && (
                     <View style={styles.newBadge}>
                         <Text style={styles.newBadgeText}>NEW</Text>
                     </View>
                 )}
             </View>
-            <Text style={styles.label} numberOfLines={1}>
-                {label}
-            </Text>
             <View style={styles.status}>{statusContent}</View>
         </TouchableOpacity>
     );
@@ -90,11 +85,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'space-between',
         gap: Spacing.xs,
-    },
-    puzzleNumber: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: 'rgba(255,255,255,0.9)',
     },
     newBadge: {
         backgroundColor: 'rgba(255,255,255,0.25)',

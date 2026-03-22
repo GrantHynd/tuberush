@@ -54,13 +54,12 @@ const mockPuzzle = {
   ],
 };
 
-jest.mock("@/constants/ConnectionsData", () => ({
-  getDailyPuzzle: jest.fn(() => mockPuzzle),
-  getPuzzleByDate: jest.fn((date: string) =>
-    date === "2024-03-14" ? mockPuzzle : undefined
+jest.mock("@/lib/daily-games", () => ({
+  getDailyGame: jest.fn(() => Promise.resolve(mockPuzzle)),
+  getGameByDate: jest.fn((_type: string, date: string) =>
+    Promise.resolve(date === "2024-03-14" ? mockPuzzle : undefined),
   ),
-  CONNECTIONS_DATA: [],
-})),
+}));
 
 describe("PlayConnectionsScreen", () => {
   const mockRouter = {

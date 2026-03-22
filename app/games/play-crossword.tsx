@@ -48,7 +48,7 @@ export default function PlayCrossword() {
     const { puzzleId: puzzleIdParam } = useLocalSearchParams<{ puzzleId?: string }>();
     const user = useAuthStore(state => state.user);
     const { loadGame, saveGame, createNewGame } = useGameStore();
-    const { puzzle, loading: puzzleLoading } = usePuzzle(puzzleIdParam);
+    const { puzzle, gameDate, loading: puzzleLoading } = usePuzzle(puzzleIdParam);
     const [gameState, setGameState] = useState<GameState | null>(null);
     const [loading, setLoading] = useState(true);
     const [showLeaderboard, setShowLeaderboard] = useState(false);
@@ -72,7 +72,12 @@ export default function PlayCrossword() {
             return;
         }
 
-        if (!puzzle || puzzleLoading) {
+        if (puzzleLoading) {
+            return;
+        }
+
+        if (!puzzle) {
+            setLoading(false);
             return;
         }
 
@@ -86,7 +91,7 @@ export default function PlayCrossword() {
                         user.id,
                         'crossword',
                         puzzleGameId,
-                        puzzle.id,
+                        puzzle,
                     );
                 }
 
@@ -251,7 +256,53 @@ export default function PlayCrossword() {
         return null;
     }
 
-    if (loading || puzzleLoading || !puzzle || !gameState) {
+    if (puzzleLoading) {
+        return (
+            <SafeAreaView style={styles.container} edges={['top']}>
+                <View style={styles.header}>
+                    <TouchableOpacity
+                        onPress={() => router.back()}
+                        style={styles.backButton}
+                        accessibilityRole="button"
+                        accessibilityLabel="Go back"
+                    >
+                        <MaterialIcons name="arrow-back" size={24} color={Colors.light.text} />
+                    </TouchableOpacity>
+                    <Text style={styles.headerTitle}>Crossword</Text>
+                    <View style={styles.headerRight} />
+                </View>
+                <View style={styles.centered}>
+                    <ActivityIndicator size="large" color={Colors.light.tint} />
+                </View>
+            </SafeAreaView>
+        );
+    }
+
+    if (!puzzle) {
+        return (
+            <SafeAreaView style={styles.container} edges={['top']}>
+                <View style={styles.header}>
+                    <TouchableOpacity
+                        onPress={() => router.back()}
+                        style={styles.backButton}
+                        accessibilityRole="button"
+                        accessibilityLabel="Go back"
+                    >
+                        <MaterialIcons name="arrow-back" size={24} color={Colors.light.text} />
+                    </TouchableOpacity>
+                    <Text style={styles.headerTitle}>Crossword</Text>
+                    <View style={styles.headerRight} />
+                </View>
+                <View style={styles.centered}>
+                    <Text style={{ color: Colors.light.text, textAlign: 'center', paddingHorizontal: 24 }}>
+                        This puzzle isn&apos;t available. It may not be published yet, or you may be offline without a cached copy.
+                    </Text>
+                </View>
+            </SafeAreaView>
+        );
+    }
+
+    if (loading || !gameState) {
         return (
             <SafeAreaView style={styles.container} edges={['top']}>
                 <View style={styles.header}>
@@ -282,7 +333,7 @@ export default function PlayCrossword() {
 
     const handleShare = async () => {
         if (completionTimeSecs == null) return;
-        const dateStr = formatPuzzleDate(puzzle.date);
+        const dateStr = formatPuzzleDate(gameDate ?? puzzle.date);
         const timeStr = formatTime(completionTimeSecs);
         capture('game_shared', { game_type: 'crossword' });
         try {
@@ -316,7 +367,7 @@ export default function PlayCrossword() {
                     {state.startTime && !isCompleted && (
                         <Text style={styles.headerTimer}>{timer.formatted}</Text>
                     )}
-                    <Text style={styles.headerDate}>{formatPuzzleDate(puzzle.date)}</Text>
+                    <Text style={styles.headerDate}>{formatPuzzleDate(gameDate ?? puzzle.date)}</Text>
                 </View>
             </View>
 

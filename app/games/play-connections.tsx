@@ -1,10 +1,6 @@
 import { Connections } from "@/components/games/Connections";
 import { Leaderboard } from "@/components/ui/Leaderboard";
 import type { ConnectionsPuzzle } from "@/constants/ConnectionsData";
-import {
-  getDailyPuzzle as getConnectionsFallback,
-  getPuzzleByDate as getConnectionsByDateFallback,
-} from "@/constants/ConnectionsData";
 import { getDailyGame, getGameByDate } from "@/lib/daily-games";
 import { Colors, Spacing, TFL, Typography } from "@/constants/theme";
 import { leaderboard } from "@/lib/leaderboard";
@@ -61,6 +57,7 @@ export default function PlayConnectionsScreen() {
   const { currentGame, loadGame, createNewGame, saveGame } = useGameStore();
   const [loading, setLoading] = useState(true);
   const [puzzle, setPuzzle] = useState<ConnectionsPuzzle | null>(null);
+  const [loadError, setLoadError] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
 
   useEffect(() => {
@@ -70,16 +67,30 @@ export default function PlayConnectionsScreen() {
     }
 
     const initGame = async () => {
-      let targetPuzzle: ConnectionsPuzzle;
+      let targetPuzzle: ConnectionsPuzzle | undefined;
       if (dateParam) {
-        const dbPuzzle = await getGameByDate("connections", dateParam);
-        targetPuzzle = (dbPuzzle as ConnectionsPuzzle) ?? getConnectionsByDateFallback(dateParam) ?? getConnectionsFallback();
+        targetPuzzle = (await getGameByDate("connections", dateParam)) as
+          | ConnectionsPuzzle
+          | undefined;
       } else {
-        targetPuzzle = (await getDailyGame("connections")) as ConnectionsPuzzle;
+        targetPuzzle = (await getDailyGame("connections")) as ConnectionsPuzzle | undefined;
       }
+
+      if (!targetPuzzle) {
+        setLoadError(true);
+        setLoading(false);
+        Alert.alert(
+          "Puzzle unavailable",
+          "This puzzle isn’t available offline or hasn’t been published yet. Check your connection or try again later.",
+          [{ text: "OK", onPress: () => router.back() }],
+        );
+        return;
+      }
+
       setPuzzle(targetPuzzle);
 
-      const gameId = `connections_${user.id}_${targetPuzzle.date}`;
+      const gameDate = dateParam || targetPuzzle.date;
+      const gameId = `connections_${user.id}_${gameDate}`;
 
       try {
         let game = await loadGame(gameId, user.id);
@@ -191,7 +202,36 @@ export default function PlayConnectionsScreen() {
   );
 
   const puzzleDate =
-    puzzle?.date || dateParam || new Date().toISOString().split("T")[0];
+    dateParam || puzzle?.date || new Date().toISOString().split("T")[0];
+
+  if (loadError) {
+    return (
+      <SafeAreaView style={styles.container} edges={["top"]}>
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.backButton}
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+          >
+            <MaterialIcons
+              name="arrow-back"
+              size={24}
+              color={Colors.light.text}
+            />
+          </TouchableOpacity>
+          <View style={styles.headerText}>
+            <Text style={styles.headerTitle}>Connections</Text>
+          </View>
+        </View>
+        <View style={styles.centered}>
+          <Text style={{ color: Colors.light.text, textAlign: "center", paddingHorizontal: 24 }}>
+            Puzzle not available. Go back and try again when you&apos;re online or after new puzzles are published.
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   if (loading || !puzzle || !currentGame) {
     return (
