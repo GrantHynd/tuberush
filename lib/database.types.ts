@@ -114,6 +114,36 @@ export interface Database {
         };
         Relationships: [];
       };
+      custom_puzzles: {
+        Row: {
+          id: string;
+          user_id: string;
+          game_type: 'connections' | 'crossword';
+          puzzle_data: Json;
+          score: number | null;
+          completed_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          game_type: 'connections' | 'crossword';
+          puzzle_data: Json;
+          score?: number | null;
+          completed_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          game_type?: 'connections' | 'crossword';
+          puzzle_data?: Json;
+          score?: number | null;
+          completed_at?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       game_states: {
         Row: {
           id: string;
