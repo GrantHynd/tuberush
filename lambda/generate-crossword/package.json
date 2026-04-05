@@ -1,7 +1,7 @@
 {
-  "name": "schedule-daily-games",
+  "name": "generate-crossword",
   "version": "1.0.0",
-  "description": "AWS Lambda: nightly daily game generation for TubeRush",
+  "description": "AWS Lambda: daily crossword puzzle generation for TubeRush",
   "private": true,
   "dependencies": {
     "@aws-sdk/client-secrets-manager": "^3.0.0"

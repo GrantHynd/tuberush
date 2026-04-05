@@ -62,10 +62,10 @@ function restHeaders(serviceKey, extra) {
     ...extra
   };
 }
-async function restGameExists(supabaseUrl, serviceKey, gameType, gameDate) {
+async function restGameExists(supabaseUrl, serviceKey, gameDate) {
   const q = new URLSearchParams({
     select: "id",
-    game_type: `eq.${gameType}`,
+    game_type: "eq.connections",
     game_date: `eq.${gameDate}`,
     limit: "1"
   });
@@ -79,16 +79,16 @@ async function restGameExists(supabaseUrl, serviceKey, gameType, gameDate) {
   const rows = await res.json().catch(() => []);
   return Array.isArray(rows) && rows.length > 0;
 }
-async function restNextval(supabaseUrl, serviceKey, seqName, fallback) {
+async function restNextval(supabaseUrl, serviceKey, fallback) {
   const url = `${baseUrl(supabaseUrl)}/rest/v1/rpc/nextval_text`;
   const res = await fetch(url, {
     method: "POST",
     headers: restHeaders(serviceKey),
-    body: JSON.stringify({ seq_name: seqName })
+    body: JSON.stringify({ seq_name: "connections_puzzle_id_seq" })
   });
   if (!res.ok) {
     const t = await res.text().catch(() => "");
-    log("rest_rpc_warn", { seqName, status: res.status, body: t.slice(0, 200) });
+    log("rest_rpc_warn", { status: res.status, body: t.slice(0, 200) });
     return String(fallback);
   }
   const val = await res.json().catch(() => null);
@@ -100,18 +100,18 @@ async function restInsertGame(supabaseUrl, serviceKey, row) {
   const res = await fetch(url, {
     method: "POST",
     headers: restHeaders(serviceKey, { Prefer: "return=minimal" }),
-    body: JSON.stringify(row)
+    body: JSON.stringify({ ...row, game_type: "connections" })
   });
   if (res.status === 201 || res.status === 200) return "inserted";
   if (res.status === 409) return "duplicate";
   const t = await res.text().catch(() => "");
   throw new Error(`REST insert games ${res.status}: ${t.slice(0, 500)}`);
 }
-function getDailyPuzzleSkillConfig(secrets) {
+function getSkillConfig(secrets) {
   if (secrets.DISABLE_CLAUDE_SKILL === "1") return null;
-  const skillId = secrets.ANTHROPIC_DAILY_PUZZLE_SKILL_ID?.trim();
+  const skillId = secrets.ANTHROPIC_CONNECTIONS_SKILL_ID?.trim();
   if (!skillId) return null;
-  const version = secrets.ANTHROPIC_DAILY_PUZZLE_SKILL_VERSION?.trim() || "latest";
+  const version = secrets.ANTHROPIC_CONNECTIONS_SKILL_VERSION?.trim() || "latest";
   return { skillId, version };
 }
 function joinTextFromContentBlocks(content) {
@@ -234,10 +234,10 @@ async function callClaudeWithSkill(apiKey, system, userPrompt, skill) {
   }
 }
 async function callClaude(apiKey, secrets, system, prompt) {
-  const skill = getDailyPuzzleSkillConfig(secrets);
+  const skill = getSkillConfig(secrets);
   if (skill) {
     log("claude_mode", { mode: "skill", skill_id: skill.skillId });
-    const systemWithSkill = `The "Daily Puzzle Generator" Agent Skill is active. Use it for quality, then output ONLY JSON (no markdown).
+    const systemWithSkill = `The "Connections Generator" Agent Skill is active. Use it for quality, then output ONLY JSON (no markdown).
 
 ${system}`;
     const userWithSkill = `Apply the skill, then output only this JSON task:
@@ -311,91 +311,16 @@ async function generateConnections(apiKey, secrets, date, id) {
   }
   throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
 }
-var CROSSWORD_SYSTEM = `You are a crossword puzzle designer for TubeRush, a London-themed daily word game. Create 5x5 mini crosswords.
-
-Rules:
-- Grid: exactly 5x5. Use 3-6 black squares. Words >= 3 letters, all interlocking correctly.
-- At least some London/British themed clues. Clues should be clever and concise.
-- Number cells that start across/down words, in reading order starting at 1.
-- Return ONLY a JSON object, no markdown fences, no extra text.`;
-function crosswordPrompt(date, id) {
-  return `5x5 crossword for ${date} (#${id}). Return: {"title":"Title","grid":[[{"letter":"A","number":1,"isBlack":false},...],...5 rows],"clues":{"across":[{"number":1,"clue":"...","answer":"WORD","row":0,"col":0,"length":4}],"down":[...]}}. Black squares: {"letter":null,"isBlack":true}. "number" only on cells starting a clue.`;
-}
-function validateCrossword(d) {
-  if (!d || typeof d !== "object") return false;
-  const o = d;
-  if (typeof o.title !== "string") return false;
-  if (!Array.isArray(o.grid) || o.grid.length !== 5) return false;
-  for (const row of o.grid) {
-    if (!Array.isArray(row) || row.length !== 5) return false;
-    for (const cell of row) {
-      if (typeof cell.isBlack !== "boolean") return false;
-      if (!cell.isBlack && (typeof cell.letter !== "string" || cell.letter.length !== 1)) return false;
-    }
-  }
-  const c = o.clues;
-  if (!c || !Array.isArray(c.across) || !Array.isArray(c.down)) return false;
-  if (c.across.length === 0 && c.down.length === 0) return false;
-  for (const cl of [
-    ...c.across,
-    ...c.down
-  ]) {
-    if (typeof cl.number !== "number" || typeof cl.clue !== "string") return false;
-    if (typeof cl.answer !== "string" || cl.answer.length < 3) return false;
-    if (typeof cl.row !== "number" || typeof cl.col !== "number" || typeof cl.length !== "number")
-      return false;
-  }
-  return true;
-}
-function normalizeGrid(grid) {
-  return grid.map(
-    (row) => row.map((cell) => {
-      if (cell.isBlack) return { letter: null, isBlack: true };
-      const out = {
-        letter: cell.letter.toUpperCase(),
-        isBlack: false
-      };
-      if (cell.number != null) out.number = cell.number;
-      return out;
-    })
-  );
-}
-async function generateCrossword(apiKey, secrets, date, id) {
-  let lastErr;
-  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-    try {
-      log("claude_call", { type: "crossword", date, attempt });
-      const raw = await callClaude(apiKey, secrets, CROSSWORD_SYSTEM, crosswordPrompt(date, id));
-      const parsed = JSON.parse(extractJSON(raw));
-      if (!validateCrossword(parsed)) {
-        throw new Error(`Invalid structure: ${JSON.stringify(parsed).slice(0, 200)}`);
-      }
-      return {
-        id,
-        date,
-        title: parsed.title,
-        rows: 5,
-        cols: 5,
-        grid: normalizeGrid(parsed.grid),
-        clues: { across: parsed.clues.across, down: parsed.clues.down }
-      };
-    } catch (err) {
-      lastErr = err;
-      log("claude_error", { type: "crossword", date, attempt, error: String(err).slice(0, 300) });
-    }
-  }
-  throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
-}
 function formatDate(d) {
   return d.toISOString().split("T")[0];
 }
-async function findNextMissingDate(supabaseUrl, serviceKey, gameType, maxDaysAhead) {
+async function findNextMissingDate(supabaseUrl, serviceKey, maxDaysAhead) {
   const today = /* @__PURE__ */ new Date();
   for (let i = 0; i < maxDaysAhead; i++) {
     const d = new Date(today);
     d.setDate(d.getDate() + i);
     const dateStr = formatDate(d);
-    if (!await restGameExists(supabaseUrl, serviceKey, gameType, dateStr)) return dateStr;
+    if (!await restGameExists(supabaseUrl, serviceKey, dateStr)) return dateStr;
   }
   return null;
 }
@@ -405,64 +330,50 @@ async function handler(event, _context) {
     const secrets = await getSecrets();
     const daysAhead = typeof event.days_ahead === "number" && event.days_ahead > 0 ? event.days_ahead : 8;
     const count = typeof event.count === "number" && event.count > 0 ? Math.min(event.count, 3) : 1;
-    const skillCfg = getDailyPuzzleSkillConfig(secrets);
+    const skillCfg = getSkillConfig(secrets);
     log("start", {
+      game_type: "connections",
       daysAhead,
       count,
       skill: skillCfg ? { id: skillCfg.skillId, version: skillCfg.version } : null
     });
-    const { ANTHROPIC_API_KEY: anthropicApiKey, SUPABASE_URL: supabaseUrl, SUPABASE_SERVICE_ROLE_KEY: serviceKey } = secrets;
+    const {
+      ANTHROPIC_API_KEY: anthropicApiKey,
+      SUPABASE_URL: supabaseUrl,
+      SUPABASE_SERVICE_ROLE_KEY: serviceKey
+    } = secrets;
     const results = [];
     let generated = 0;
     for (let round = 0; round < count; round++) {
-      const connDate = await findNextMissingDate(supabaseUrl, serviceKey, "connections", daysAhead);
-      const crossDate = await findNextMissingDate(supabaseUrl, serviceKey, "crossword", daysAhead);
-      if (!connDate && !crossDate) {
-        log("all_filled", { daysAhead });
+      const date = await findNextMissingDate(supabaseUrl, serviceKey, daysAhead);
+      if (!date) {
+        log("all_filled", { game_type: "connections", daysAhead });
         break;
       }
-      if (connDate) {
-        try {
-          const id = await restNextval(supabaseUrl, serviceKey, "connections_puzzle_id_seq", generated + round + 1);
-          log("generating", { type: "connections", date: connDate, id });
-          const puzzle = await generateConnections(anthropicApiKey, secrets, connDate, id);
-          const ins = await restInsertGame(supabaseUrl, serviceKey, {
-            game_type: "connections",
-            game_date: connDate,
-            puzzle_data: puzzle,
-            is_published: true
-          });
-          results.push({ date: connDate, game_type: "connections", status: ins === "duplicate" ? "skipped_duplicate" : "created" });
-          if (ins === "inserted") generated++;
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : String(err);
-          log("failed", { type: "connections", date: connDate, error: msg.slice(0, 500) });
-          results.push({ date: connDate, game_type: "connections", status: "error", detail: msg.slice(0, 500) });
-        }
-      }
-      if (crossDate) {
-        try {
-          const id = await restNextval(supabaseUrl, serviceKey, "crossword_puzzle_id_seq", generated + round + 100);
-          log("generating", { type: "crossword", date: crossDate, id });
-          const puzzle = await generateCrossword(anthropicApiKey, secrets, crossDate, id);
-          const ins = await restInsertGame(supabaseUrl, serviceKey, {
-            game_type: "crossword",
-            game_date: crossDate,
-            puzzle_data: puzzle,
-            is_published: true
-          });
-          results.push({ date: crossDate, game_type: "crossword", status: ins === "duplicate" ? "skipped_duplicate" : "created" });
-          if (ins === "inserted") generated++;
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : String(err);
-          log("failed", { type: "crossword", date: crossDate, error: msg.slice(0, 500) });
-          results.push({ date: crossDate, game_type: "crossword", status: "error", detail: msg.slice(0, 500) });
-        }
+      try {
+        const id = await restNextval(supabaseUrl, serviceKey, generated + round + 1);
+        log("generating", { type: "connections", date, id });
+        const puzzle = await generateConnections(anthropicApiKey, secrets, date, id);
+        const ins = await restInsertGame(supabaseUrl, serviceKey, {
+          game_date: date,
+          puzzle_data: puzzle,
+          is_published: true
+        });
+        results.push({
+          date,
+          game_type: "connections",
+          status: ins === "duplicate" ? "skipped_duplicate" : "created"
+        });
+        if (ins === "inserted") generated++;
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        log("failed", { type: "connections", date, error: msg.slice(0, 500) });
+        results.push({ date, game_type: "connections", status: "error", detail: msg.slice(0, 500) });
       }
     }
     const elapsed = Date.now() - startMs;
     const errors = results.filter((r) => r.status === "error").length;
-    log("done", { generated, elapsed, errors });
+    log("done", { game_type: "connections", generated, elapsed, errors });
     return { success: true, generated, elapsed_ms: elapsed, results, had_errors: errors > 0 };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
