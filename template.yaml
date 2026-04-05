@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: TubeRush - nightly daily game generation Lambda
+Description: TubeRush - daily game generation Lambdas (connections + crossword)
 
 Parameters:
   SecretName:
@@ -8,10 +8,15 @@ Parameters:
     Default: tuberush/daily-games
     Description: Name of the Secrets Manager secret containing API keys
 
-  ScheduleExpression:
+  ConnectionsScheduleExpression:
     Type: String
     Default: cron(0 2 * * ? *)
-    Description: EventBridge schedule (default 2am UTC daily)
+    Description: EventBridge schedule for connections generation (default 2am UTC daily)
+
+  CrosswordScheduleExpression:
+    Type: String
+    Default: cron(30 2 * * ? *)
+    Description: EventBridge schedule for crossword generation (default 2:30am UTC daily)
 
 Globals:
   Function:
@@ -37,21 +42,23 @@ Resources:
           "ANTHROPIC_API_KEY": "",
           "SUPABASE_URL": "",
           "SUPABASE_SERVICE_ROLE_KEY": "",
-          "ANTHROPIC_DAILY_PUZZLE_SKILL_ID": "",
-          "ANTHROPIC_DAILY_PUZZLE_SKILL_VERSION": "latest",
+          "ANTHROPIC_CONNECTIONS_SKILL_ID": "",
+          "ANTHROPIC_CONNECTIONS_SKILL_VERSION": "latest",
+          "ANTHROPIC_CROSSWORD_SKILL_ID": "",
+          "ANTHROPIC_CROSSWORD_SKILL_VERSION": "latest",
           "DISABLE_CLAUDE_SKILL": ""
         }
 
   # -------------------------------------------------------------------------
-  # Lambda function
+  # Connections Lambda
   # -------------------------------------------------------------------------
-  ScheduleDailyGamesFunction:
+  GenerateConnectionsFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: tuberush-schedule-daily-games
-      CodeUri: lambda/schedule-daily-games/
+      FunctionName: tuberush-generate-connections
+      CodeUri: lambda/generate-connections/
       Handler: src/index.handler
-      Description: Generates daily connections + crossword puzzles via Claude
+      Description: Generates daily connections puzzles via Claude + Connections Generator skill
       Environment:
         Variables:
           SECRET_ARN: !Ref DailyGamesSecret
@@ -65,9 +72,50 @@ Resources:
         NightlySchedule:
           Type: ScheduleV2
           Properties:
-            ScheduleExpression: !Ref ScheduleExpression
-            Name: tuberush-nightly-game-generation
-            Description: Generate daily games at 2am UTC
+            ScheduleExpression: !Ref ConnectionsScheduleExpression
+            Name: tuberush-nightly-connections-generation
+            Description: Generate daily connections puzzle at 2am UTC
+            State: ENABLED
+            RetryPolicy:
+              MaximumRetryAttempts: 2
+              MaximumEventAgeInSeconds: 3600
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: es2022
+        Sourcemap: true
+        EntryPoints:
+          - src/index.ts
+        External:
+          - '@aws-sdk/client-secrets-manager'
+
+  # -------------------------------------------------------------------------
+  # Crossword Lambda
+  # -------------------------------------------------------------------------
+  GenerateCrosswordFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: tuberush-generate-crossword
+      CodeUri: lambda/generate-crossword/
+      Handler: src/index.handler
+      Description: Generates daily crossword puzzles via Claude + Crossword Generator skill
+      Environment:
+        Variables:
+          SECRET_ARN: !Ref DailyGamesSecret
+          NODE_OPTIONS: --enable-source-maps
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: secretsmanager:GetSecretValue
+              Resource: !Ref DailyGamesSecret
+      Events:
+        NightlySchedule:
+          Type: ScheduleV2
+          Properties:
+            ScheduleExpression: !Ref CrosswordScheduleExpression
+            Name: tuberush-nightly-crossword-generation
+            Description: Generate daily crossword puzzle at 2:30am UTC
             State: ENABLED
             RetryPolicy:
               MaximumRetryAttempts: 2
@@ -84,13 +132,21 @@ Resources:
           - '@aws-sdk/client-secrets-manager'
 
 Outputs:
-  FunctionName:
-    Description: Lambda function name
-    Value: !Ref ScheduleDailyGamesFunction
+  ConnectionsFunctionName:
+    Description: Connections Lambda function name
+    Value: !Ref GenerateConnectionsFunction
 
-  FunctionArn:
-    Description: Lambda function ARN
-    Value: !GetAtt ScheduleDailyGamesFunction.Arn
+  ConnectionsFunctionArn:
+    Description: Connections Lambda function ARN
+    Value: !GetAtt GenerateConnectionsFunction.Arn
+
+  CrosswordFunctionName:
+    Description: Crossword Lambda function name
+    Value: !Ref GenerateCrosswordFunction
+
+  CrosswordFunctionArn:
+    Description: Crossword Lambda function ARN
+    Value: !GetAtt GenerateCrosswordFunction.Arn
 
   SecretArn:
     Description: Secrets Manager secret ARN — update this with real values after deploy

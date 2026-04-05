@@ -9,6 +9,21 @@
 -- To reset: run the cleanup block at the bottom first.
 -- ============================================================
 
+-- ----------------------------------------------------------
+-- Cleanup: Remove any existing seed data before reinserting
+-- (makes the script idempotent / safe to re-run)
+-- ----------------------------------------------------------
+DELETE FROM leaderboard
+WHERE user_id IN (
+  SELECT id FROM auth.users WHERE email LIKE '%@tuberush.test'
+);
+DELETE FROM profiles
+WHERE id IN (
+  SELECT id FROM auth.users WHERE email LIKE '%@tuberush.test'
+);
+DELETE FROM auth.users
+WHERE email LIKE '%@tuberush.test';
+
 BEGIN;
 
 -- ----------------------------------------------------------
@@ -107,7 +122,7 @@ SELECT
   jsonb_build_object('provider', 'email', 'providers', ARRAY['email']),
   '{}'::jsonb
 FROM _seed_users s
-ON CONFLICT (id) DO NOTHING;
+ON CONFLICT DO NOTHING;
 
 -- Small pause for trigger to fire (profiles auto-created)
 -- Then update profiles with location + premium status
@@ -203,19 +218,3 @@ DROP TABLE _week;
 COMMIT;
 
 
--- ============================================================
--- CLEANUP: Run this block FIRST if you need to re-seed.
--- It removes only seed data (identified by @tuberush.test).
--- ============================================================
--- BEGIN;
---   DELETE FROM leaderboard
---   WHERE user_id IN (
---     SELECT id FROM auth.users WHERE email LIKE '%@tuberush.test'
---   );
---   DELETE FROM profiles
---   WHERE id IN (
---     SELECT id FROM auth.users WHERE email LIKE '%@tuberush.test'
---   );
---   DELETE FROM auth.users
---   WHERE email LIKE '%@tuberush.test';
--- COMMIT;

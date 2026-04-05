@@ -1,0 +1,1 @@
+{"success":false,"generated":0,"elapsed_ms":17,"results":[],"had_errors":true,"error":"Failed to parse URL from /rest/v1/games?select=id&game_type=eq.connections&game_date=eq.2026-04-05&limit=1"}

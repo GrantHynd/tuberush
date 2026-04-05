@@ -1,0 +1,14 @@
+{
+  "name": "generate-connections",
+  "version": "1.0.0",
+  "description": "AWS Lambda: daily connections puzzle generation for TubeRush",
+  "private": true,
+  "dependencies": {
+    "@aws-sdk/client-secrets-manager": "^3.0.0"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.0",
+    "@types/node": "^22.0.0",
+    "typescript": "^5.0.0"
+  }
+}
