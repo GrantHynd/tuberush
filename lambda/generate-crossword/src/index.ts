@@ -1,7 +1,8 @@
 /**
- * AWS Lambda: daily crossword puzzle generation for TubeRush.
+ * AWS Lambda: daily 9×9 crossword generation for TubeRush.
  * Triggered by EventBridge Scheduler (cron).
- * Uses the Crossword Generator Agent Skill for high-quality puzzle generation.
+ * Black-square templates are fixed in code; Claude fills clues/answers only.
+ * Optional Crossword Generator Agent Skill: set ANTHROPIC_CROSSWORD_SKILL_ID (+ version) in Secrets.
  */
 
 import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager';
@@ -13,11 +14,87 @@ import type { ScheduledEvent, Context } from 'aws-lambda';
 
 const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
 const CLAUDE_MODEL = 'claude-sonnet-4-6';
-const CLAUDE_TIMEOUT_MS = 25_000;
-const CLAUDE_SKILL_TIMEOUT_MS = 60_000;
-const MAX_RETRIES = 1;
+/** Non-skill path: 9×9 clue JSON can be large */
+const CLAUDE_TIMEOUT_MS = 35_000;
+/** Skills + code execution may need more time for 9×9 */
+const CLAUDE_SKILL_TIMEOUT_MS = 90_000;
+const MAX_RETRIES = 2;
 const MAX_PAUSE_TURNS = 8;
 const ANTHROPIC_BETA_SKILLS = 'code-execution-2025-08-25,skills-2025-10-02';
+
+/** Match hosted Agent Skill: bump `ANTHROPIC_CROSSWORD_SKILL_VERSION` in Secrets when the skill is republished */
+const GRID_SIZE = 9;
+
+type TemplateId = '9x9-A' | '9x9-B' | '9x9-C' | '9x9-D' | '9x9-E';
+
+/** 0 = white (letter cell), 1 = black — same encoding as crossword-generator `template_info.py` */
+const TEMPLATE_MASKS: Record<TemplateId, number[][]> = {
+  '9x9-A': [
+    [0, 0, 0, 0, 0, 1, 0, 0, 0],
+    [1, 0, 1, 1, 1, 1, 1, 0, 1],
+    [0, 0, 0, 0, 1, 0, 0, 0, 1],
+    [1, 1, 1, 0, 1, 0, 1, 1, 1],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [1, 1, 1, 0, 1, 0, 1, 1, 1],
+    [1, 0, 0, 0, 1, 0, 0, 0, 1],
+    [1, 0, 1, 1, 1, 1, 1, 0, 1],
+    [0, 0, 0, 1, 0, 0, 0, 0, 0],
+  ],
+  '9x9-B': [
+    [0, 0, 0, 0, 0, 1, 0, 0, 0],
+    [0, 1, 1, 1, 1, 1, 0, 1, 0],
+    [0, 0, 0, 0, 0, 1, 0, 0, 0],
+    [1, 1, 0, 1, 0, 1, 1, 1, 1],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [1, 1, 1, 1, 0, 1, 0, 1, 1],
+    [0, 0, 0, 1, 0, 0, 0, 0, 0],
+    [0, 1, 0, 1, 1, 1, 1, 1, 0],
+    [0, 0, 0, 1, 0, 0, 0, 0, 0],
+  ],
+  '9x9-C': [
+    [0, 0, 0, 0, 1, 0, 0, 0, 0],
+    [0, 0, 0, 1, 0, 1, 0, 0, 0],
+    [0, 0, 1, 0, 0, 0, 1, 0, 0],
+    [0, 1, 0, 0, 0, 0, 0, 1, 0],
+    [1, 0, 0, 0, 0, 0, 0, 0, 1],
+    [0, 1, 0, 0, 0, 0, 0, 1, 0],
+    [0, 0, 1, 0, 0, 0, 1, 0, 0],
+    [0, 0, 0, 1, 0, 1, 0, 0, 0],
+    [0, 0, 0, 0, 1, 0, 0, 0, 0],
+  ],
+  '9x9-D': [
+    [0, 0, 0, 1, 0, 1, 0, 0, 0],
+    [0, 1, 0, 1, 0, 1, 0, 1, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [1, 0, 1, 0, 0, 0, 1, 0, 1],
+    [0, 0, 0, 0, 1, 0, 0, 0, 0],
+    [1, 0, 1, 0, 0, 0, 1, 0, 1],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 1, 0, 1, 0, 1, 0, 1, 0],
+    [0, 0, 0, 1, 0, 1, 0, 0, 0],
+  ],
+  '9x9-E': [
+    [0, 0, 0, 1, 0, 0, 0, 1, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 1, 0, 0, 0, 1, 0],
+    [1, 0, 1, 0, 0, 0, 1, 0, 1],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [1, 0, 1, 0, 0, 0, 1, 0, 1],
+    [0, 1, 0, 0, 0, 1, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 1, 0, 0, 0, 1, 0, 0, 0],
+  ],
+};
+
+const CROSSWORD_TEMPLATE_BY_DAY: Record<number, { templateId: TemplateId; difficulty: string }> = {
+  0: { templateId: '9x9-C', difficulty: 'medium' },
+  1: { templateId: '9x9-A', difficulty: 'easy' },
+  2: { templateId: '9x9-B', difficulty: 'easy' },
+  3: { templateId: '9x9-C', difficulty: 'medium' },
+  4: { templateId: '9x9-D', difficulty: 'medium' },
+  5: { templateId: '9x9-D', difficulty: 'hard' },
+  6: { templateId: '9x9-E', difficulty: 'hard' },
+};
 
 // ---------------------------------------------------------------------------
 // Secrets
@@ -27,8 +104,11 @@ interface Secrets {
   ANTHROPIC_API_KEY: string;
   SUPABASE_URL: string;
   SUPABASE_SERVICE_ROLE_KEY: string;
+  /** Hosted Crossword Generator Agent Skill id (Messages API container.skills) */
   ANTHROPIC_CROSSWORD_SKILL_ID?: string;
+  /** Pin when publishing a new skill revision; omit or `latest` to track newest */
   ANTHROPIC_CROSSWORD_SKILL_VERSION?: string;
+  /** Set to `1` to disable skill path and use plain Messages only */
   DISABLE_CLAUDE_SKILL?: string;
 }
 
@@ -184,7 +264,7 @@ async function callClaudeSimple(apiKey: string, system: string, prompt: string):
       },
       body: JSON.stringify({
         model: CLAUDE_MODEL,
-        max_tokens: 4096,
+        max_tokens: 8192,
         system,
         messages: [{ role: 'user', content: prompt }],
       }),
@@ -333,60 +413,377 @@ function extractJSON(text: string): string {
 }
 
 // ---------------------------------------------------------------------------
-// Crossword puzzle
+// Crossword puzzle (9×9, template fixed in code)
 // ---------------------------------------------------------------------------
 
-const CROSSWORD_SYSTEM = `You are a crossword puzzle designer for TubeRush, a London-themed daily word game. Create 5x5 mini crosswords.
-
-Rules:
-- Grid: exactly 5x5. Use 3-6 black squares. Words >= 3 letters, all interlocking correctly.
-- At least some London/British themed clues. Clues should be clever and concise.
-- Number cells that start across/down words, in reading order starting at 1.
-- Return ONLY a JSON object, no markdown fences, no extra text.`;
-
-function crosswordPrompt(date: string, id: string): string {
-  return `5x5 crossword for ${date} (#${id}). Return: {"title":"Title","grid":[[{"letter":"A","number":1,"isBlack":false},...],...5 rows],"clues":{"across":[{"number":1,"clue":"...","answer":"WORD","row":0,"col":0,"length":4}],"down":[...]}}. Black squares: {"letter":null,"isBlack":true}. "number" only on cells starting a clue.`;
+interface WordSlot {
+  number: number;
+  direction: 'across' | 'down';
+  row: number;
+  col: number;
+  length: number;
 }
 
-function validateCrossword(d: unknown): boolean {
-  if (!d || typeof d !== 'object') return false;
-  const o = d as Record<string, unknown>;
-  if (typeof o.title !== 'string') return false;
-  if (!Array.isArray(o.grid) || o.grid.length !== 5) return false;
-  for (const row of o.grid as unknown[][]) {
-    if (!Array.isArray(row) || row.length !== 5) return false;
-    for (const cell of row as Record<string, unknown>[]) {
-      if (typeof cell.isBlack !== 'boolean') return false;
-      if (!cell.isBlack && (typeof cell.letter !== 'string' || (cell.letter as string).length !== 1)) return false;
+interface RawClue {
+  number: number;
+  row: number;
+  col: number;
+  length: number;
+  answer: string;
+  clue: string;
+}
+
+interface CanonicalClue {
+  number: number;
+  row: number;
+  col: number;
+  length: number;
+  answer: string;
+  clue: string;
+}
+
+function getCrosswordTemplateForDate(date: string): {
+  templateId: TemplateId;
+  difficulty: string;
+  mask: number[][];
+} {
+  const dayOfWeek = new Date(`${date}T00:00:00Z`).getUTCDay();
+  const pick =
+    CROSSWORD_TEMPLATE_BY_DAY[dayOfWeek] ?? ({ templateId: '9x9-D', difficulty: 'medium' } as const);
+  return {
+    templateId: pick.templateId,
+    difficulty: pick.difficulty,
+    mask: TEMPLATE_MASKS[pick.templateId],
+  };
+}
+
+function maskToPromptLines(mask: number[][]): string {
+  return mask.map(row => row.map(c => (c === 1 ? '#' : '.')).join('')).join('\n');
+}
+
+/** Word slots with length >= 3; numbers match reading-order starts (shared across/down start = one number). */
+function computeWordSlots(mask: number[][]): WordSlot[] {
+  const size = mask.length;
+  const raw: Omit<WordSlot, 'number'>[] = [];
+
+  for (let r = 0; r < size; r++) {
+    let c = 0;
+    while (c < size) {
+      if (mask[r][c] === 0) {
+        const start = c;
+        while (c < size && mask[r][c] === 0) c++;
+        const len = c - start;
+        if (len >= 3) raw.push({ direction: 'across', row: r, col: start, length: len });
+      } else c++;
     }
   }
-  const c = o.clues as Record<string, unknown> | undefined;
-  if (!c || !Array.isArray(c.across) || !Array.isArray(c.down)) return false;
-  if (c.across.length === 0 && c.down.length === 0) return false;
-  for (const cl of [
-    ...(c.across as Record<string, unknown>[]),
-    ...(c.down as Record<string, unknown>[]),
-  ]) {
-    if (typeof cl.number !== 'number' || typeof cl.clue !== 'string') return false;
-    if (typeof cl.answer !== 'string' || (cl.answer as string).length < 3) return false;
-    if (typeof cl.row !== 'number' || typeof cl.col !== 'number' || typeof cl.length !== 'number')
-      return false;
+
+  for (let col = 0; col < size; col++) {
+    let r = 0;
+    while (r < size) {
+      if (mask[r][col] === 0) {
+        const start = r;
+        while (r < size && mask[r][col] === 0) r++;
+        const len = r - start;
+        if (len >= 3) raw.push({ direction: 'down', row: start, col, length: len });
+      } else r++;
+    }
   }
-  return true;
+
+  const startCells = new Set(raw.map(s => `${s.row},${s.col}`));
+  const numbered = new Map<string, number>();
+  let num = 1;
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size; c++) {
+      if (startCells.has(`${r},${c}`)) numbered.set(`${r},${c}`, num++);
+    }
+  }
+
+  const slots: WordSlot[] = raw.map(s => ({
+    ...s,
+    number: numbered.get(`${s.row},${s.col}`)!,
+  }));
+
+  slots.sort(
+    (a, b) =>
+      a.number - b.number || (a.direction === 'across' ? 0 : 1) - (b.direction === 'across' ? 0 : 1),
+  );
+  return slots;
 }
 
-function normalizeGrid(grid: Record<string, unknown>[][]) {
-  return grid.map(row =>
-    row.map(cell => {
-      if (cell.isBlack) return { letter: null, isBlack: true };
-      const out: Record<string, unknown> = {
-        letter: (cell.letter as string).toUpperCase(),
+function countSlotsByDirection(slots: WordSlot[]): { across: number; down: number } {
+  let across = 0;
+  let down = 0;
+  for (const s of slots) {
+    if (s.direction === 'across') across++;
+    else down++;
+  }
+  return { across, down };
+}
+
+const CROSSWORD_SYSTEM = `You are a crossword puzzle designer for TubeRush — a British daily word game app. You fill a FIXED 9×9 template (black squares are given; you do not change them).
+
+Grid templates (for context when the user names one):
+- 9x9-A: very sparse, isolated zones — easy
+- 9x9-B: vertical pillars — easy-medium
+- 9x9-C: symmetric mosaic, short words — medium
+- 9x9-D: lattice, recommended default — medium-hard
+- 9x9-E: open frame, longer words — hard
+
+Word rules:
+- Words are >= 3 letters, real British English spelling (COLOUR not COLOR, CENTRE not CENTER).
+- Anchors (5+ letters): at least two common vowels (A, E, I, O). Fill these thoughtfully.
+- Bridges (3-letter): prefer high-frequency letters (R, S, T, L, N, E, A) at crossings.
+- Vocabulary: (1) common nouns/verbs/adjectives (2) well-known places/names only if needed (3) common abbreviations as last resort.
+- NEVER crosswordese (ALEE, SNEE, ESNE, etc.). No duplicate words. No offensive words.
+- Every crossing letter must match between across and down.
+
+Clue rules (aim for ~60% definition, ~20% fill-in-the-blank, ~20% light wordplay):
+- Never include the answer (or substring of it) in the clue text.
+- Keep clues concise (under ~12 words). British cultural references welcome if fair.
+
+Output: ONLY JSON. Do not include a "grid" field — only "title" and "clues" with across/down arrays.
+Each clue object: number, row, col, length, answer (uppercase A–Z), clue (string). row/col are 0-based start cells; length must match the template slot.`;
+
+function crosswordPrompt(
+  date: string,
+  id: string,
+  templateId: TemplateId,
+  difficulty: string,
+  maskLines: string,
+  slotCounts: { across: number; down: number },
+): string {
+  return `9×9 crossword for ${date} (store id #${id}).
+Template: ${templateId}. Difficulty label: "${difficulty}".
+
+Black (#) / white (.) pattern — use EXACTLY this (9 rows × 9 cols):
+${maskLines}
+
+You must output exactly ${slotCounts.across} across and ${slotCounts.down} down entries (one per word slot in the pattern, each word >= 3 letters). Match each slot's start cell (row, col), direction, and length; use standard crossword numbering (starts in reading order, top-to-bottom then left-to-right).
+
+Return ONLY this JSON shape (no markdown):
+{"title":"Short title","clues":{"across":[{"number":1,"row":0,"col":0,"length":3,"answer":"CAT","clue":"..."},...],"down":[...]}}`;
+}
+
+function parseRawClue(cl: Record<string, unknown>): RawClue | null {
+  if (typeof cl.number !== 'number' || !Number.isInteger(cl.number)) return null;
+  if (typeof cl.clue !== 'string' || !cl.clue.trim()) return null;
+  if (typeof cl.answer !== 'string') return null;
+  const ans = cl.answer.trim().toUpperCase();
+  if (ans.length < 3 || !/^[A-Z]+$/.test(ans)) return null;
+  if (typeof cl.row !== 'number' || typeof cl.col !== 'number' || typeof cl.length !== 'number')
+    return null;
+  if (!Number.isInteger(cl.row) || !Number.isInteger(cl.col) || !Number.isInteger(cl.length))
+    return null;
+  if (cl.length < 3 || cl.length !== ans.length) return null;
+  return {
+    number: cl.number,
+    row: cl.row,
+    col: cl.col,
+    length: cl.length,
+    answer: ans,
+    clue: cl.clue.trim(),
+  };
+}
+
+/** Match model clues to template slots by geometry; canonical clue numbers come from the template. */
+function matchCluesToSlots(
+  slots: WordSlot[],
+  acrossIn: RawClue[],
+  downIn: RawClue[],
+): { across: CanonicalClue[]; down: CanonicalClue[] } | null {
+  const poolAcross = [...acrossIn];
+  const poolDown = [...downIn];
+  const acrossOut: CanonicalClue[] = [];
+  const downOut: CanonicalClue[] = [];
+
+  for (const slot of slots) {
+    const pool = slot.direction === 'across' ? poolAcross : poolDown;
+    const idx = pool.findIndex(
+      c => c.row === slot.row && c.col === slot.col && c.length === slot.length,
+    );
+    if (idx === -1) return null;
+    const m = pool.splice(idx, 1)[0];
+    const canonical: CanonicalClue = {
+      number: slot.number,
+      row: slot.row,
+      col: slot.col,
+      length: slot.length,
+      answer: m.answer,
+      clue: m.clue,
+    };
+    if (slot.direction === 'across') acrossOut.push(canonical);
+    else downOut.push(canonical);
+  }
+
+  if (poolAcross.length > 0 || poolDown.length > 0) return null;
+
+  const sortKey = (a: CanonicalClue, b: CanonicalClue) =>
+    a.number - b.number || a.row - b.row || a.col - b.col;
+  acrossOut.sort(sortKey);
+  downOut.sort(sortKey);
+  return { across: acrossOut, down: downOut };
+}
+
+function clueContainsAnswer(clue: string, answer: string): boolean {
+  return clue.toUpperCase().includes(answer.toUpperCase());
+}
+
+function buildGridFromMaskAndClues(
+  mask: number[][],
+  slots: WordSlot[],
+  byKey: Map<string, CanonicalClue>,
+): { grid: Record<string, unknown>[][]; error?: string } {
+  const size = GRID_SIZE;
+  const letters: (string | null)[][] = Array.from({ length: size }, () =>
+    Array.from({ length: size }, () => null),
+  );
+
+  for (const slot of slots) {
+    const key = `${slot.direction}-${slot.row}-${slot.col}-${slot.length}`;
+    const cl = byKey.get(key);
+    if (!cl) return { grid: [], error: `internal: missing clue for slot ${key}` };
+    const ans = cl.answer;
+    if (ans.length !== slot.length) return { grid: [], error: 'answer length mismatch' };
+
+    for (let i = 0; i < slot.length; i++) {
+      const r = slot.direction === 'across' ? slot.row : slot.row + i;
+      const c = slot.direction === 'across' ? slot.col + i : slot.col;
+      if (r < 0 || r >= size || c < 0 || c >= size) return { grid: [], error: 'slot out of bounds' };
+      if (mask[r][c] !== 0) return { grid: [], error: 'letter on black cell' };
+      const ch = ans[i]!;
+      const prev = letters[r][c];
+      if (prev !== null && prev !== ch) {
+        return {
+          grid: [],
+          error: `crossing mismatch at (${r},${c}): ${prev} vs ${ch}`,
+        };
+      }
+      letters[r][c] = ch;
+    }
+  }
+
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size; c++) {
+      if (mask[r][c] === 0 && letters[r][c] === null) {
+        return { grid: [], error: `unfilled white cell (${r},${c})` };
+      }
+      if (mask[r][c] === 1 && letters[r][c] !== null) {
+        return { grid: [], error: 'letter on black' };
+      }
+    }
+  }
+
+  const numberAt = new Map<string, number>();
+  for (const slot of slots) {
+    const k = `${slot.row},${slot.col}`;
+    numberAt.set(k, slot.number);
+  }
+
+  const grid: Record<string, unknown>[][] = [];
+  for (let r = 0; r < size; r++) {
+    const row: Record<string, unknown>[] = [];
+    for (let c = 0; c < size; c++) {
+      if (mask[r][c] === 1) {
+        row.push({ letter: null, isBlack: true });
+        continue;
+      }
+      const num = numberAt.get(`${r},${c}`);
+      const cell: Record<string, unknown> = {
+        letter: letters[r][c],
         isBlack: false,
       };
-      if (cell.number != null) out.number = cell.number;
-      return out;
-    }),
-  );
+      if (num != null) cell.number = num;
+      row.push(cell);
+    }
+    grid.push(row);
+  }
+
+  return { grid };
+}
+
+function assembleCrosswordPayload(
+  id: string,
+  date: string,
+  title: string,
+  templateId: TemplateId,
+  difficulty: string,
+  mask: number[][],
+  slots: WordSlot[],
+  acrossIn: RawClue[],
+  downIn: RawClue[],
+): Record<string, unknown> {
+  const matched = matchCluesToSlots(slots, acrossIn, downIn);
+  if (!matched) throw new Error('clues do not match template slots (row/col/length/direction)');
+
+  const all = [...matched.across, ...matched.down];
+  const answers = all.map(c => c.answer);
+  if (new Set(answers).size !== answers.length) throw new Error('duplicate answers');
+
+  for (const cl of all) {
+    if (clueContainsAnswer(cl.clue, cl.answer)) {
+      throw new Error(`clue text contains answer fragment: ${cl.answer}`);
+    }
+  }
+
+  const byKey = new Map<string, CanonicalClue>();
+  for (const slot of slots) {
+    const key = `${slot.direction}-${slot.row}-${slot.col}-${slot.length}`;
+    const list = slot.direction === 'across' ? matched.across : matched.down;
+    const cl = list.find(
+      x => x.row === slot.row && x.col === slot.col && x.length === slot.length,
+    );
+    if (!cl) throw new Error('internal match failure');
+    byKey.set(key, cl);
+  }
+
+  const { grid, error } = buildGridFromMaskAndClues(mask, slots, byKey);
+  if (error || !grid.length) throw new Error(error || 'grid build failed');
+
+  return {
+    id,
+    date,
+    title,
+    rows: GRID_SIZE,
+    cols: GRID_SIZE,
+    templateId,
+    difficulty,
+    grid,
+    clues: { across: matched.across, down: matched.down },
+  };
+}
+
+function parseClueResponse(d: unknown, expectedAcross: number, expectedDown: number): RawClue[][] {
+  if (!d || typeof d !== 'object') throw new Error('not an object');
+  const o = d as Record<string, unknown>;
+  if (typeof o.title !== 'string' || !o.title.trim()) throw new Error('missing title');
+  if ('grid' in o) throw new Error('grid must not be present; template is fixed in code');
+
+  const c = o.clues as Record<string, unknown> | undefined;
+  if (!c || !Array.isArray(c.across) || !Array.isArray(c.down)) {
+    throw new Error('missing clues.across / clues.down');
+  }
+  if (c.across.length !== expectedAcross || c.down.length !== expectedDown) {
+    throw new Error(
+      `clue count mismatch: expected ${expectedAcross} across, ${expectedDown} down; got ${c.across.length}, ${c.down.length}`,
+    );
+  }
+
+  const across: RawClue[] = [];
+  for (const item of c.across as unknown[]) {
+    if (!item || typeof item !== 'object') throw new Error('invalid across clue');
+    const p = parseRawClue(item as Record<string, unknown>);
+    if (!p) throw new Error('invalid across clue fields');
+    across.push(p);
+  }
+  const down: RawClue[] = [];
+  for (const item of c.down as unknown[]) {
+    if (!item || typeof item !== 'object') throw new Error('invalid down clue');
+    const p = parseRawClue(item as Record<string, unknown>);
+    if (!p) throw new Error('invalid down clue fields');
+    down.push(p);
+  }
+  return [across, down];
 }
 
 async function generateCrossword(
@@ -394,25 +791,43 @@ async function generateCrossword(
   secrets: Secrets,
   date: string,
   id: string,
-) {
+): Promise<Record<string, unknown>> {
+  const { templateId, difficulty, mask } = getCrosswordTemplateForDate(date);
+  const slots = computeWordSlots(mask);
+  const slotCounts = countSlotsByDirection(slots);
+  const maskLines = maskToPromptLines(mask);
+
   let lastErr: unknown;
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     try {
-      log('claude_call', { type: 'crossword', date, attempt });
-      const raw = await callClaude(apiKey, secrets, CROSSWORD_SYSTEM, crosswordPrompt(date, id));
+      log('claude_call', {
+        type: 'crossword',
+        date,
+        attempt,
+        templateId,
+        difficulty,
+        slots: slotCounts,
+      });
+      const prompt = crosswordPrompt(date, id, templateId, difficulty, maskLines, slotCounts);
+      const raw = await callClaude(apiKey, secrets, CROSSWORD_SYSTEM, prompt);
       const parsed = JSON.parse(extractJSON(raw));
-      if (!validateCrossword(parsed)) {
-        throw new Error(`Invalid structure: ${JSON.stringify(parsed).slice(0, 200)}`);
-      }
-      return {
+      const [acrossIn, downIn] = parseClueResponse(
+        parsed,
+        slotCounts.across,
+        slotCounts.down,
+      );
+      const payload = assembleCrosswordPayload(
         id,
         date,
-        title: parsed.title,
-        rows: 5,
-        cols: 5,
-        grid: normalizeGrid(parsed.grid),
-        clues: { across: parsed.clues.across, down: parsed.clues.down },
-      };
+        (parsed as { title: string }).title.trim(),
+        templateId,
+        difficulty,
+        mask,
+        slots,
+        acrossIn,
+        downIn,
+      );
+      return payload;
     } catch (err) {
       lastErr = err;
       log('claude_error', { type: 'crossword', date, attempt, error: String(err).slice(0, 300) });
