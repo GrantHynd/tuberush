@@ -15,12 +15,10 @@ import wordBankData from './word-bank.json';
 
 const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
 const CLAUDE_MODEL = 'claude-sonnet-4-6';
-/** Non-skill path: 9×9 clue JSON can be large */
 const CLAUDE_TIMEOUT_MS = 35_000;
-/** Skills + code execution may need more time for 9×9 */
 const CLAUDE_SKILL_TIMEOUT_MS = 90_000;
-const MAX_RETRIES = 2;
-const MAX_PAUSE_TURNS = 8;
+const MAX_RETRIES = 1;
+const MAX_PAUSE_TURNS = 4;
 const ANTHROPIC_BETA_SKILLS = 'code-execution-2025-08-25,skills-2025-10-02';
 
 /** Match hosted Agent Skill: bump `ANTHROPIC_CROSSWORD_SKILL_VERSION` in Secrets when the skill is republished */
@@ -275,7 +273,7 @@ async function callClaudeSimple(apiKey: string, system: string, prompt: string):
       },
       body: JSON.stringify({
         model: CLAUDE_MODEL,
-        max_tokens: 8192,
+        max_tokens: 2048,
         system,
         messages: [{ role: 'user', content: prompt }],
       }),
@@ -332,7 +330,7 @@ async function callClaudeWithSkill(
         },
         body: JSON.stringify({
           model: CLAUDE_MODEL,
-          max_tokens: 8192,
+          max_tokens: 2048,
           system,
           messages,
           tools,
@@ -578,22 +576,18 @@ function computeIntersections(mask: number[][], slots: WordSlot[]): Intersection
 }
 
 function formatSlotTable(slots: WordSlot[]): string {
-  const lines: string[] = ['SLOTS:'];
+  const lines: string[] = ['SLOTS (num-dir: r,c len):'];
   for (const s of slots) {
-    lines.push(`  ${s.number}-${s.direction === 'across' ? 'Across' : 'Down'}: row=${s.row}, col=${s.col}, length=${s.length}`);
+    lines.push(`  ${s.number}${s.direction === 'across' ? 'A' : 'D'}: ${s.row},${s.col} ${s.length}`);
   }
   return lines.join('\n');
 }
 
 function formatIntersections(intersections: Intersection[]): string {
   if (intersections.length === 0) return '';
-  const lines: string[] = [
-    'CROSSINGS (shared cells — the letter MUST be identical in both words):',
-  ];
+  const lines: string[] = ['CROSSINGS (letter MUST match):'];
   for (const ix of intersections) {
-    const aLabel = `${ix.acrossSlot.number}-Across[${ix.acrossLetterIndex}]`;
-    const dLabel = `${ix.downSlot.number}-Down[${ix.downLetterIndex}]`;
-    lines.push(`  Cell (${ix.row},${ix.col}): ${aLabel} = ${dLabel}`);
+    lines.push(`  (${ix.row},${ix.col}): ${ix.acrossSlot.number}A[${ix.acrossLetterIndex}]=${ix.downSlot.number}D[${ix.downLetterIndex}]`);
   }
   return lines.join('\n');
 }
@@ -605,56 +599,37 @@ function formatIntersections(intersections: Intersection[]): string {
 type WordBankEntry = { word: string; clue: string };
 const wordBank: Record<string, WordBankEntry[]> = wordBankData as Record<string, WordBankEntry[]>;
 
+const WORD_BANK_PER_LENGTH = 10;
+
 function getWordBankForSlots(slots: WordSlot[]): string {
   const neededLengths = new Set(slots.map(s => s.length));
   const sections: string[] = [];
   for (const len of [...neededLengths].sort((a, b) => a - b)) {
     const entries = wordBank[String(len)];
     if (!entries || entries.length === 0) continue;
-    const words = entries.map(e => `${e.word} — ${e.clue}`).join('; ');
-    sections.push(`  ${len}-letter: ${words}`);
+    const selected = entries.slice(0, WORD_BANK_PER_LENGTH);
+    const words = selected.map(e => `${e.word}—${e.clue}`).join('; ');
+    sections.push(`  ${len}: ${words}`);
   }
   if (sections.length === 0) return '';
-  return 'WORD BANK (prefer these pre-vetted words; only invent a word if no bank word fits the slot + crossing constraints):\n' + sections.join('\n');
+  return 'WORD BANK (prefer these; invent only if none fit):\n' + sections.join('\n');
 }
 
 // ---------------------------------------------------------------------------
 // Prompts
 // ---------------------------------------------------------------------------
 
-const CROSSWORD_SYSTEM = `You are a crossword puzzle designer for TubeRush — a British daily word game app. You fill a FIXED 9×9 template (black squares are given; you do not change them).
+const CROSSWORD_SYSTEM = `You fill a FIXED 9×9 crossword template for TubeRush (British daily word game). Black squares are given — do not change them.
 
-Templates:
-- 9x9-A: sparse, isolated zones — easy
-- 9x9-B: vertical pillars — easy-medium
-- 9x9-C: symmetric mosaic — medium
-- 9x9-D: lattice, dense crossings — medium-hard
-- 9x9-E: open frame, longer words — hard
+Rules:
+- British English spelling (COLOUR not COLOR). Words >= 3 letters, common vocabulary only.
+- No crosswordese (ALEE, SNEE, ESNE). No duplicates. No offensive words.
+- CRITICAL: every crossing cell must have the SAME letter in both across and down words.
+- Clues: concise (<12 words), mix of definition/fill-in-blank/wordplay. Never include the answer in the clue.
+- Use the WORD BANK when provided. Fill most-constrained slots first.
+- VERIFY all crossings match before outputting.
 
-Word rules:
-- Words >= 3 letters, real British English spelling (COLOUR not COLOR, CENTRE not CENTER).
-- Anchors (5+ letters): at least two common vowels (A, E, I, O).
-- Bridges (3-letter): prefer high-frequency letters (R, S, T, L, N, E, A) at crossings.
-- Vocabulary: (1) common nouns/verbs/adjectives (2) well-known places/names if needed.
-- NEVER crosswordese (ALEE, SNEE, ESNE, etc.). No duplicates. No offensive words.
-- CRITICAL: every crossing cell must have the SAME letter in both the across and down word.
-
-Clue rules (~60% definition, ~20% fill-in-the-blank, ~20% light wordplay):
-- Never include the answer (or substring) in the clue text.
-- Keep clues concise (under ~12 words). British cultural references welcome.
-
-Fill strategy:
-1. Fill the most-constrained slots first (most crossings already fixed).
-2. After placing each word, immediately check all its crossing cells against already-placed words.
-3. If a crossing letter conflicts, try a different word — never proceed with a mismatch.
-4. Use the provided WORD BANK wherever possible.
-
-Self-verification (do this BEFORE outputting):
-- For every entry in the CROSSINGS list, confirm the letter at that position in the across word equals the letter at that position in the down word.
-- If any mismatch is found, fix it before outputting.
-
-Output: ONLY JSON. No "grid" field — only "title" and "clues" with across/down arrays.
-Each clue object: number, row, col, length, answer (uppercase A–Z), clue (string). row/col are 0-based.`;
+Output ONLY JSON (no markdown). No "grid" field. Each clue: {number, row, col, length, answer (uppercase), clue}. row/col 0-based.`;
 
 function crosswordPrompt(
   date: string,
@@ -669,23 +644,21 @@ function crosswordPrompt(
 ): string {
   const parts: string[] = [];
 
-  parts.push(`9×9 crossword for ${date} (id #${id}). Template: ${templateId}. Difficulty: "${difficulty}".`);
+  parts.push(`${date} #${id}, ${templateId}, ${difficulty}.`);
 
   if (previousError) {
-    parts.push(`\n⚠️ PREVIOUS ATTEMPT FAILED: ${previousError}\nPay extra attention to the constraint that caused this failure.`);
+    parts.push(`\nFIX: ${previousError}`);
   }
 
-  parts.push(`\nGrid mask (# = black, . = white):\n${maskLines}`);
+  parts.push(`\nGrid (#=black .=white):\n${maskLines}`);
   parts.push(`\n${formatSlotTable(slots)}`);
   parts.push(`\n${formatIntersections(intersections)}`);
 
   const bankText = getWordBankForSlots(slots);
   if (bankText) parts.push(`\n${bankText}`);
 
-  parts.push(`\nYou must output exactly ${slotCounts.across} across and ${slotCounts.down} down entries matching the slots above.`);
-
-  parts.push(`\nReturn ONLY this JSON (no markdown fences, no commentary):
-{"title":"Short title","clues":{"across":[{"number":1,"row":0,"col":0,"length":3,"answer":"CAT","clue":"Domestic feline"},...],"down":[...]}}`);
+  parts.push(`\nExactly ${slotCounts.across} across + ${slotCounts.down} down. Return ONLY JSON:
+{"title":"...","clues":{"across":[{"number":1,"row":0,"col":0,"length":3,"answer":"CAT","clue":"Feline"},...],"down":[...]}}`);
 
   return parts.join('\n');
 }
