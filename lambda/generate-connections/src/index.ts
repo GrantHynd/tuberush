@@ -16,7 +16,7 @@ const CLAUDE_MODEL = 'claude-sonnet-4-6';
 const CLAUDE_TIMEOUT_MS = 25_000;
 const CLAUDE_SKILL_TIMEOUT_MS = 60_000;
 const MAX_RETRIES = 1;
-const MAX_PAUSE_TURNS = 8;
+const MAX_PAUSE_TURNS = 4;
 const ANTHROPIC_BETA_SKILLS = 'code-execution-2025-08-25,skills-2025-10-02';
 const GROUP_COLORS = ['#DC241F', '#007D32', '#0019A8', '#FFD329'];
 
@@ -185,7 +185,7 @@ async function callClaudeSimple(apiKey: string, system: string, prompt: string):
       },
       body: JSON.stringify({
         model: CLAUDE_MODEL,
-        max_tokens: 4096,
+        max_tokens: 1024,
         system,
         messages: [{ role: 'user', content: prompt }],
       }),
@@ -242,7 +242,7 @@ async function callClaudeWithSkill(
         },
         body: JSON.stringify({
           model: CLAUDE_MODEL,
-          max_tokens: 8192,
+          max_tokens: 1024,
           system,
           messages,
           tools,
@@ -337,17 +337,10 @@ function extractJSON(text: string): string {
 // Connections puzzle
 // ---------------------------------------------------------------------------
 
-const CONNECTIONS_SYSTEM = `You are a puzzle designer for TubeRush, a London-themed daily word game. Create "Connections" puzzles: four groups of four related words.
-
-Rules:
-- Exactly 4 groups, each with exactly 4 items. Difficulty 1 (easy) to 4 (hard).
-- Items: single words or very short phrases (2-3 words max), ALL CAPS.
-- At least one London/British culture group. Mix topics: pop culture, wordplay, geography, history, food, etc.
-- Some items should plausibly fit multiple groups. No duplicates across groups.
-- Return ONLY a JSON object, no markdown fences, no extra text.`;
+const CONNECTIONS_SYSTEM = `Create a "Connections" puzzle for TubeRush (London-themed word game). 4 groups of 4 related words, difficulty 1-4. Items: ALL CAPS, short. At least one British/London group. Some items should plausibly fit multiple groups. No duplicates. Return ONLY JSON, no markdown.`;
 
 function connectionsPrompt(date: string, id: string): string {
-  return `Connections puzzle for ${date} (#${id}). Return: {"groups":[{"category":"NAME","items":["A","B","C","D"],"difficulty":1}, ...4 groups]}`;
+  return `${date} #${id}. Return: {"groups":[{"category":"NAME","items":["A","B","C","D"],"difficulty":1}, ...4]}`;
 }
 
 function validateConnections(
