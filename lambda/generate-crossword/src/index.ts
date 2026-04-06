@@ -7,6 +7,7 @@
 
 import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager';
 import type { ScheduledEvent, Context } from 'aws-lambda';
+import wordBankData from './word-bank.json';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -27,7 +28,17 @@ const GRID_SIZE = 9;
 
 type TemplateId = '9x9-A' | '9x9-B' | '9x9-C' | '9x9-D' | '9x9-E';
 
-/** 0 = white (letter cell), 1 = black — same encoding as crossword-generator `template_info.py` */
+/**
+ * 9×9 black-square templates. 0 = white (letter cell), 1 = black.
+ *
+ * | Template | Black cells | Slots (A/D) | Word lengths | Intersections | Difficulty |
+ * |----------|-------------|-------------|-------------|---------------|------------|
+ * | 9x9-A   | 38 (47%)    | ~8A / ~9D   | 3–9         | sparse        | easy       |
+ * | 9x9-B   | 30 (37%)    | ~8A / ~7D   | 3–9         | low           | easy-med   |
+ * | 9x9-C   | 17 (21%)    | ~9A / ~9D   | 3–8         | moderate      | medium     |
+ * | 9x9-D   | 17 (21%)    | ~9A / ~8D   | 3–9         | dense lattice | med-hard   |
+ * | 9x9-E   | 14 (17%)    | ~8A / ~7D   | 3–9         | open frame    | hard       |
+ */
 const TEMPLATE_MASKS: Record<TemplateId, number[][]> = {
   '9x9-A': [
     [0, 0, 0, 0, 0, 1, 0, 0, 0],
@@ -521,29 +532,129 @@ function countSlotsByDirection(slots: WordSlot[]): { across: number; down: numbe
   return { across, down };
 }
 
+// ---------------------------------------------------------------------------
+// Intersection map — explicit crossing constraints for the prompt
+// ---------------------------------------------------------------------------
+
+interface Intersection {
+  row: number;
+  col: number;
+  acrossSlot: WordSlot;
+  acrossLetterIndex: number;
+  downSlot: WordSlot;
+  downLetterIndex: number;
+}
+
+function computeIntersections(mask: number[][], slots: WordSlot[]): Intersection[] {
+  const cellToSlot = new Map<string, { slot: WordSlot; letterIndex: number }[]>();
+
+  for (const slot of slots) {
+    for (let i = 0; i < slot.length; i++) {
+      const r = slot.direction === 'across' ? slot.row : slot.row + i;
+      const c = slot.direction === 'across' ? slot.col + i : slot.col;
+      const key = `${r},${c}`;
+      if (!cellToSlot.has(key)) cellToSlot.set(key, []);
+      cellToSlot.get(key)!.push({ slot, letterIndex: i });
+    }
+  }
+
+  const intersections: Intersection[] = [];
+  for (const [key, entries] of cellToSlot) {
+    if (entries.length < 2) continue;
+    const across = entries.find(e => e.slot.direction === 'across');
+    const down = entries.find(e => e.slot.direction === 'down');
+    if (!across || !down) continue;
+    const [row, col] = key.split(',').map(Number);
+    intersections.push({
+      row,
+      col,
+      acrossSlot: across.slot,
+      acrossLetterIndex: across.letterIndex,
+      downSlot: down.slot,
+      downLetterIndex: down.letterIndex,
+    });
+  }
+  return intersections;
+}
+
+function formatSlotTable(slots: WordSlot[]): string {
+  const lines: string[] = ['SLOTS:'];
+  for (const s of slots) {
+    lines.push(`  ${s.number}-${s.direction === 'across' ? 'Across' : 'Down'}: row=${s.row}, col=${s.col}, length=${s.length}`);
+  }
+  return lines.join('\n');
+}
+
+function formatIntersections(intersections: Intersection[]): string {
+  if (intersections.length === 0) return '';
+  const lines: string[] = [
+    'CROSSINGS (shared cells — the letter MUST be identical in both words):',
+  ];
+  for (const ix of intersections) {
+    const aLabel = `${ix.acrossSlot.number}-Across[${ix.acrossLetterIndex}]`;
+    const dLabel = `${ix.downSlot.number}-Down[${ix.downLetterIndex}]`;
+    lines.push(`  Cell (${ix.row},${ix.col}): ${aLabel} = ${dLabel}`);
+  }
+  return lines.join('\n');
+}
+
+// ---------------------------------------------------------------------------
+// Word bank helpers
+// ---------------------------------------------------------------------------
+
+type WordBankEntry = { word: string; clue: string };
+const wordBank: Record<string, WordBankEntry[]> = wordBankData as Record<string, WordBankEntry[]>;
+
+function getWordBankForSlots(slots: WordSlot[]): string {
+  const neededLengths = new Set(slots.map(s => s.length));
+  const sections: string[] = [];
+  for (const len of [...neededLengths].sort((a, b) => a - b)) {
+    const entries = wordBank[String(len)];
+    if (!entries || entries.length === 0) continue;
+    const words = entries.map(e => `${e.word} — ${e.clue}`).join('; ');
+    sections.push(`  ${len}-letter: ${words}`);
+  }
+  if (sections.length === 0) return '';
+  return 'WORD BANK (prefer these pre-vetted words; only invent a word if no bank word fits the slot + crossing constraints):\n' + sections.join('\n');
+}
+
+// ---------------------------------------------------------------------------
+// Prompts
+// ---------------------------------------------------------------------------
+
 const CROSSWORD_SYSTEM = `You are a crossword puzzle designer for TubeRush — a British daily word game app. You fill a FIXED 9×9 template (black squares are given; you do not change them).
 
-Grid templates (for context when the user names one):
-- 9x9-A: very sparse, isolated zones — easy
+Templates:
+- 9x9-A: sparse, isolated zones — easy
 - 9x9-B: vertical pillars — easy-medium
-- 9x9-C: symmetric mosaic, short words — medium
-- 9x9-D: lattice, recommended default — medium-hard
+- 9x9-C: symmetric mosaic — medium
+- 9x9-D: lattice, dense crossings — medium-hard
 - 9x9-E: open frame, longer words — hard
 
 Word rules:
-- Words are >= 3 letters, real British English spelling (COLOUR not COLOR, CENTRE not CENTER).
-- Anchors (5+ letters): at least two common vowels (A, E, I, O). Fill these thoughtfully.
+- Words >= 3 letters, real British English spelling (COLOUR not COLOR, CENTRE not CENTER).
+- Anchors (5+ letters): at least two common vowels (A, E, I, O).
 - Bridges (3-letter): prefer high-frequency letters (R, S, T, L, N, E, A) at crossings.
-- Vocabulary: (1) common nouns/verbs/adjectives (2) well-known places/names only if needed (3) common abbreviations as last resort.
-- NEVER crosswordese (ALEE, SNEE, ESNE, etc.). No duplicate words. No offensive words.
-- Every crossing letter must match between across and down.
+- Vocabulary: (1) common nouns/verbs/adjectives (2) well-known places/names if needed.
+- NEVER crosswordese (ALEE, SNEE, ESNE, etc.). No duplicates. No offensive words.
+- CRITICAL: every crossing cell must have the SAME letter in both the across and down word.
 
-Clue rules (aim for ~60% definition, ~20% fill-in-the-blank, ~20% light wordplay):
-- Never include the answer (or substring of it) in the clue text.
-- Keep clues concise (under ~12 words). British cultural references welcome if fair.
+Clue rules (~60% definition, ~20% fill-in-the-blank, ~20% light wordplay):
+- Never include the answer (or substring) in the clue text.
+- Keep clues concise (under ~12 words). British cultural references welcome.
 
-Output: ONLY JSON. Do not include a "grid" field — only "title" and "clues" with across/down arrays.
-Each clue object: number, row, col, length, answer (uppercase A–Z), clue (string). row/col are 0-based start cells; length must match the template slot.`;
+Fill strategy:
+1. Fill the most-constrained slots first (most crossings already fixed).
+2. After placing each word, immediately check all its crossing cells against already-placed words.
+3. If a crossing letter conflicts, try a different word — never proceed with a mismatch.
+4. Use the provided WORD BANK wherever possible.
+
+Self-verification (do this BEFORE outputting):
+- For every entry in the CROSSINGS list, confirm the letter at that position in the across word equals the letter at that position in the down word.
+- If any mismatch is found, fix it before outputting.
+
+Output: ONLY JSON. No "grid" field — only "title" and "clues" with across/down arrays.
+Each clue object: number, row, col, length, answer (uppercase A–Z), clue (string). row/col are 0-based.`;
 
 function crosswordPrompt(
   date: string,
@@ -551,18 +662,32 @@ function crosswordPrompt(
   templateId: TemplateId,
   difficulty: string,
   maskLines: string,
+  slots: WordSlot[],
   slotCounts: { across: number; down: number },
+  intersections: Intersection[],
+  previousError?: string,
 ): string {
-  return `9×9 crossword for ${date} (store id #${id}).
-Template: ${templateId}. Difficulty label: "${difficulty}".
+  const parts: string[] = [];
 
-Black (#) / white (.) pattern — use EXACTLY this (9 rows × 9 cols):
-${maskLines}
+  parts.push(`9×9 crossword for ${date} (id #${id}). Template: ${templateId}. Difficulty: "${difficulty}".`);
 
-You must output exactly ${slotCounts.across} across and ${slotCounts.down} down entries (one per word slot in the pattern, each word >= 3 letters). Match each slot's start cell (row, col), direction, and length; use standard crossword numbering (starts in reading order, top-to-bottom then left-to-right).
+  if (previousError) {
+    parts.push(`\n⚠️ PREVIOUS ATTEMPT FAILED: ${previousError}\nPay extra attention to the constraint that caused this failure.`);
+  }
 
-Return ONLY this JSON shape (no markdown):
-{"title":"Short title","clues":{"across":[{"number":1,"row":0,"col":0,"length":3,"answer":"CAT","clue":"..."},...],"down":[...]}}`;
+  parts.push(`\nGrid mask (# = black, . = white):\n${maskLines}`);
+  parts.push(`\n${formatSlotTable(slots)}`);
+  parts.push(`\n${formatIntersections(intersections)}`);
+
+  const bankText = getWordBankForSlots(slots);
+  if (bankText) parts.push(`\n${bankText}`);
+
+  parts.push(`\nYou must output exactly ${slotCounts.across} across and ${slotCounts.down} down entries matching the slots above.`);
+
+  parts.push(`\nReturn ONLY this JSON (no markdown fences, no commentary):
+{"title":"Short title","clues":{"across":[{"number":1,"row":0,"col":0,"length":3,"answer":"CAT","clue":"Domestic feline"},...],"down":[...]}}`);
+
+  return parts.join('\n');
 }
 
 function parseRawClue(cl: Record<string, unknown>): RawClue | null {
@@ -796,8 +921,10 @@ async function generateCrossword(
   const slots = computeWordSlots(mask);
   const slotCounts = countSlotsByDirection(slots);
   const maskLines = maskToPromptLines(mask);
+  const intersections = computeIntersections(mask, slots);
 
   let lastErr: unknown;
+  let previousError: string | undefined;
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     try {
       log('claude_call', {
@@ -807,8 +934,12 @@ async function generateCrossword(
         templateId,
         difficulty,
         slots: slotCounts,
+        intersections: intersections.length,
       });
-      const prompt = crosswordPrompt(date, id, templateId, difficulty, maskLines, slotCounts);
+      const prompt = crosswordPrompt(
+        date, id, templateId, difficulty, maskLines,
+        slots, slotCounts, intersections, previousError,
+      );
       const raw = await callClaude(apiKey, secrets, CROSSWORD_SYSTEM, prompt);
       const parsed = JSON.parse(extractJSON(raw));
       const [acrossIn, downIn] = parseClueResponse(
@@ -830,7 +961,8 @@ async function generateCrossword(
       return payload;
     } catch (err) {
       lastErr = err;
-      log('claude_error', { type: 'crossword', date, attempt, error: String(err).slice(0, 300) });
+      previousError = err instanceof Error ? err.message : String(err);
+      log('claude_error', { type: 'crossword', date, attempt, error: previousError.slice(0, 300) });
     }
   }
   throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
