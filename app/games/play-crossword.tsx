@@ -2,6 +2,7 @@ import { Crossword } from '@/components/games/Crossword';
 import { CrosswordErrorBoundary } from '@/components/games/CrosswordErrorBoundary';
 import { Leaderboard } from '@/components/ui/Leaderboard';
 import { Colors, Layout, Spacing, TFL, Typography } from '@/constants/theme';
+import { getCustomPuzzle, saveCustomPuzzleScore } from '@/lib/custom-puzzles';
 import { leaderboard } from '@/lib/leaderboard';
 import { capture } from '@/lib/posthog';
 import { useAuthStore } from '@/stores/auth-store';
@@ -10,7 +11,7 @@ import { useCrosswordTimer } from '@/hooks/useCrosswordTimer';
 import { usePuzzle } from '@/hooks/usePuzzle';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Haptics from 'expo-haptics';
-import type { CrosswordState, GameState } from '@/types/game';
+import type { CrosswordPuzzle, CrosswordState, GameState } from '@/types/game';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -45,13 +46,40 @@ function formatTime(seconds: number): string {
 
 export default function PlayCrossword() {
     const router = useRouter();
-    const { puzzleId: puzzleIdParam } = useLocalSearchParams<{ puzzleId?: string }>();
+    const { puzzleId: puzzleIdParam, customPuzzleId } = useLocalSearchParams<{ puzzleId?: string; customPuzzleId?: string }>();
+    const isCustomPuzzle = !!customPuzzleId;
     const user = useAuthStore(state => state.user);
     const { loadGame, saveGame, createNewGame } = useGameStore();
-    const { puzzle, gameDate, loading: puzzleLoading } = usePuzzle(puzzleIdParam);
+    const { puzzle: dailyPuzzle, gameDate: dailyGameDate, loading: dailyPuzzleLoading } = usePuzzle(isCustomPuzzle ? undefined : puzzleIdParam);
+    const [customPuzzle, setCustomPuzzle] = useState<CrosswordPuzzle | null>(null);
+    const [customPuzzleLoading, setCustomPuzzleLoading] = useState(!!customPuzzleId);
+    const puzzle = isCustomPuzzle ? customPuzzle : dailyPuzzle;
+    const gameDate = isCustomPuzzle ? null : dailyGameDate;
+    const puzzleLoading = isCustomPuzzle ? customPuzzleLoading : dailyPuzzleLoading;
     const [gameState, setGameState] = useState<GameState | null>(null);
     const [loading, setLoading] = useState(true);
     const [showLeaderboard, setShowLeaderboard] = useState(false);
+
+    // Load custom puzzle from Supabase
+    useEffect(() => {
+        if (!customPuzzleId) return;
+        let cancelled = false;
+        async function load() {
+            setCustomPuzzleLoading(true);
+            try {
+                const row = await getCustomPuzzle(customPuzzleId!);
+                if (!cancelled && row) {
+                    setCustomPuzzle(row.puzzle_data as CrosswordPuzzle);
+                }
+            } catch {
+                // handled by null puzzle state
+            } finally {
+                if (!cancelled) setCustomPuzzleLoading(false);
+            }
+        }
+        load();
+        return () => { cancelled = true; };
+    }, [customPuzzleId]);
 
     useEffect(() => {
         if (!user) {
@@ -82,7 +110,9 @@ export default function PlayCrossword() {
         }
 
         const initGame = async () => {
-            const puzzleGameId = `crossword_${user.id}_${puzzle.id}`;
+            const puzzleGameId = isCustomPuzzle
+                ? `crossword_${user.id}_custom_${customPuzzleId}`
+                : `crossword_${user.id}_${puzzle.id}`;
             try {
                 let game = await loadGame(puzzleGameId, user.id);
 
@@ -96,7 +126,11 @@ export default function PlayCrossword() {
                 }
 
                 setGameState(game);
-                capture('game_started', { game_type: 'crossword', puzzle_id: puzzle.id });
+                capture('game_started', {
+                    game_type: 'crossword',
+                    puzzle_id: puzzle.id,
+                    is_custom: isCustomPuzzle,
+                });
             } catch (error) {
                 console.error('Failed to init crossword game:', error);
                 Alert.alert('Error', 'Failed to load game');
@@ -107,7 +141,7 @@ export default function PlayCrossword() {
         };
 
         initGame();
-    }, [user, puzzle, puzzleLoading, loadGame, createNewGame, router]);
+    }, [user, puzzle, puzzleLoading, loadGame, createNewGame, router, isCustomPuzzle, customPuzzleId]);
 
     const timerRef = React.useRef<{ accumulatedPause: number }>({ accumulatedPause: 0 });
 
@@ -215,16 +249,24 @@ export default function PlayCrossword() {
                 game_type: 'crossword',
                 result: 'won',
                 time_taken_seconds: completionSecs,
+                is_custom: isCustomPuzzle,
             });
             capture('game_marked_complete', {
                 game_type: 'crossword',
                 puzzle_id: puzzle.id,
                 time_taken_seconds: completionSecs,
+                is_custom: isCustomPuzzle,
             });
 
-            if (user?.city && newState.startTime) {
-                const pauseMs = newState.accumulatedPause ?? 0;
-                const timeTaken = Math.floor((endTime - newState.startTime - pauseMs) / 1000);
+            const pauseMs = newState.accumulatedPause ?? 0;
+            const timeTaken = newState.startTime
+                ? Math.floor((endTime - newState.startTime - pauseMs) / 1000)
+                : null;
+
+            if (isCustomPuzzle && customPuzzleId && timeTaken != null) {
+                saveCustomPuzzleScore(customPuzzleId, timeTaken)
+                    .catch((err) => console.error('Failed to save custom puzzle score', err));
+            } else if (!isCustomPuzzle && user?.city && timeTaken != null) {
                 leaderboard
                     .submitScore(
                         user.id,
@@ -243,7 +285,7 @@ export default function PlayCrossword() {
                 [{ text: 'OK' }]
             );
         }
-    }, [gameState, saveGame, user, puzzle]);
+    }, [gameState, saveGame, user, puzzle, isCustomPuzzle, customPuzzleId]);
 
     const crosswordState = (gameState?.state ?? null) as CrosswordState | null;
     const timer = useCrosswordTimer(crosswordState ?? {
@@ -333,13 +375,13 @@ export default function PlayCrossword() {
 
     const handleShare = async () => {
         if (completionTimeSecs == null) return;
-        const dateStr = formatPuzzleDate(gameDate ?? puzzle.date);
         const timeStr = formatTime(completionTimeSecs);
-        capture('game_shared', { game_type: 'crossword' });
+        capture('game_shared', { game_type: 'crossword', is_custom: isCustomPuzzle });
         try {
-            await Share.share({
-                message: `TubeRush Crossword - ${dateStr} - Solved in ${timeStr}`,
-            });
+            const message = isCustomPuzzle
+                ? `TubeRush Custom Crossword - Solved in ${timeStr}`
+                : `TubeRush Crossword - ${formatPuzzleDate(gameDate ?? puzzle.date)} - Solved in ${timeStr}`;
+            await Share.share({ message });
         } catch { /* user cancelled */ }
     };
 
@@ -359,7 +401,7 @@ export default function PlayCrossword() {
                 <View style={styles.headerCenter}>
                     <Text style={styles.headerTitle}>Crossword</Text>
                     <View style={styles.badge}>
-                        <Text style={styles.badgeText}>1st Class</Text>
+                        <Text style={styles.badgeText}>{isCustomPuzzle ? 'Custom' : '1st Class'}</Text>
                     </View>
                 </View>
 
@@ -367,7 +409,9 @@ export default function PlayCrossword() {
                     {state.startTime && !isCompleted && (
                         <Text style={styles.headerTimer}>{timer.formatted}</Text>
                     )}
-                    <Text style={styles.headerDate}>{formatPuzzleDate(gameDate ?? puzzle.date)}</Text>
+                    <Text style={styles.headerDate}>
+                        {isCustomPuzzle ? 'Custom Puzzle' : formatPuzzleDate(gameDate ?? puzzle.date)}
+                    </Text>
                 </View>
             </View>
 
@@ -418,14 +462,16 @@ export default function PlayCrossword() {
                                 </Text>
                             )}
                             <View style={styles.gameOverActions}>
-                                <TouchableOpacity
-                                    style={styles.gameOverButton}
-                                    onPress={() => setShowLeaderboard(true)}
-                                    accessibilityRole="button"
-                                    accessibilityLabel="View leaderboard"
-                                >
-                                    <Text style={styles.gameOverButtonText}>Leaderboard</Text>
-                                </TouchableOpacity>
+                                {!isCustomPuzzle && (
+                                    <TouchableOpacity
+                                        style={styles.gameOverButton}
+                                        onPress={() => setShowLeaderboard(true)}
+                                        accessibilityRole="button"
+                                        accessibilityLabel="View leaderboard"
+                                    >
+                                        <Text style={styles.gameOverButtonText}>Leaderboard</Text>
+                                    </TouchableOpacity>
+                                )}
                                 <TouchableOpacity
                                     style={styles.gameOverButton}
                                     onPress={handleShare}
@@ -438,10 +484,10 @@ export default function PlayCrossword() {
                                     style={[styles.gameOverButton, styles.gameOverButtonPrimary]}
                                     onPress={() => router.back()}
                                     accessibilityRole="button"
-                                    accessibilityLabel="Return home"
+                                    accessibilityLabel={isCustomPuzzle ? "Return to puzzles" : "Return home"}
                                 >
                                     <Text style={[styles.gameOverButtonText, styles.gameOverButtonTextPrimary]}>
-                                        Home
+                                        {isCustomPuzzle ? 'Back to Puzzles' : 'Home'}
                                     </Text>
                                 </TouchableOpacity>
                             </View>
@@ -451,16 +497,18 @@ export default function PlayCrossword() {
             </KeyboardAvoidingView>
             </CrosswordErrorBoundary>
 
-            <Modal
-                visible={showLeaderboard}
-                animationType="slide"
-                presentationStyle="pageSheet"
-            >
-                <Leaderboard
-                    gameType="crossword"
-                    onClose={() => setShowLeaderboard(false)}
-                />
-            </Modal>
+            {!isCustomPuzzle && (
+                <Modal
+                    visible={showLeaderboard}
+                    animationType="slide"
+                    presentationStyle="pageSheet"
+                >
+                    <Leaderboard
+                        gameType="crossword"
+                        onClose={() => setShowLeaderboard(false)}
+                    />
+                </Modal>
+            )}
         </SafeAreaView>
     );
 }
