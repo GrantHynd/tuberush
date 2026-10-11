@@ -61,6 +61,7 @@ export default function PlayConnectionsScreen() {
   const [puzzle, setPuzzle] = useState<ConnectionsPuzzle | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [revealComplete, setRevealComplete] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -201,6 +202,7 @@ export default function PlayConnectionsScreen() {
         if (newState.mistakesRemaining === 0) {
           newState.status = "lost";
           newState.endTime = Date.now();
+          setRevealComplete(false); // Reset for reveal animation
           capture("game_completed", {
             game_type: "connections",
             result: "lost",
@@ -220,8 +222,23 @@ export default function PlayConnectionsScreen() {
     [currentGame, puzzle, user, saveGame, isCustomPuzzle, customPuzzleId],
   );
 
+  const handleRevealComplete = useCallback(() => {
+    setRevealComplete(true);
+  }, []);
+
   const puzzleDate =
     dateParam || puzzle?.date || new Date().toISOString().split("T")[0];
+
+  // Handle already-lost game on mount
+  useEffect(() => {
+    if (currentGame) {
+      const state = currentGame.state as ConnectionsState;
+      if (state.status === "lost") {
+        setRevealComplete(true);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentGame?.id]); // Only run when game id changes (mount or game switch)
 
   if (loadError) {
     return (
@@ -280,11 +297,14 @@ export default function PlayConnectionsScreen() {
   }
 
   const gameState = currentGame.state as ConnectionsState;
-  const isGameOver =
-    gameState.status === "won" || gameState.status === "lost";
   const timeTaken = gameState.endTime
     ? Math.floor((gameState.endTime - gameState.startTime) / 1000)
     : null;
+
+  // Only show game over banner after reveal is complete for lost games
+  const shouldShowGameOver = 
+    gameState.status === "won" || 
+    (gameState.status === "lost" && revealComplete);
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -315,10 +335,11 @@ export default function PlayConnectionsScreen() {
         gameState={gameState}
         puzzle={puzzle}
         onSubmitGuess={handleSubmitGuess}
+        onRevealComplete={handleRevealComplete}
       />
 
       {/* Game Over Banner */}
-      {isGameOver && (
+      {shouldShowGameOver && (
         <View style={styles.gameOverContainer}>
           <Text style={styles.gameOverTitle}>
             {gameState.status === "won"
