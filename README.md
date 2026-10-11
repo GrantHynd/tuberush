@@ -1,12 +1,24 @@
 # TubeRush 🎮
 
-A React Native game platform with offline-first architecture, premium subscriptions, and cloud synchronization.
+A daily word game app for British commuters, built with React Native/Expo, offline-first architecture, premium subscriptions, and cloud sync.
 
 ## Features
 
 ✅ **Two Games**
-- Connections (Free)
-- Crossword Puzzles (Premium)
+- Connections (Free) — find groups of 4 related items
+- Crossword Puzzles (Premium) — daily 9x9 crossword
+
+✅ **Custom Puzzles**
+- Play Connections/Crossword puzzles loaded from a `custom_puzzles` table outside the daily flow
+- Score saved separately from the daily leaderboard; leaderboard UI hidden for these sessions
+
+✅ **Leaderboards**
+- Weekly leaderboards by game and by London borough/UK city
+- Personal rank, podium, and borough breakdown views
+
+✅ **Automated Daily Games**
+- Daily Connections/Crossword puzzles generated on a schedule via an AWS Lambda (`lambda/schedule-daily-games`), calling a Claude skill to produce puzzle content
+- A Supabase edge function (`schedule-daily-games`) remains for manual/edge-triggered generation
 
 ✅ **Premium Membership**
 - RevenueCat subscriptions (Monthly & Yearly)
@@ -20,9 +32,12 @@ A React Native game platform with offline-first architecture, premium subscripti
 - Conflict resolution
 
 ✅ **User Authentication**
-- Email/password sign-up
+- Email/password sign-up, forgot/reset password flow
 - Secure session management
 - Profile management
+
+✅ **Analytics**
+- PostHog product analytics via `hooks/useAnalytics.ts`
 
 ✅ **Cloud Sync**
 - Real-time game state synchronization
@@ -31,50 +46,45 @@ A React Native game platform with offline-first architecture, premium subscripti
 
 ## Tech Stack
 
-- **Frontend**: React Native with Expo
+- **Frontend**: React Native with Expo (SDK 54), Expo Router
 - **Language**: TypeScript
 - **State Management**: Zustand
-- **Backend**: Supabase (PostgreSQL, Auth, Real-time)
+- **Backend**: Supabase (PostgreSQL, Auth, Edge Functions)
+- **Scheduled Jobs**: AWS Lambda (SAM) for daily puzzle generation
 - **Payments**: RevenueCat (react-native-purchases)
+- **Analytics**: PostHog
 - **Offline Storage**: AsyncStorage
 - **Network Detection**: NetInfo
+- **Testing**: Jest (unit/integration), Maestro (E2E)
 
 ## Project Structure
 
 ```
 tuberush-v2/
 ├── app/                      # Expo Router screens
-│   ├── (tabs)/              # Tab navigation
-│   │   ├── index.tsx        # Home screen
-│   │   └── profile.tsx      # Profile screen
-│   ├── games/               # Game screens
-│   │   ├── play-tictactoe.tsx
-│   │   └── play-crossword.tsx
-│   ├── auth.tsx             # Authentication modal
+│   ├── (tabs)/              # Tab navigation: index, profile, stats, trophy
+│   ├── games/               # connections-list, crossword-list, play-connections, play-crossword
+│   ├── leaderboard/         # boroughs.tsx, game.tsx
+│   ├── auth.tsx / forgot-password.tsx / reset-password.tsx
 │   └── subscribe.tsx        # Subscription modal
 ├── components/
-│   ├── games/               # Game components
-│   │   ├── TicTacToe.tsx
-│   │   └── Crossword.tsx
-│   └── ui/                  # UI components
-│       ├── GameCard.tsx
-│       ├── SyncIndicator.tsx
-│       └── PremiumBadge.tsx
-├── lib/                     # Core utilities
-│   ├── supabase-client.ts
-│   ├── storage-manager.ts
-│   └── offline-sync-manager.ts
-├── stores/                  # Zustand stores
-│   ├── auth-store.ts
-│   └── game-store.ts
-├── types/                   # TypeScript types
-│   └── game.ts
-├── constants/               # App constants
-│   └── Games.ts
-└── supabase/               # Backend
-    ├── schema.sql          # Database schema
-    ├── functions/          # Edge functions
-    └── README.md           # Setup guide
+│   ├── games/               # Connections, Crossword, grid previews, error boundary, history list
+│   ├── home/                # PuzzleCard, SectionHeader, StatCard
+│   ├── leaderboard/         # Avatar, BoroughList, Podium, RankedList, WeekNavigator, etc.
+│   └── ui/                  # GameCard, GameTypeBadge, PremiumBadge, SyncIndicator, etc.
+├── hooks/                    # useAnalytics, useGameHistory, useLeaderboardOverview,
+│                             # useBoroughRank, useCrosswordTimer, usePuzzleCarousel, ...
+├── lib/                      # supabase-client, custom-puzzles, daily-games, leaderboard,
+│                             # offline-sync-manager, storage-manager, posthog, revenuecat
+├── stores/                   # Zustand: auth-store, game-store
+├── constants/                 # Games, ConnectionsData, CrosswordData, Boroughs, UKCities, theme
+├── types/                    # TypeScript types (game.ts, database.types.ts in lib/)
+├── lambda/schedule-daily-games/  # AWS Lambda (SAM) for automated daily puzzle generation
+└── supabase/                 # Backend
+    ├── migrations/          # 12 migrations
+    ├── functions/           # e2e-test-helper, schedule-daily-games, validate-iap
+    ├── schema.sql / seed.sql
+    └── README.md            # Setup guide
 ```
 
 ## Getting Started
@@ -107,6 +117,9 @@ tuberush-v2/
    - `EXPO_PUBLIC_SUPABASE_URL`
    - `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
    - `EXPO_PUBLIC_REVENUECAT_API_KEY` (from RevenueCat dashboard)
+   - `EXPO_PUBLIC_POSTHOG_API_KEY` (from PostHog project settings)
+
+   The `schedule-daily-games` edge function/Lambda also needs its own secrets (`ANTHROPIC_API_KEY`, `ANTHROPIC_DAILY_PUZZLE_SKILL_ID`, etc.) — see `.env.example` for the full list.
 
 4. **Start the development server**
    ```bash
@@ -158,12 +171,22 @@ if (game.isPremium && !user?.isPremium) {
 
 ### Authentication
 - Email/password signup and login
+- Forgot/reset password flow
 - Automatic session persistence
 - Profile auto-creation on signup
 
 ### Games
-- **Connections**: Find groups of 4 related items
-- **Crossword**: Premium puzzle game with clue display
+- **Connections**: Find groups of 4 related items (free)
+- **Crossword**: Premium 9x9 puzzle game with clue display and timer
+- **Custom Puzzles**: Either game type can also be loaded by ID from the `custom_puzzles` table (e.g. shared or AI-generated puzzles), scored separately from the daily leaderboard
+
+### Leaderboards
+- Weekly leaderboard per game, plus borough/city ranking views
+- Personal summary card and podium UI
+
+### Daily Puzzle Generation
+- `lambda/schedule-daily-games` (AWS Lambda, SAM-deployed) generates the day's Connections/Crossword puzzles on a schedule using a Claude skill
+- `supabase/functions/schedule-daily-games` provides the same generation logic as an edge function
 
 ### Subscriptions
 - RevenueCat-powered subscriptions (Monthly & Yearly)
@@ -192,9 +215,10 @@ See `supabase/README.md` for detailed setup instructions.
 ### Adding a New Game
 
 1. Create game component in `components/games/`
-2. Add game config to `constants/Games.ts`
-3. Create play screen in `app/games/`
+2. Add game config to `constants/Games.ts` (id, name, description, `isPremium`, icon, colour)
+3. Create list + play screens in `app/games/`
 4. Update type definitions in `types/game.ts`
+5. If it should support daily generation, extend `lib/daily-games.ts` and the `schedule-daily-games` function/Lambda
 
 ### Modifying Sync Logic
 
@@ -282,10 +306,8 @@ eas submit --platform android
 
 - [ ] Additional games
 - [ ] Multiplayer support
-- [ ] Leaderboards
 - [ ] Social features
 - [ ] Push notifications
-- [ ] Analytics
 
 ## License
 

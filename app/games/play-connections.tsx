@@ -1,6 +1,7 @@
 import { Connections } from "@/components/games/Connections";
 import { Leaderboard } from "@/components/ui/Leaderboard";
 import type { ConnectionsPuzzle } from "@/constants/ConnectionsData";
+import { getCustomPuzzle, saveCustomPuzzleScore } from "@/lib/custom-puzzles";
 import { getDailyGame, getGameByDate } from "@/lib/daily-games";
 import { Colors, Spacing, TFL, Typography } from "@/constants/theme";
 import { leaderboard } from "@/lib/leaderboard";
@@ -52,7 +53,8 @@ function formatDate(dateStr: string): string {
 
 export default function PlayConnectionsScreen() {
   const router = useRouter();
-  const { date: dateParam } = useLocalSearchParams<{ date?: string }>();
+  const { date: dateParam, customPuzzleId } = useLocalSearchParams<{ date?: string; customPuzzleId?: string }>();
+  const isCustomPuzzle = !!customPuzzleId;
   const { user } = useAuthStore();
   const { currentGame, loadGame, createNewGame, saveGame } = useGameStore();
   const [loading, setLoading] = useState(true);
@@ -68,7 +70,12 @@ export default function PlayConnectionsScreen() {
 
     const initGame = async () => {
       let targetPuzzle: ConnectionsPuzzle | undefined;
-      if (dateParam) {
+
+      if (customPuzzleId) {
+        // Load from custom_puzzles table
+        const row = await getCustomPuzzle(customPuzzleId);
+        targetPuzzle = row?.puzzle_data as ConnectionsPuzzle | undefined;
+      } else if (dateParam) {
         targetPuzzle = (await getGameByDate("connections", dateParam)) as
           | ConnectionsPuzzle
           | undefined;
@@ -89,8 +96,9 @@ export default function PlayConnectionsScreen() {
 
       setPuzzle(targetPuzzle);
 
-      const gameDate = dateParam || targetPuzzle.date;
-      const gameId = `connections_${user.id}_${gameDate}`;
+      const gameId = customPuzzleId
+        ? `connections_${user.id}_custom_${customPuzzleId}`
+        : `connections_${user.id}_${dateParam || targetPuzzle.date}`;
 
       try {
         let game = await loadGame(gameId, user.id);
@@ -99,7 +107,11 @@ export default function PlayConnectionsScreen() {
           game = createNewGame(user.id, "connections", gameId);
         }
 
-        capture("game_started", { game_type: "connections", puzzle_date: targetPuzzle.date });
+        capture("game_started", {
+          game_type: "connections",
+          puzzle_date: targetPuzzle.date,
+          is_custom: isCustomPuzzle,
+        });
         setLoading(false);
       } catch (error) {
         console.error("Failed to init game:", error);
@@ -109,7 +121,7 @@ export default function PlayConnectionsScreen() {
     };
 
     initGame();
-  }, [user, dateParam, loadGame, createNewGame, router]);
+  }, [user, dateParam, customPuzzleId, isCustomPuzzle, loadGame, createNewGame, router]);
 
   const handleSubmitGuess = useCallback(
     async (items: string[]) => {
@@ -150,15 +162,22 @@ export default function PlayConnectionsScreen() {
               result: "won",
               time_taken_seconds: timeTaken,
               mistakes: 4 - newState.mistakesRemaining,
+              is_custom: isCustomPuzzle,
             });
             capture("game_marked_complete", {
               game_type: "connections",
               puzzle_date: puzzle.date,
               time_taken_seconds: timeTaken,
               mistakes_used: 4 - newState.mistakesRemaining,
+              is_custom: isCustomPuzzle,
             });
 
-            if (user.city) {
+            if (isCustomPuzzle && customPuzzleId) {
+              saveCustomPuzzleScore(customPuzzleId, timeTaken)
+                .catch((err) =>
+                  console.error("Failed to save custom puzzle score", err),
+                );
+            } else if (!isCustomPuzzle && user.city) {
               leaderboard
                 .submitScore(
                   user.id,
@@ -198,7 +217,7 @@ export default function PlayConnectionsScreen() {
         lastUpdated: new Date().toISOString(),
       });
     },
-    [currentGame, puzzle, user, saveGame],
+    [currentGame, puzzle, user, saveGame, isCustomPuzzle, customPuzzleId],
   );
 
   const puzzleDate =
@@ -285,7 +304,7 @@ export default function PlayConnectionsScreen() {
         </TouchableOpacity>
         <View style={styles.headerText}>
           <Text style={styles.headerTitle}>Connections</Text>
-          <Text style={styles.headerSubtitle}>{formatDate(puzzleDate)}</Text>
+          <Text style={styles.headerSubtitle}>{isCustomPuzzle ? 'Custom Puzzle' : formatDate(puzzleDate)}</Text>
         </View>
       </View>
 
@@ -310,19 +329,21 @@ export default function PlayConnectionsScreen() {
             <Text style={styles.gameOverTime}>Solved in {timeTaken}s</Text>
           )}
           <View style={styles.gameOverActions}>
-            <TouchableOpacity
-              style={styles.gameOverButton}
-              onPress={() => setShowLeaderboard(true)}
-              accessibilityRole="button"
-              accessibilityLabel="View leaderboard"
-            >
-              <Text style={styles.gameOverButtonText}>Leaderboard</Text>
-            </TouchableOpacity>
+            {!isCustomPuzzle && (
+              <TouchableOpacity
+                style={styles.gameOverButton}
+                onPress={() => setShowLeaderboard(true)}
+                accessibilityRole="button"
+                accessibilityLabel="View leaderboard"
+              >
+                <Text style={styles.gameOverButtonText}>Leaderboard</Text>
+              </TouchableOpacity>
+            )}
             <TouchableOpacity
               style={[styles.gameOverButton, styles.gameOverButtonPrimary]}
               onPress={() => router.back()}
               accessibilityRole="button"
-              accessibilityLabel="Return home"
+              accessibilityLabel={isCustomPuzzle ? "Return to puzzles" : "Return home"}
             >
               <Text
                 style={[
@@ -330,23 +351,25 @@ export default function PlayConnectionsScreen() {
                   styles.gameOverButtonTextPrimary,
                 ]}
               >
-                Home
+                {isCustomPuzzle ? 'Back to Puzzles' : 'Home'}
               </Text>
             </TouchableOpacity>
           </View>
         </View>
       )}
 
-      <Modal
-        visible={showLeaderboard}
-        animationType="slide"
-        presentationStyle="pageSheet"
-      >
-        <Leaderboard
-          gameType="connections"
-          onClose={() => setShowLeaderboard(false)}
-        />
-      </Modal>
+      {!isCustomPuzzle && (
+        <Modal
+          visible={showLeaderboard}
+          animationType="slide"
+          presentationStyle="pageSheet"
+        >
+          <Leaderboard
+            gameType="connections"
+            onClose={() => setShowLeaderboard(false)}
+          />
+        </Modal>
+      )}
     </SafeAreaView>
   );
 }
