@@ -15,10 +15,14 @@ import wordBankData from './word-bank.json';
 
 const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
 const CLAUDE_MODEL = 'claude-sonnet-4-6';
-const CLAUDE_TIMEOUT_MS = 35_000;
-const CLAUDE_SKILL_TIMEOUT_MS = 90_000;
+const CLAUDE_TIMEOUT_MS = 90_000;
+const CLAUDE_SKILL_TIMEOUT_MS = 240_000;
 const MAX_RETRIES = 1;
-const MAX_PAUSE_TURNS = 4;
+const MAX_PAUSE_TURNS = 8;
+/** 26 clues as JSON is ~2k tokens on its own; leave headroom. */
+const MAX_TOKENS_SIMPLE = 8192;
+/** Skill turns include code-execution narration before the final JSON. */
+const MAX_TOKENS_SKILL = 16_000;
 const ANTHROPIC_BETA_SKILLS = 'code-execution-2025-08-25,skills-2025-10-02';
 
 /** Match hosted Agent Skill: bump `ANTHROPIC_CROSSWORD_SKILL_VERSION` in Secrets when the skill is republished */
@@ -247,6 +251,16 @@ function getSkillConfig(
   return { skillId, version };
 }
 
+/** The skill narrates before answering; the JSON is normally in the last text block. */
+function lastTextBlockWithJson(content: unknown): string | null {
+  if (!Array.isArray(content)) return null;
+  for (let i = content.length - 1; i >= 0; i--) {
+    const b = content[i] as { type?: string; text?: string } | null;
+    if (b?.type === 'text' && typeof b.text === 'string' && b.text.includes('{')) return b.text;
+  }
+  return null;
+}
+
 function joinTextFromContentBlocks(content: unknown): string {
   if (!Array.isArray(content)) return '';
   const parts: string[] = [];
@@ -273,7 +287,7 @@ async function callClaudeSimple(apiKey: string, system: string, prompt: string):
       },
       body: JSON.stringify({
         model: CLAUDE_MODEL,
-        max_tokens: 2048,
+        max_tokens: MAX_TOKENS_SIMPLE,
         system,
         messages: [{ role: 'user', content: prompt }],
       }),
@@ -291,7 +305,11 @@ async function callClaudeSimple(apiKey: string, system: string, prompt: string):
     if (data == null || typeof data !== 'object') {
       throw new Error('Claude JSON was empty or not an object');
     }
-    const text = joinTextFromContentBlocks((data as { content?: unknown }).content);
+    const { content, stop_reason: stopReason } = data as { content?: unknown; stop_reason?: string };
+    if (stopReason === 'max_tokens') {
+      throw new Error(`Claude response truncated at max_tokens (${MAX_TOKENS_SIMPLE})`);
+    }
+    const text = joinTextFromContentBlocks(content);
     if (!text.trim()) {
       throw new Error(`Empty Claude text; keys=${Object.keys(data as object).join(',')}`);
     }
@@ -330,7 +348,7 @@ async function callClaudeWithSkill(
         },
         body: JSON.stringify({
           model: CLAUDE_MODEL,
-          max_tokens: 2048,
+          max_tokens: MAX_TOKENS_SKILL,
           system,
           messages,
           tools,
@@ -368,7 +386,13 @@ async function callClaudeWithSkill(
         container_id: payload.container?.id,
       });
 
+      if (stopReason === 'max_tokens') {
+        throw new Error(`Claude (skills) truncated at max_tokens (${MAX_TOKENS_SKILL}) on turn ${turn}`);
+      }
+
       if (stopReason !== 'pause_turn') {
+        const finalJsonText = lastTextBlockWithJson(payload.content);
+        if (finalJsonText) return finalJsonText;
         if (!text.trim()) {
           throw new Error(
             `Empty Claude (skills) stop_reason=${stopReason} snippet=${JSON.stringify(data).slice(0, 300)}`,
@@ -402,7 +426,13 @@ async function callClaude(
       `The "Crossword Generator" Agent Skill is active. Use it for quality, then output ONLY JSON (no markdown).\n\n${system}`;
     const userWithSkill = `Apply the skill, then output only this JSON task:\n\n${prompt}`;
     try {
-      return await callClaudeWithSkill(apiKey, systemWithSkill, userWithSkill, skill);
+      const text = await callClaudeWithSkill(apiKey, systemWithSkill, userWithSkill, skill);
+      try {
+        JSON.parse(extractJSON(text));
+      } catch {
+        throw new Error(`skill returned no parseable JSON: ${text.slice(0, 80)}`);
+      }
+      return text;
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       log('claude_skill_fallback', { reason: msg.slice(0, 200) });

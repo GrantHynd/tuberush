@@ -98,6 +98,8 @@ Resources:
     Properties:
       FunctionName: tuberush-generate-crossword
       CodeUri: lambda/generate-crossword/
+      # Skill calls can take minutes; 2 attempts x (skill 240s + fallback 90s) must fit
+      Timeout: 900
       Handler: src/index.handler
       Description: Generates daily crossword puzzles via Claude + Crossword Generator skill
       Environment:
