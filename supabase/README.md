@@ -16,10 +16,10 @@
 2. Run migrations in order:
    - `supabase/schema.sql` (base schema)
    - `supabase/migrations/update_schema.sql` (borough, leaderboard)
-   - `supabase/migrations/20250314_apple_iap_schema.sql` (Apple IAP)
-   - `supabase/migrations/20250315_drop_subscription_fields.sql` (if applicable)
-   - `supabase/migrations/20250315_add_connections_game_type.sql` (if applicable)
-   - `supabase/migrations/20250315_city_borough_location.sql` (city/town support)
+   - `supabase/migrations/20250314000000_apple_iap_schema.sql` (Apple IAP)
+   - `supabase/migrations/20250315000006_drop_subscription_fields.sql` (if applicable)
+   - `supabase/migrations/20250315000001_add_connections_game_type.sql` (if applicable)
+   - `supabase/migrations/20250315000002_city_borough_location.sql` (city/town support)
 
 ### 3. Get API Keys
 1. In Supabase Dashboard, go to Settings → API
@@ -76,7 +76,7 @@ After setup, test by:
 
 ## Troubleshooting
 
-**"Failed to update location" when changing City/Town:** The `profiles` table needs a `city` column. Run `supabase/migrations/20250315_city_borough_location_profiles_only.sql` in the Supabase SQL Editor. Or run the full migration: `supabase/migrations/20250315_city_borough_location.sql`.
+**"Failed to update location" when changing City/Town:** The `profiles` table needs a `city` column. Run `supabase/migrations/20250315000003_city_borough_location_profiles_only.sql` in the Supabase SQL Editor. Or run the full migration: `supabase/migrations/20250315000002_city_borough_location.sql`.
 
 ## Notes
 - RLS (Row Level Security) is enabled - users can only access their own data
