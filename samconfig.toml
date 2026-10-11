@@ -7,7 +7,7 @@ s3_prefix = "tuberush-daily-games"
 region = "eu-west-1"
 confirm_changeset = true
 capabilities = "CAPABILITY_IAM"
-parameter_overrides = "SecretName=\"tuberush/daily-games\" ScheduleExpression=\"cron(0 2 * * ? *)\""
+parameter_overrides = "SecretName=\"tuberush/daily-games\""
 image_repositories = []
 
 [default.global.parameters]
