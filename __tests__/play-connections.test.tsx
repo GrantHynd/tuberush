@@ -733,4 +733,106 @@ describe("PlayConnectionsScreen", () => {
       spy.mockRestore();
     });
   });
+
+  describe("Loss Reveal Flow", () => {
+    it("delays game over banner until reveal completes", async () => {
+      const lostGameState: ConnectionsState = {
+        ...mockGameState,
+        status: "lost",
+        mistakesRemaining: 0,
+        completedGroups: ["TUBE LINES"],
+        endTime: Date.now(),
+      };
+
+      (useGameStore as unknown as jest.Mock).mockReturnValue({
+        currentGame: { ...mockGame, state: lostGameState },
+        loadGame: mockLoadGame,
+        createNewGame: mockCreateNewGame,
+        saveGame: mockSaveGame,
+      });
+
+      const { queryByText } = render(<PlayConnectionsScreen />);
+
+      // Game over banner should not be visible immediately
+      expect(queryByText("Better luck next time")).toBeNull();
+
+      // Wait for reveal to complete
+      await waitFor(
+        () => {
+          expect(queryByText("Better luck next time")).toBeTruthy();
+        },
+        { timeout: 2000 },
+      );
+    });
+
+    it("shows game over banner immediately for already-lost game on reload", async () => {
+      const lostGameState: ConnectionsState = {
+        ...mockGameState,
+        status: "lost",
+        mistakesRemaining: 0,
+        completedGroups: ["TUBE LINES"],
+        endTime: Date.now(),
+      };
+
+      (useGameStore as unknown as jest.Mock).mockReturnValue({
+        currentGame: { ...mockGame, state: lostGameState },
+        loadGame: mockLoadGame,
+        createNewGame: mockCreateNewGame,
+        saveGame: mockSaveGame,
+      });
+
+      const { getByText } = render(<PlayConnectionsScreen />);
+
+      // Game over banner should be visible immediately for reload
+      await waitFor(() => {
+        expect(getByText("Better luck next time")).toBeTruthy();
+      });
+    });
+
+    it("resets reveal state when player loses", async () => {
+      // Start with a game state that has 1 mistake left
+      const gameStateOneLifeLeft: ConnectionsState = {
+        ...mockGameState,
+        mistakesRemaining: 1,
+      };
+
+      (useGameStore as unknown as jest.Mock).mockReturnValue({
+        currentGame: { ...mockGame, state: gameStateOneLifeLeft },
+        loadGame: mockLoadGame,
+        createNewGame: mockCreateNewGame,
+        saveGame: mockSaveGame,
+      });
+
+      render(<PlayConnectionsScreen />);
+
+      const connections = require("@/components/games/Connections");
+      const spy = jest.spyOn(connections, "Connections");
+
+      await waitFor(() => {
+        expect(spy).toHaveBeenCalled();
+      });
+
+      const onSubmitGuess = (
+        spy.mock.calls[spy.mock.calls.length - 1][0] as any
+      ).onSubmitGuess;
+
+      // Make incorrect guess to lose
+      await act(async () => {
+        await onSubmitGuess(["BAKERLOO", "HYDE", "HEATHROW", "VINE"]);
+      });
+
+      await waitFor(() => {
+        expect(mockSaveGame).toHaveBeenCalledWith(
+          expect.objectContaining({
+            state: expect.objectContaining({
+              status: "lost",
+              mistakesRemaining: 0,
+            }),
+          }),
+        );
+      });
+
+      spy.mockRestore();
+    });
+  });
 });

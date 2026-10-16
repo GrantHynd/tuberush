@@ -25,6 +25,7 @@ interface ConnectionsProps {
   gameState: ConnectionsState;
   puzzle: ConnectionsPuzzle;
   onSubmitGuess: (items: string[]) => void;
+  onRevealComplete?: () => void;
 }
 
 const GRID_COLUMNS = 4;
@@ -43,22 +44,77 @@ export function Connections({
   gameState,
   puzzle,
   onSubmitGuess,
+  onRevealComplete,
 }: ConnectionsProps) {
   const { width: screenWidth } = useWindowDimensions();
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [shuffledItems, setShuffledItems] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [revealedCount, setRevealedCount] = useState(0);
   const shakeAnim = useRef(new Animated.Value(0)).current;
+  const revealTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Calculate responsive card size based on screen width
   const gridWidth = screenWidth - HORIZONTAL_PADDING * 2;
   const cardSize = (gridWidth - CARD_GAP * (GRID_COLUMNS - 1)) / GRID_COLUMNS;
 
+  // Derive revealed groups when game is lost
+  const revealedGroups = React.useMemo(() => {
+    if (gameState.status !== "lost") return [];
+    const completedGroupIds = gameState.completedGroups || [];
+    return puzzle.groups
+      .filter((g) => !completedGroupIds.includes(g.category))
+      .sort((a, b) => a.difficulty - b.difficulty);
+  }, [gameState.status, gameState.completedGroups, puzzle.groups]);
+
+  // Check if this is a reload of an already-lost game (no animation needed)
+  const isAlreadyLost = useRef(gameState.status === "lost");
+
+  // Staggered reveal animation for lost games
+  useEffect(() => {
+    if (gameState.status !== "lost" || revealedGroups.length === 0) return;
+
+    // If already lost on mount, show all groups immediately
+    if (isAlreadyLost.current) {
+      setRevealedCount(revealedGroups.length);
+      onRevealComplete?.();
+      return;
+    }
+
+    // Start reveal animation
+    let count = 0;
+
+    const revealNext = () => {
+      if (count < revealedGroups.length) {
+        count++;
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+        setRevealedCount(count);
+        revealTimerRef.current = setTimeout(revealNext, 400);
+      } else {
+        onRevealComplete?.();
+      }
+    };
+
+    revealTimerRef.current = setTimeout(revealNext, 400);
+
+    return () => {
+      if (revealTimerRef.current) {
+        clearTimeout(revealTimerRef.current);
+        revealTimerRef.current = null;
+      }
+    };
+  }, [gameState.status, revealedGroups.length, onRevealComplete]);
+
   // Initialize shuffled items on mount or when completed groups change
   useEffect(() => {
     const completedGroupIds = gameState.completedGroups || [];
+    
+    // Filter out revealed groups as well
+    const revealedToExclude = revealedGroups.slice(0, revealedCount).map(g => g.category);
+    const excludedGroups = [...completedGroupIds, ...revealedToExclude];
+    
     const activeGroups = puzzle.groups.filter(
-      (g) => !completedGroupIds.includes(g.category),
+      (g) => !excludedGroups.includes(g.category),
     );
     const allActiveItems = activeGroups.flatMap((g) => g.items);
 
@@ -69,7 +125,7 @@ export function Connections({
       }
       return remaining;
     });
-  }, [gameState.completedGroups, puzzle]);
+  }, [gameState.completedGroups, puzzle, revealedGroups, revealedCount]);
 
   const handleSelect = useCallback(
     (item: string) => {
@@ -146,7 +202,7 @@ export function Connections({
   }, [gameState.completedGroups.length]);
 
   const renderCompletedGroups = () => {
-    return gameState.completedGroups.map((groupId) => {
+    const completedElements = gameState.completedGroups.map((groupId) => {
       const group = puzzle.groups.find((g) => g.category === groupId);
       if (!group) return null;
 
@@ -169,6 +225,39 @@ export function Connections({
         </View>
       );
     });
+
+    // Add revealed groups (only shown on loss)
+    const revealedElements = revealedGroups.slice(0, revealedCount).map((group) => {
+      const bgColor = DIFFICULTY_COLORS[group.difficulty] || group.color;
+      const textColor = Colors.light.text;
+
+      return (
+        <View
+          key={`revealed-${group.category}`}
+          style={[
+            styles.completedGroup,
+            styles.revealedGroup,
+            { backgroundColor: bgColor },
+          ]}
+          accessible={true}
+          accessibilityLabel={`Revealed group: ${group.category}. Items: ${group.items.join(", ")}`}
+        >
+          <View style={styles.revealedHeader}>
+            <Text style={[styles.completedTitle, { color: textColor }]}>
+              {group.category}
+            </Text>
+            <View style={styles.revealedTag}>
+              <Text style={styles.revealedTagText}>Revealed</Text>
+            </View>
+          </View>
+          <Text style={[styles.completedItems, { color: textColor }]}>
+            {group.items.join(", ")}
+          </Text>
+        </View>
+      );
+    });
+
+    return [...completedElements, ...revealedElements];
   };
 
   const renderMistakes = () => {
@@ -374,6 +463,27 @@ const styles = StyleSheet.create({
     borderRadius: Layout.borderRadius.lg,
     alignItems: "center",
     justifyContent: "center",
+  },
+  revealedGroup: {
+    opacity: 0.6,
+  },
+  revealedHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.xs,
+    marginBottom: 2,
+  },
+  revealedTag: {
+    backgroundColor: "rgba(0, 0, 0, 0.2)",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  revealedTagText: {
+    fontSize: 10,
+    fontWeight: "600",
+    color: Colors.light.background,
+    textTransform: "uppercase",
   },
   completedTitle: {
     fontSize: 16,

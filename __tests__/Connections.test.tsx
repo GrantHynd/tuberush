@@ -616,4 +616,244 @@ describe("Connections Component", () => {
       expect(cards.length).toBe(16);
     });
   });
+
+  describe("Loss Reveal", () => {
+    it("reveals all unsolved groups when game is lost (animation)", async () => {
+      const lostGameState: ConnectionsState = {
+        ...initialGameState,
+        status: "lost",
+        mistakesRemaining: 0,
+        completedGroups: ["TUBE LINES"],
+      };
+
+      const { getByLabelText } = render(
+        <Connections
+          gameState={lostGameState}
+          puzzle={mockPuzzle}
+          onSubmitGuess={mockOnSubmitGuess}
+        />,
+      );
+
+      // Completed group should be present
+      expect(getByLabelText(/Completed group: TUBE LINES/)).toBeTruthy();
+
+      // Wait for first revealed group (400ms delay)
+      await waitFor(
+        () => {
+          expect(getByLabelText(/Revealed group: ROYAL PARKS/)).toBeTruthy();
+        },
+        { timeout: 1000 },
+      );
+
+      // Wait for all revealed groups
+      await waitFor(
+        () => {
+          expect(getByLabelText(/Revealed group: LONDON AIRPORTS/)).toBeTruthy();
+          expect(getByLabelText(/Revealed group: MONOPOLY STREETS/)).toBeTruthy();
+        },
+        { timeout: 2000 },
+      );
+    });
+
+    it("shows revealed groups immediately when reloading a lost game", () => {
+      const lostGameState: ConnectionsState = {
+        ...initialGameState,
+        status: "lost",
+        mistakesRemaining: 0,
+        completedGroups: ["TUBE LINES", "ROYAL PARKS"],
+      };
+
+      const { getByLabelText } = render(
+        <Connections
+          gameState={lostGameState}
+          puzzle={mockPuzzle}
+          onSubmitGuess={mockOnSubmitGuess}
+        />,
+      );
+
+      // All groups should be visible immediately
+      expect(getByLabelText(/Completed group: TUBE LINES/)).toBeTruthy();
+      expect(getByLabelText(/Completed group: ROYAL PARKS/)).toBeTruthy();
+      expect(getByLabelText(/Revealed group: LONDON AIRPORTS/)).toBeTruthy();
+      expect(getByLabelText(/Revealed group: MONOPOLY STREETS/)).toBeTruthy();
+    });
+
+    it("reveals groups in difficulty order", async () => {
+      const lostGameState: ConnectionsState = {
+        ...initialGameState,
+        status: "lost",
+        mistakesRemaining: 0,
+        completedGroups: [],
+      };
+
+      const { getByLabelText, queryByLabelText } = render(
+        <Connections
+          gameState={lostGameState}
+          puzzle={mockPuzzle}
+          onSubmitGuess={mockOnSubmitGuess}
+        />,
+      );
+
+      // Wait for difficulty 1 to appear (TUBE LINES)
+      await waitFor(
+        () => {
+          expect(getByLabelText(/Revealed group: TUBE LINES/)).toBeTruthy();
+        },
+        { timeout: 1000 },
+      );
+
+      // Difficulty 2 (ROYAL PARKS) should appear next
+      await waitFor(
+        () => {
+          expect(getByLabelText(/Revealed group: ROYAL PARKS/)).toBeTruthy();
+        },
+        { timeout: 1000 },
+      );
+
+      // Wait for all groups
+      await waitFor(
+        () => {
+          expect(getByLabelText(/Revealed group: LONDON AIRPORTS/)).toBeTruthy();
+          expect(getByLabelText(/Revealed group: MONOPOLY STREETS/)).toBeTruthy();
+        },
+        { timeout: 2000 },
+      );
+    });
+
+    it("calls onRevealComplete after all groups are revealed", async () => {
+      const mockOnRevealComplete = jest.fn();
+      const lostGameState: ConnectionsState = {
+        ...initialGameState,
+        status: "lost",
+        mistakesRemaining: 0,
+        completedGroups: ["TUBE LINES"],
+      };
+
+      render(
+        <Connections
+          gameState={lostGameState}
+          puzzle={mockPuzzle}
+          onSubmitGuess={mockOnSubmitGuess}
+          onRevealComplete={mockOnRevealComplete}
+        />,
+      );
+
+      // Wait for reveal to complete (3 groups * 400ms + buffer)
+      await waitFor(
+        () => {
+          expect(mockOnRevealComplete).toHaveBeenCalled();
+        },
+        { timeout: 2000 },
+      );
+    });
+
+    it("removes grid tiles as groups are revealed", async () => {
+      // Use a fresh component that starts in playing state and transitions to lost
+      // to test the animation path
+      const playingState: ConnectionsState = {
+        ...initialGameState,
+        status: "playing",
+        mistakesRemaining: 1,
+        completedGroups: ["TUBE LINES"],
+      };
+
+      const { getByLabelText, queryByLabelText, rerender } = render(
+        <Connections
+          gameState={playingState}
+          puzzle={mockPuzzle}
+          onSubmitGuess={mockOnSubmitGuess}
+        />,
+      );
+
+      // Items from ROYAL PARKS should be in grid initially
+      expect(
+        queryByLabelText("HYDE, not selected") ||
+          queryByLabelText("HYDE, selected"),
+      ).toBeTruthy();
+
+      // Transition to lost state
+      const lostGameState: ConnectionsState = {
+        ...playingState,
+        status: "lost",
+        mistakesRemaining: 0,
+      };
+
+      rerender(
+        <Connections
+          gameState={lostGameState}
+          puzzle={mockPuzzle}
+          onSubmitGuess={mockOnSubmitGuess}
+        />,
+      );
+
+      // Wait for ROYAL PARKS to be revealed
+      await waitFor(
+        () => {
+          expect(getByLabelText(/Revealed group: ROYAL PARKS/)).toBeTruthy();
+        },
+        { timeout: 1000 },
+      );
+
+      // After reveal, HYDE should not be in the grid anymore
+      await waitFor(
+        () => {
+          expect(queryByLabelText("HYDE, not selected")).toBeNull();
+          expect(queryByLabelText("HYDE, selected")).toBeNull();
+        },
+        { timeout: 500 },
+      );
+    });
+
+    it("handles loss with 0 groups solved", async () => {
+      const lostGameState: ConnectionsState = {
+        ...initialGameState,
+        status: "lost",
+        mistakesRemaining: 0,
+        completedGroups: [],
+      };
+
+      const { getByLabelText } = render(
+        <Connections
+          gameState={lostGameState}
+          puzzle={mockPuzzle}
+          onSubmitGuess={mockOnSubmitGuess}
+        />,
+      );
+
+      // Wait for all 4 groups to be revealed
+      await waitFor(
+        () => {
+          expect(getByLabelText(/Revealed group: TUBE LINES/)).toBeTruthy();
+          expect(getByLabelText(/Revealed group: ROYAL PARKS/)).toBeTruthy();
+          expect(getByLabelText(/Revealed group: LONDON AIRPORTS/)).toBeTruthy();
+          expect(getByLabelText(/Revealed group: MONOPOLY STREETS/)).toBeTruthy();
+        },
+        { timeout: 2500 },
+      );
+    });
+
+    it("clears timers on unmount during reveal", async () => {
+      const lostGameState: ConnectionsState = {
+        ...initialGameState,
+        status: "lost",
+        mistakesRemaining: 0,
+        completedGroups: ["TUBE LINES"],
+      };
+
+      const { unmount } = render(
+        <Connections
+          gameState={lostGameState}
+          puzzle={mockPuzzle}
+          onSubmitGuess={mockOnSubmitGuess}
+        />,
+      );
+
+      // Unmount before reveal completes
+      unmount();
+
+      // If timers weren't cleared, this would cause warnings
+      // Wait to ensure no errors occur
+      await waitFor(() => {}, { timeout: 500 });
+    });
+  });
 });
