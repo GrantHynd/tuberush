@@ -1,10 +1,24 @@
-/** Extract display name from email (part before @). */
-export function getDisplayName(email: string): string {
-  const local = email.split('@')[0] || '';
-  return local
-    .replace(/[._]/g, ' ')
-    .replace(/\b\w/g, (c) => c.toUpperCase())
-    .trim() || 'Anonymous';
+/** 
+ * Get display name for a user.
+ * @param username - The user's username
+ * @param email - Optional fallback email (for backwards compatibility)
+ */
+export function getDisplayName(username: string, email?: string): string {
+  // If username is provided and not empty, use it
+  if (username && username.trim()) {
+    return username.trim();
+  }
+  
+  // Fallback to email extraction for backwards compatibility
+  if (email) {
+    const local = email.split('@')[0] || '';
+    return local
+      .replace(/[._]/g, ' ')
+      .replace(/\b\w/g, (c) => c.toUpperCase())
+      .trim() || 'Anonymous';
+  }
+  
+  return 'Anonymous';
 }
 
 /** First letter of display name, uppercased. Handles emoji / empty edge cases. */

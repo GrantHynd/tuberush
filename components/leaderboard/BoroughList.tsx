@@ -17,7 +17,7 @@ export function BoroughList({ boroughs, userBorough }: BoroughListProps) {
                 {boroughs.map((b, i) => {
                     const isMe =
                         userBorough != null && b.borough === userBorough;
-                    const leaderName = getDisplayName(b.leaderEmail);
+                    const leaderName = getDisplayName(b.leaderUsername);
 
                     return (
                         <React.Fragment key={b.borough}>

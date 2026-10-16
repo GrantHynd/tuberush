@@ -206,7 +206,7 @@ export interface Database {
         };
         Returns: {
           user_id: string;
-          email: string;
+          username: string;
           city: string | null;
           borough: string | null;
           total_score: number;
@@ -224,7 +224,7 @@ export interface Database {
         Returns: {
           borough: string;
           commuter_count: number;
-          leader_email: string;
+          leader_username: string;
           top_score: number;
         }[];
       };

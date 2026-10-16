@@ -125,7 +125,7 @@ export interface LeaderboardEntry {
 
 export interface WeeklyLeaderboardEntry {
     userId: string;
-    email: string;
+    username: string;
     city: string | null;
     borough: string | null;
     totalScore: number;
@@ -136,7 +136,7 @@ export interface WeeklyLeaderboardEntry {
 export interface BoroughBreakdownEntry {
     borough: string;
     commuterCount: number;
-    leaderEmail: string;
+    leaderUsername: string;
     topScore: number;
 }
 
