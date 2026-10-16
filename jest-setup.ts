@@ -120,6 +120,17 @@ jest.mock("react-native-purchases-ui", () => ({
   },
 }));
 
+// Mock Sentry (native crash reporting)
+jest.mock("@sentry/react-native", () => ({
+  init: jest.fn(),
+  wrap: (component: unknown) => component,
+  captureException: jest.fn(),
+  captureMessage: jest.fn(),
+  setUser: jest.fn(),
+  setContext: jest.fn(),
+  addBreadcrumb: jest.fn(),
+}));
+
 // Mock Alert
 (global as any).Alert = {
   alert: jest.fn(),

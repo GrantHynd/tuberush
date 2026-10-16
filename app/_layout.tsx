@@ -1,15 +1,19 @@
 import { prefetchDailyGames } from '@/lib/daily-games';
 import { initPostHog, capture, flush } from '@/lib/posthog';
 import { configureRevenueCat } from '@/lib/revenuecat';
+import { initSentry } from '@/lib/sentry';
 import { supabase } from '@/lib/supabase-client';
 import { useAuthStore } from '@/stores/auth-store';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import * as Sentry from '@sentry/react-native';
 import * as Linking from 'expo-linking';
 import { Stack, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { useColorScheme, Platform } from 'react-native';
 import 'react-native-reanimated';
+
+initSentry();
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -46,7 +50,7 @@ async function handleAuthDeepLink(url: string) {
   }
 }
 
-export default function RootLayout() {
+function RootLayout() {
   const colorScheme = useColorScheme();
   const checkSession = useAuthStore(state => state.checkSession);
 
@@ -110,3 +114,5 @@ export default function RootLayout() {
     </ThemeProvider>
   );
 }
+
+export default Sentry.wrap(RootLayout);
