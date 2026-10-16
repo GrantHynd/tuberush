@@ -1,4 +1,5 @@
 import { capture, identify, resetIdentity } from '@/lib/posthog';
+import { setUser as setSentryUser } from '@/lib/sentry';
 import { hasActiveEntitlement, logInRevenueCat, logOutRevenueCat } from '@/lib/revenuecat';
 import { APP_SCHEME } from '@/constants/Games';
 import { supabase } from '@/lib/supabase-client';
@@ -20,6 +21,21 @@ async function resolvePremiumStatus(supabaseValue: boolean): Promise<boolean> {
         }
     }
     return supabaseValue;
+}
+
+function syncSentryUser(
+    user: { id: string; email?: string | null; username?: string | null } | null,
+): void {
+    if (!user) {
+        setSentryUser(null);
+        return;
+    }
+
+    setSentryUser({
+        id: user.id,
+        ...(user.email ? { email: user.email } : {}),
+        ...(user.username ? { username: user.username } : {}),
+    });
 }
 
 /** Normalize profile: borough-only (legacy) → city=London, borough=value */
@@ -70,6 +86,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
         if (data.user) {
             capture('sign_up', { method: 'email' });
+            syncSentryUser({
+                id: data.user.id,
+                email: data.user.email,
+                username: username || data.user.user_metadata?.username,
+            });
              set({
                 user: {
                     id: data.user.id,
@@ -101,6 +122,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             }
 
             identify(data.user.id, { email: data.user.email });
+            syncSentryUser({ id: data.user.id, email: data.user.email });
             capture('sign_in', { method: 'email' });
 
             // Fetch profile
@@ -137,6 +159,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         }
         capture('sign_out');
         resetIdentity();
+        syncSentryUser(null);
         await supabase.auth.signOut();
         set({ user: null, session: null });
     },
@@ -154,6 +177,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             }
 
             identify(session.user.id, { email: session.user.email });
+            syncSentryUser({ id: session.user.id, email: session.user.email });
 
             // Fetch profile
             const { data: profile } = await supabase
@@ -179,6 +203,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 loading: false,
             });
         } else {
+            syncSentryUser(null);
             set({ user: null, session: null, loading: false });
         }
     },

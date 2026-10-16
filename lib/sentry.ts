@@ -11,15 +11,16 @@ let sentryInitialized = false;
 function getSentryDsn(): string | undefined {
   return (
     Constants.expoConfig?.extra?.sentryDsn ||
-    process.env.SENTRY_DSN ||
+    process.env.EXPO_PUBLIC_SENTRY_DSN ||
     undefined
   );
 }
 
 /**
  * Initialize Sentry for error and crash reporting.
- * Automatically disabled in local development to avoid noise.
- * Call once on app launch.
+ * Events are silenced in local development. Call once at app startup,
+ * before the root component renders. Leave release and dist unset so the
+ * Expo plugin can match uploaded source maps.
  */
 export function initSentry(): void {
   if (sentryInitialized) return;
@@ -27,42 +28,29 @@ export function initSentry(): void {
   const dsn = getSentryDsn();
   if (!dsn) {
     if (__DEV__) {
-      console.warn('[Sentry] SENTRY_DSN not set, skipping init');
+      console.warn('[Sentry] EXPO_PUBLIC_SENTRY_DSN not set, skipping init');
     }
-    return;
-  }
-
-  // Disable Sentry in local development to avoid noise
-  if (__DEV__) {
-    console.log('[Sentry] Disabled in development mode');
     return;
   }
 
   try {
     Sentry.init({
       dsn,
-      // Enable automatic session tracking
+      enabled: !__DEV__,
       enableAutoSessionTracking: true,
-      // Session close timeout (ms) - default 30000
       sessionTrackingIntervalMillis: 30000,
-      // Enable automatic breadcrumbs for navigation, console logs, etc.
-      enableAutoPerformanceTracing: false, // Keeping it simple for MVP
-      // Capture errors that happen during app startup
       enableNative: true,
-      // Attach stack traces to messages
       attachStacktrace: true,
-      // Release version
-      release: Constants.expoConfig?.version || '1.0.0',
-      // Distribution (build number)
-      dist: Constants.expoConfig?.ios?.buildNumber || Constants.expoConfig?.android?.versionCode?.toString() || '1',
-      // Environment
       environment: __DEV__ ? 'development' : 'production',
-      // Enable/disable debug logging
       debug: false,
     });
 
     sentryInitialized = true;
-    console.log('[Sentry] Initialized successfully');
+    if (__DEV__) {
+      console.log('[Sentry] Disabled in development mode');
+    } else {
+      console.log('[Sentry] Initialized successfully');
+    }
   } catch (e) {
     console.warn('[Sentry] Init failed:', e);
   }
@@ -125,11 +113,16 @@ export function addBreadcrumb(breadcrumb: {
   Sentry.addBreadcrumb(breadcrumb);
 }
 
-/** Trigger a test error to verify Sentry integration */
+/**
+ * Send a non-fatal test event. Call this from a temporary debug control in a
+ * release or preview build. It does not crash the app, and it is not shown in Settings.
+ */
 export function triggerTestError(): void {
   if (!isSentryEnabled()) {
-    console.warn('[Sentry] Test error not triggered - Sentry is disabled in development');
+    console.warn('[Sentry] Test error not sent — Sentry is disabled in development');
     return;
   }
-  throw new Error('Sentry Test Error - If you see this in Sentry, the integration is working!');
+  captureException(
+    new Error('Sentry test error — if you see this in Sentry, the integration is working'),
+  );
 }
