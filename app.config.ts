@@ -64,6 +64,7 @@ export default {
             ],
           ]
         : []),
+      './plugins/withPrivacyManifest.js',
     ],
     experiments: {
       typedRoutes: true,
