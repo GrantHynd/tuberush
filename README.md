@@ -17,7 +17,8 @@ A daily word game app for British commuters, built with React Native/Expo, offli
 - Personal rank, podium, and borough breakdown views
 
 ✅ **Automated Daily Games**
-- Daily Connections/Crossword puzzles generated on a schedule via an AWS Lambda (`lambda/schedule-daily-games`), calling a Claude skill to produce puzzle content
+- Daily puzzles generated nightly by two AWS Lambdas (`lambda/generate-connections`, `lambda/generate-crossword`)
+- Crossword grids are filled by a seeded solver from a word bank + common British word list; Claude writes the clues
 - A Supabase edge function (`schedule-daily-games`) remains for manual/edge-triggered generation
 
 ✅ **Premium Membership**
@@ -79,7 +80,8 @@ tuberush-v2/
 ├── stores/                   # Zustand: auth-store, game-store
 ├── constants/                 # Games, ConnectionsData, CrosswordData, Boroughs, UKCities, theme
 ├── types/                    # TypeScript types (game.ts, database.types.ts in lib/)
-├── lambda/schedule-daily-games/  # AWS Lambda (SAM) for automated daily puzzle generation
+├── lambda/generate-connections/  # AWS Lambda (SAM): nightly Connections puzzle
+├── lambda/generate-crossword/    # AWS Lambda (SAM): nightly crossword (grid solver + Claude clues)
 └── supabase/                 # Backend
     ├── migrations/          # 12 migrations
     ├── functions/           # e2e-test-helper, schedule-daily-games, validate-iap
@@ -185,7 +187,8 @@ if (game.isPremium && !user?.isPremium) {
 - Personal summary card and podium UI
 
 ### Daily Puzzle Generation
-- `lambda/schedule-daily-games` (AWS Lambda, SAM-deployed) generates the day's Connections/Crossword puzzles on a schedule using a Claude skill
+- `lambda/generate-connections` and `lambda/generate-crossword` (AWS Lambda, SAM-deployed via `template.yaml`) run nightly at 02:00 / 02:30 UTC
+- Crossword: a solver fills the day's template so every crossing is valid, then Claude writes the title and clues (see `lambda/generate-crossword/WORD_LIST.md`)
 - `supabase/functions/schedule-daily-games` provides the same generation logic as an edge function
 
 ### Subscriptions

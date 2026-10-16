@@ -101,7 +101,7 @@ Resources:
       # Skill calls can take minutes; 2 attempts x (skill 240s + fallback 90s) must fit
       Timeout: 900
       Handler: src/index.handler
-      Description: Generates daily crossword puzzles via Claude + Crossword Generator skill
+      Description: Fills the daily crossword grid with a solver; Claude writes the clues
       Environment:
         Variables:
           SECRET_ARN: !Ref DailyGamesSecret

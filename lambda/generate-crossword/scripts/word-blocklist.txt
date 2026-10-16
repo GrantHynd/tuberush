@@ -1,0 +1,30 @@
+# Words never allowed in the crossword grid, on top of the better-profanity list.
+# Whitespace-separated words; '#' starts a comment. Rebuild with scripts/build-word-list.py.
+# Add words here when the Lambda logs a 'clue_rejects' entry you agree with.
+
+# Slang, contractions, filler
+gonna wanna gotta etc okay yeah yep yup nope huh hmm ugh lol omg aye nah innit ain dunno
+
+# Crude or sexual
+john dick cock tit tits titty boob boobs booby bum bums arse arses ass asses piss pissed crap crappy
+dildo dildos horny orgasm orgy semen sperm penis vagina anus anal erotic nude nudes naked stripper
+porn porno sexy sex
+
+# Slurs and hateful terms
+fag fags faggot slut sluts whore whores bitch bitches bastard bastards wank wanker twat prick pricks
+nigger nigga coon coons spic paki pakis wog wogs gook gooks kike chink dyke dykes homo homos tranny retard retards spaz
+nazi nazis
+
+# Violence, drugs
+rape raped rapes rapist kill killer killers murder murders suicide
+drug drugs cocaine heroin meth weed stoned
+
+# Abbreviations, names, foreign words and crosswordese the en_GB dictionary still accepts
+inc via non tom bob don lee max tho ups vol bro gen sec ted sue ken pic mar aka rev est cam cal gov sen hes
+col ref cox jun sci ins def mod opt tel hon med woo abs bot alt mic amp ops sim wan int res quo eds lib mil
+dis ole val dos sol uni reg exp var sis rec sic duh cis pas ind tor esp meg org mas nos yrs rad aux lam pow
+mos pol hoc cad meh avg div ems ids yer obi bis foo dun cor soc ans bey fay pap tam biz fol moi emo ifs deb
+mam nee cir viz ova pom ext lat bah nab mot seq inf fer rah rel bod ska adv ecu hap syn wot mus mun orc ump
+arr mes ell gar tun hos cur gad cit dag deg fem bub obj och sop hep yon ult opp qua sou poi nae neg yip aah
+pah nus bur pix cay hwy amt dpi rte uhf obs pis
+phi psi tau rho eta chi
