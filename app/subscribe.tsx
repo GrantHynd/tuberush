@@ -1,5 +1,4 @@
 import { capture } from '@/lib/posthog';
-import { supabase } from '@/lib/supabase-client';
 import { useAuthStore } from '@/stores/auth-store';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
