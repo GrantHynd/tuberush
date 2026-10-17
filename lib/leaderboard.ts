@@ -157,7 +157,7 @@ export const leaderboard = {
 
         const rows = (data ?? []) as {
             user_id: string;
-            email: string;
+            username: string;
             city: string | null;
             borough: string | null;
             total_score: number;
@@ -170,7 +170,7 @@ export const leaderboard = {
 
         const entries: WeeklyLeaderboardEntry[] = rows.map((r) => ({
             userId: r.user_id,
-            email: r.email,
+            username: r.username,
             city: r.city,
             borough: r.borough,
             totalScore: r.total_score,
@@ -200,12 +200,12 @@ export const leaderboard = {
         return ((data ?? []) as {
             borough: string;
             commuter_count: number;
-            leader_email: string;
+            leader_username: string;
             top_score: number;
         }[]).map((r) => ({
             borough: r.borough,
             commuterCount: r.commuter_count,
-            leaderEmail: r.leader_email,
+            leaderUsername: r.leader_username,
             topScore: r.top_score,
         }));
     },
