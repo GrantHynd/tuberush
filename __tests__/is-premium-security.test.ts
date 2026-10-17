@@ -1,267 +1,94 @@
 /**
- * Integration test for is_premium column security
- * Tests that authenticated users cannot modify is_premium, while other fields work
+ * TUB-234 integration test: clients must not be able to write premium columns on `profiles`.
  *
- * To run this test against a real Supabase instance:
- * 1. Set up test environment variables in .env.test
- * 2. Apply all migrations including 20260401000000_lock_is_premium_column.sql
- * 3. Run: npm test is-premium-security.test.ts
+ * Runs against a real Supabase project with migration 20261017000000_lock_is_premium_column.sql applied.
+ * Skipped (reported as skipped, not passed) unless TEST_SUPABASE_URL, TEST_SUPABASE_ANON_KEY
+ * and TEST_SUPABASE_SERVICE_KEY are set. The project must allow sign-up without email confirmation.
  */
-
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import type { Database } from '@/lib/database.types';
 
-// This test requires a real Supabase instance with the security migration applied
-// It will be skipped if test credentials are not provided
-const TEST_SUPABASE_URL = process.env.TEST_SUPABASE_URL || '';
-const TEST_SUPABASE_ANON_KEY = process.env.TEST_SUPABASE_ANON_KEY || '';
-const TEST_SUPABASE_SERVICE_KEY = process.env.TEST_SUPABASE_SERVICE_KEY || '';
+const URL = process.env.TEST_SUPABASE_URL ?? '';
+const ANON_KEY = process.env.TEST_SUPABASE_ANON_KEY ?? '';
+const SERVICE_KEY = process.env.TEST_SUPABASE_SERVICE_KEY ?? '';
 
-const shouldRunIntegrationTests = TEST_SUPABASE_URL && TEST_SUPABASE_ANON_KEY && TEST_SUPABASE_SERVICE_KEY;
+const describeIntegration = URL && ANON_KEY && SERVICE_KEY ? describe : describe.skip;
 
-describe('is_premium column security', () => {
-  let authenticatedClient: SupabaseClient<Database>;
-  let serviceClient: SupabaseClient<Database>;
-  let testUserId: string;
-  let testUserEmail: string;
+const PERMISSION_DENIED = '42501';
+const PASSWORD = 'TestPassword123!';
+const clientOptions = { auth: { autoRefreshToken: false, persistSession: false } };
+
+// Untyped client: lib/database.types.ts doesn't model every profiles column (e.g. username).
+type Client = SupabaseClient;
+
+async function createSignedInUser(): Promise<{ client: Client; userId: string }> {
+  const client = createClient(URL, ANON_KEY, clientOptions);
+  const email = `tub234-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.com`;
+  const { data, error } = await client.auth.signUp({ email, password: PASSWORD });
+  if (error || !data.user) throw new Error(`signUp failed: ${error?.message}`);
+  if (!data.session) {
+    const { error: signInError } = await client.auth.signInWithPassword({ email, password: PASSWORD });
+    if (signInError) throw new Error(`signIn failed: ${signInError.message}`);
+  }
+  return { client, userId: data.user.id };
+}
+
+describeIntegration('profiles premium columns are server-side only (TUB-234)', () => {
+  let service: Client;
+  let user: Client;
+  let userId: string;
 
   beforeAll(async () => {
-    if (!shouldRunIntegrationTests) {
-      console.warn('Skipping is_premium security tests: TEST_SUPABASE_* env vars not set');
-      return;
-    }
-
-    // Create authenticated client (simulates regular user)
-    authenticatedClient = createClient<Database>(
-      TEST_SUPABASE_URL,
-      TEST_SUPABASE_ANON_KEY,
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
-      }
-    );
-
-    // Create service role client (simulates backend webhook/purchase verification)
-    serviceClient = createClient<Database>(
-      TEST_SUPABASE_URL,
-      TEST_SUPABASE_SERVICE_KEY,
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
-      }
-    );
-
-    // Create a test user
-    testUserEmail = `test-${Date.now()}@example.com`;
-    const { data: signUpData, error: signUpError } = await authenticatedClient.auth.signUp({
-      email: testUserEmail,
-      password: 'TestPassword123!',
-    });
-
-    if (signUpError || !signUpData.user) {
-      throw new Error(`Failed to create test user: ${signUpError?.message}`);
-    }
-
-    testUserId = signUpData.user.id;
-
-    // Sign in as the test user
-    const { error: signInError } = await authenticatedClient.auth.signInWithPassword({
-      email: testUserEmail,
-      password: 'TestPassword123!',
-    });
-
-    if (signInError) {
-      throw new Error(`Failed to sign in test user: ${signInError.message}`);
-    }
+    service = createClient(URL, SERVICE_KEY, clientOptions);
+    ({ client: user, userId } = await createSignedInUser());
   });
 
   afterAll(async () => {
-    if (!shouldRunIntegrationTests || !testUserId) return;
-
-    // Clean up: delete test user (cascade will delete profile)
-    await serviceClient.auth.admin.deleteUser(testUserId);
+    if (userId) await service.auth.admin.deleteUser(userId);
   });
 
-  it('should prevent authenticated users from updating is_premium to true', async () => {
-    if (!shouldRunIntegrationTests) {
-      console.warn('Skipping test: integration tests disabled');
-      return;
-    }
+  async function readPremium(): Promise<boolean | null> {
+    const { data, error } = await service.from('profiles').select('is_premium').eq('id', userId).single();
+    if (error) throw error;
+    return data.is_premium;
+  }
 
-    // Try to update is_premium as authenticated user
-    const { error } = await authenticatedClient
-      .from('profiles')
-      .update({ is_premium: true })
-      .eq('id', testUserId);
-
-    // Should fail with an error
-    expect(error).toBeTruthy();
-    expect(error?.message).toContain('Cannot modify is_premium field');
+  it('rejects a client setting is_premium = true', async () => {
+    const { error } = await user.from('profiles').update({ is_premium: true }).eq('id', userId);
+    expect(error?.code).toBe(PERMISSION_DENIED);
+    expect(await readPremium()).toBe(false);
   });
 
-  it('should allow authenticated users to update other profile fields', async () => {
-    if (!shouldRunIntegrationTests) {
-      console.warn('Skipping test: integration tests disabled');
-      return;
-    }
+  it.each([
+    ['expires_at', new Date(Date.now() + 365 * 864e5).toISOString()],
+    ['apple_original_transaction_id', 'fake-txn'],
+  ])('rejects a client writing %s', async (column, value) => {
+    const { error } = await user.from('profiles').update({ [column]: value }).eq('id', userId);
+    expect(error?.code).toBe(PERMISSION_DENIED);
+  });
 
-    // Update email (a field that users should be able to update)
-    const newEmail = `updated-${Date.now()}@example.com`;
-    const { error } = await authenticatedClient
-      .from('profiles')
-      .update({ email: newEmail })
-      .eq('id', testUserId);
-
-    // Should succeed
+  it('still lets a client update city and borough', async () => {
+    const { error } = await user.from('profiles').update({ city: 'London', borough: 'Hackney' }).eq('id', userId);
     expect(error).toBeNull();
 
-    // Verify the update worked
-    const { data } = await authenticatedClient
-      .from('profiles')
-      .select('email')
-      .eq('id', testUserId)
-      .single();
-
-    expect(data?.email).toBe(newEmail);
+    const { data } = await user.from('profiles').select('city, borough').eq('id', userId).single();
+    expect(data).toEqual({ city: 'London', borough: 'Hackney' });
   });
 
-  it('should prevent authenticated users from setting is_premium on profile creation', async () => {
-    if (!shouldRunIntegrationTests) {
-      console.warn('Skipping test: integration tests disabled');
-      return;
-    }
-
-    // Create another test user to test insert
-    const newUserEmail = `test-insert-${Date.now()}@example.com`;
-    const newAuthClient = createClient<Database>(
-      TEST_SUPABASE_URL,
-      TEST_SUPABASE_ANON_KEY,
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
-      }
-    );
-
-    const { data: signUpData, error: signUpError } = await newAuthClient.auth.signUp({
-      email: newUserEmail,
-      password: 'TestPassword123!',
-    });
-
-    if (signUpError || !signUpData.user) {
-      throw new Error(`Failed to create test user: ${signUpError?.message}`);
-    }
-
-    const newUserId = signUpData.user.id;
-
-    // Sign in
-    await newAuthClient.auth.signInWithPassword({
-      email: newUserEmail,
-      password: 'TestPassword123!',
-    });
-
-    // Try to manually insert a profile with is_premium = true
-    // (Note: normally profiles are auto-created by trigger, but let's test direct insert)
-    const { error: insertError } = await newAuthClient
-      .from('profiles')
-      .insert({
-        id: newUserId,
-        email: newUserEmail,
-        is_premium: true,
-      });
-
-    // Should fail
-    expect(insertError).toBeTruthy();
-    if (insertError) {
-      expect(insertError.message).toContain('Cannot set is_premium to true on insert');
-    }
-
-    // Clean up
-    await serviceClient.auth.admin.deleteUser(newUserId);
+  it('rejects a client inserting a profile with is_premium = true', async () => {
+    const { error } = await user.from('profiles').insert({ id: userId, email: 'x@example.com', is_premium: true });
+    expect(error?.code).toBe(PERMISSION_DENIED);
   });
 
-  it('should allow service role to update is_premium', async () => {
-    if (!shouldRunIntegrationTests) {
-      console.warn('Skipping test: integration tests disabled');
-      return;
-    }
+  it('lets the service role grant and revoke premium', async () => {
+    expect((await service.from('profiles').update({ is_premium: true }).eq('id', userId)).error).toBeNull();
+    expect(await readPremium()).toBe(true);
 
-    // Service role should be able to set is_premium to true
-    const { error } = await serviceClient
-      .from('profiles')
-      .update({ is_premium: true })
-      .eq('id', testUserId);
+    // A premium user can't downgrade/tamper either.
+    const { error } = await user.from('profiles').update({ is_premium: false }).eq('id', userId);
+    expect(error?.code).toBe(PERMISSION_DENIED);
+    expect(await readPremium()).toBe(true);
 
-    // Should succeed
-    expect(error).toBeNull();
-
-    // Verify the update worked
-    const { data } = await serviceClient
-      .from('profiles')
-      .select('is_premium')
-      .eq('id', testUserId)
-      .single();
-
-    expect(data?.is_premium).toBe(true);
-
-    // Service role should also be able to set it back to false
-    const { error: resetError } = await serviceClient
-      .from('profiles')
-      .update({ is_premium: false })
-      .eq('id', testUserId);
-
-    expect(resetError).toBeNull();
-
-    // Verify
-    const { data: resetData } = await serviceClient
-      .from('profiles')
-      .select('is_premium')
-      .eq('id', testUserId)
-      .single();
-
-    expect(resetData?.is_premium).toBe(false);
-  });
-
-  it('should prevent authenticated users from setting is_premium back to false', async () => {
-    if (!shouldRunIntegrationTests) {
-      console.warn('Skipping test: integration tests disabled');
-      return;
-    }
-
-    // First, set is_premium to true using service role
-    await serviceClient
-      .from('profiles')
-      .update({ is_premium: true })
-      .eq('id', testUserId);
-
-    // Now try to set it back to false as authenticated user
-    const { error } = await authenticatedClient
-      .from('profiles')
-      .update({ is_premium: false })
-      .eq('id', testUserId);
-
-    // Should fail
-    expect(error).toBeTruthy();
-    expect(error?.message).toContain('Cannot modify is_premium field');
-
-    // Verify is_premium is still true
-    const { data } = await authenticatedClient
-      .from('profiles')
-      .select('is_premium')
-      .eq('id', testUserId)
-      .single();
-
-    expect(data?.is_premium).toBe(true);
-
-    // Clean up: reset to false for next tests
-    await serviceClient
-      .from('profiles')
-      .update({ is_premium: false })
-      .eq('id', testUserId);
+    expect((await service.from('profiles').update({ is_premium: false }).eq('id', userId)).error).toBeNull();
+    expect(await readPremium()).toBe(false);
   });
 });
