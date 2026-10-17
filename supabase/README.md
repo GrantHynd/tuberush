@@ -47,11 +47,6 @@
    supabase link --project-ref your-project-ref
    ```
 
-3. Deploy the validate-iap function (for Apple IAP receipt validation):
-   ```bash
-   supabase functions deploy validate-iap
-   ```
-
 ## Seeding Test Data
 
 To populate a test environment with 50 leaderboard users across UK cities:
