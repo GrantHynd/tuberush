@@ -169,12 +169,18 @@ describe('Leaderboard Security (TUB-230)', () => {
             expect(sql).toMatch(/bl\.uname AS leader_username/);
         });
 
-        it('revokes anon execute on leaderboard RPCs', () => {
+        it('revokes public and anon execute on leaderboard RPCs', () => {
             expect(sql).toMatch(
-                /REVOKE EXECUTE ON FUNCTION get_weekly_leaderboard\(TEXT, DATE, DATE, TEXT\) FROM anon/,
+                /REVOKE ALL ON FUNCTION get_weekly_leaderboard\(TEXT, DATE, DATE, TEXT\) FROM PUBLIC/,
             );
             expect(sql).toMatch(
-                /REVOKE EXECUTE ON FUNCTION get_borough_breakdown\(TEXT, DATE, DATE\) FROM anon/,
+                /REVOKE ALL ON FUNCTION get_weekly_leaderboard\(TEXT, DATE, DATE, TEXT\) FROM anon/,
+            );
+            expect(sql).toMatch(
+                /REVOKE ALL ON FUNCTION get_borough_breakdown\(TEXT, DATE, DATE\) FROM PUBLIC/,
+            );
+            expect(sql).toMatch(
+                /REVOKE ALL ON FUNCTION get_borough_breakdown\(TEXT, DATE, DATE\) FROM anon/,
             );
         });
     });

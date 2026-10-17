@@ -30,7 +30,11 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 4. Update get_weekly_leaderboard to return username instead of email
+-- 4. Recreate get_weekly_leaderboard to return username instead of email.
+-- Postgres cannot CREATE OR REPLACE a function when the RETURNS TABLE
+-- columns change (email → username), so drop first.
+DROP FUNCTION IF EXISTS get_weekly_leaderboard(TEXT, DATE, DATE, TEXT);
+
 CREATE OR REPLACE FUNCTION get_weekly_leaderboard(
   p_game_type TEXT,
   p_week_start DATE,
@@ -93,7 +97,9 @@ END;
 $$ LANGUAGE plpgsql STABLE SECURITY DEFINER
 SET search_path = public;
 
--- 5. Update get_borough_breakdown to return leader username instead of email
+-- 5. Recreate get_borough_breakdown to return leader username instead of email
+DROP FUNCTION IF EXISTS get_borough_breakdown(TEXT, DATE, DATE);
+
 CREATE OR REPLACE FUNCTION get_borough_breakdown(
   p_game_type TEXT,
   p_week_start DATE,
@@ -148,12 +154,14 @@ END;
 $$ LANGUAGE plpgsql STABLE SECURITY DEFINER
 SET search_path = public;
 
--- 6. REVOKE EXECUTE permissions from anon for security
--- These functions are SECURITY DEFINER and should only be called by authenticated users
-REVOKE EXECUTE ON FUNCTION get_weekly_leaderboard(TEXT, DATE, DATE, TEXT) FROM anon;
-REVOKE EXECUTE ON FUNCTION get_borough_breakdown(TEXT, DATE, DATE) FROM anon;
+-- 6. Lock EXECUTE to authenticated users.
+-- New functions inherit EXECUTE for PUBLIC, which includes the anon role.
+-- Revoking only FROM anon leaves the PUBLIC grant in place.
+REVOKE ALL ON FUNCTION get_weekly_leaderboard(TEXT, DATE, DATE, TEXT) FROM PUBLIC;
+REVOKE ALL ON FUNCTION get_weekly_leaderboard(TEXT, DATE, DATE, TEXT) FROM anon;
+REVOKE ALL ON FUNCTION get_borough_breakdown(TEXT, DATE, DATE) FROM PUBLIC;
+REVOKE ALL ON FUNCTION get_borough_breakdown(TEXT, DATE, DATE) FROM anon;
 
--- Grant to authenticated users
 GRANT EXECUTE ON FUNCTION get_weekly_leaderboard(TEXT, DATE, DATE, TEXT) TO authenticated;
 GRANT EXECUTE ON FUNCTION get_borough_breakdown(TEXT, DATE, DATE) TO authenticated;
 
