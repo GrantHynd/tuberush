@@ -84,7 +84,7 @@ tuberush-v2/
 ├── lambda/generate-crossword/    # AWS Lambda (SAM): nightly crossword (grid solver + Claude clues)
 └── supabase/                 # Backend
     ├── migrations/          # 12 migrations
-    ├── functions/           # e2e-test-helper, schedule-daily-games, validate-iap
+    ├── functions/           # schedule-daily-games, validate-iap
     ├── schema.sql / seed.sql
     └── README.md            # Setup guide
 ```

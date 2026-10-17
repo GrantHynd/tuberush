@@ -52,11 +52,6 @@
    supabase functions deploy validate-iap
    ```
 
-4. Deploy the e2e-test-helper (for E2E testing only):
-   ```bash
-   supabase functions deploy e2e-test-helper
-   ```
-
 ## Seeding Test Data
 
 To populate a test environment with 50 leaderboard users across UK cities:
