@@ -44,31 +44,6 @@ export default function SubscribeScreen() {
 
         setLoading(true);
         try {
-            // Test users: bypass IAP and use e2e-test-helper
-            if (
-                __DEV__ &&
-                user.email &&
-                (user.email.startsWith('test_user_') || user.email.endsWith('@example.com'))
-            ) {
-                const { error: testError } = await supabase.functions.invoke('e2e-test-helper', {
-                    body: {
-                        action: 'promote_premium',
-                        secret: 'e2e_secret_9f8e7d6c5b4a3_DO_NOT_USE_IN_PROD_random_string_xyz',
-                    },
-                });
-
-                if (testError) {
-                    throw new Error(testError.message || 'Test promotion failed');
-                }
-
-                await new Promise((resolve) => setTimeout(resolve, 1000));
-                await refreshPremiumStatusFromRevenueCat();
-                Alert.alert('Success', 'Premium membership activated!', [
-                    { text: 'OK', onPress: () => router.back() },
-                ]);
-                return;
-            }
-
             // RevenueCat Paywall - presents native paywall UI
             capture('paywall_presented');
             const result = await RevenueCatUI.presentPaywall({
