@@ -6,11 +6,8 @@ export interface User {
     id: string;
     email: string;
     username?: string;
+    /** From the RevenueCat entitlement. Always false on web. */
     isPremium: boolean;
-    subscriptionId?: string;
-    subscriptionStatus?: 'active' | 'canceled' | 'past_due';
-    expiresAt?: string | null;
-    appleOriginalTransactionId?: string | null;
     city?: string | null;
     borough?: Borough | null;
 }

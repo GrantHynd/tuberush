@@ -74,7 +74,7 @@ Test that premium purchases still work via RevenueCat (the issue's "Done when" c
 4. Verify that premium access is granted
 5. Check that the purchase is reflected in RevenueCat dashboard
 
-**Expected behavior:** RevenueCat webhooks should update the `is_premium` status in the profiles table, completely independent of the deleted function.
+**Expected behavior:** A sandbox purchase unlocks premium in the app from the RevenueCat entitlement. Premium is not stored on `profiles`.
 
 ## Verification Checklist
 

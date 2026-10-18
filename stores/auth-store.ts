@@ -9,18 +9,18 @@ import { Platform } from 'react-native';
 import { create } from 'zustand';
 
 /**
- * Resolve the user's premium status.
- * On native platforms RevenueCat is the source of truth; Supabase is the fallback.
+ * Resolve premium from RevenueCat only.
+ * Purchases are native-only, so web is free. A lookup error is free, not a crash.
  */
-async function resolvePremiumStatus(supabaseValue: boolean): Promise<boolean> {
-    if (Platform.OS === 'ios' || Platform.OS === 'android') {
-        try {
-            return await hasActiveEntitlement();
-        } catch {
-            // Fall back to Supabase value on error
-        }
+async function resolvePremiumStatus(): Promise<boolean> {
+    if (Platform.OS !== 'ios' && Platform.OS !== 'android') {
+        return false;
     }
-    return supabaseValue;
+    try {
+        return await hasActiveEntitlement();
+    } catch {
+        return false;
+    }
 }
 
 function syncSentryUser(
@@ -132,18 +132,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 .eq('id', data.user.id)
                 .single();
 
-            // Check RevenueCat entitlement (source of truth for premium on native)
-            const isPremium = await resolvePremiumStatus(profile?.is_premium || false);
+            const isPremium = await resolvePremiumStatus();
 
             set({
                 user: {
                     id: data.user.id,
                     email: data.user.email!,
+                    username: profile?.username ?? undefined,
                     isPremium,
-                    subscriptionId: profile?.subscription_id,
-                    subscriptionStatus: profile?.subscription_status,
-                    expiresAt: profile?.expires_at,
-                    appleOriginalTransactionId: profile?.apple_original_transaction_id,
                     ...normalizeProfile(profile || {}),
                 },
                 session: data.session,
@@ -186,17 +182,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 .eq('id', session.user.id)
                 .single();
 
-            const isPremium = await resolvePremiumStatus(profile?.is_premium || false);
+            const isPremium = await resolvePremiumStatus();
 
             set({
                 user: {
                     id: session.user.id,
                     email: session.user.email!,
+                    username: profile?.username ?? undefined,
                     isPremium,
-                    subscriptionId: profile?.subscription_id,
-                    subscriptionStatus: profile?.subscription_status,
-                    expiresAt: profile?.expires_at,
-                    appleOriginalTransactionId: profile?.apple_original_transaction_id,
                     ...normalizeProfile(profile || {}),
                 },
                 session,
@@ -218,38 +211,29 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             .eq('id', user.id)
             .single();
 
-        const isPremium = await resolvePremiumStatus(profile?.is_premium ?? false);
+        const isPremium = await resolvePremiumStatus();
 
-        if (profile) {
-            set({
-                user: {
-                    ...user,
-                    isPremium,
-                    subscriptionId: profile.subscription_id,
-                    subscriptionStatus: profile.subscription_status,
-                    expiresAt: profile.expires_at,
-                    appleOriginalTransactionId: profile.apple_original_transaction_id,
-                    ...normalizeProfile(profile),
-                },
-            });
-        }
+        set({
+            user: {
+                ...user,
+                isPremium,
+                ...(profile?.username ? { username: profile.username } : {}),
+                ...(profile ? normalizeProfile(profile) : {}),
+            },
+        });
     },
 
     refreshPremiumStatusFromRevenueCat: async () => {
         const user = get().user;
-        if (!user || (Platform.OS !== 'ios' && Platform.OS !== 'android')) return;
+        if (!user) return;
 
-        try {
-            const isPremium = await hasActiveEntitlement();
-            set({
-                user: {
-                    ...user,
-                    isPremium,
-                },
-            });
-        } catch {
-            // Ignore errors
-        }
+        const isPremium = await resolvePremiumStatus();
+        set({
+            user: {
+                ...user,
+                isPremium,
+            },
+        });
     },
 
     updateProfile: async (updates: Partial<User>) => {

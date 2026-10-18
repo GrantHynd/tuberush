@@ -100,18 +100,15 @@ export const supabase = createClient(supabaseUrl, supabasePublishableKey, {
 **Location**: `supabase/schema.sql`
 
 #### Profiles Table
-Stores user profile information and premium status.
+Stores user profile information. Premium status comes from RevenueCat, not this table.
 
 ```sql
 CREATE TABLE profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email TEXT NOT NULL,
-  is_premium BOOLEAN DEFAULT FALSE,
+  username TEXT,
+  city TEXT,
   borough TEXT,
-  subscription_id TEXT,
-  subscription_status TEXT,
-  expires_at TIMESTAMP WITH TIME ZONE,
-  apple_original_transaction_id TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -124,8 +121,12 @@ A database trigger automatically creates a profile when a new user signs up:
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO public.profiles (id, email, is_premium)
-  VALUES (NEW.id, NEW.email, FALSE);
+  INSERT INTO public.profiles (id, email, username)
+  VALUES (
+    NEW.id,
+    NEW.email,
+    COALESCE(NEW.raw_user_meta_data->>'username', SPLIT_PART(NEW.email, '@', 1))
+  );
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -140,7 +141,7 @@ All tables have RLS enabled to ensure users can only access their own data:
 
 - Users can view/update their own profile
 - Users can view/insert/update/delete their own game states
-- Subscription status is stored on profiles
+- Premium status is the RevenueCat entitlement, not a profiles column
 
 ### 3. Auth Store (State Management)
 
@@ -183,8 +184,8 @@ The auth store manages authentication state using Zustand:
 - Restores user state if valid session exists
 
 #### `refreshPremiumStatus()`
-- Polls profile table for premium status updates
-- Used after subscription flow completes
+- Re-reads the RevenueCat entitlement
+- A lookup error leaves the user on the free tier
 
 ### 4. UI Components
 

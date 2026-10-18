@@ -8,11 +8,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE TABLE IF NOT EXISTS profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email TEXT NOT NULL,
-  is_premium BOOLEAN DEFAULT FALSE,
-  subscription_id TEXT,
-  subscription_status TEXT,
-  expires_at TIMESTAMP WITH TIME ZONE,
-  apple_original_transaction_id TEXT,
+  username TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -85,13 +81,21 @@ CREATE TRIGGER update_profiles_updated_at BEFORE UPDATE ON profiles
 
 -- Function to create profile automatically on signup
 CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
 BEGIN
-  INSERT INTO public.profiles (id, email, is_premium)
-  VALUES (NEW.id, NEW.email, FALSE);
+  INSERT INTO public.profiles (id, email, username)
+  VALUES (
+    NEW.id,
+    NEW.email,
+    COALESCE(NEW.raw_user_meta_data->>'username', SPLIT_PART(NEW.email, '@', 1))
+  );
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
 
 -- Trigger for automatic profile creation
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
