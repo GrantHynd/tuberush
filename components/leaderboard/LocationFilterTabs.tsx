@@ -7,7 +7,7 @@ import {
     StyleSheet,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { Colors, TFL, Spacing, Layout } from '@/constants/theme';
+import { Colors, TFL, Spacing } from '@/constants/theme';
 
 interface LocationFilterTabsProps {
     cities: string[];

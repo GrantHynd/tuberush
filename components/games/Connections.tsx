@@ -51,7 +51,7 @@ export function Connections({
   const [shuffledItems, setShuffledItems] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [revealedCount, setRevealedCount] = useState(0);
-  const shakeAnim = useRef(new Animated.Value(0)).current;
+  const [shakeAnim] = useState(() => new Animated.Value(0));
   const revealTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Calculate responsive card size based on screen width
@@ -105,27 +105,37 @@ export function Connections({
     };
   }, [gameState.status, revealedGroups.length, onRevealComplete]);
 
-  // Initialize shuffled items on mount or when completed groups change
-  useEffect(() => {
-    const completedGroupIds = gameState.completedGroups || [];
-    
-    // Filter out revealed groups as well
-    const revealedToExclude = revealedGroups.slice(0, revealedCount).map(g => g.category);
-    const excludedGroups = [...completedGroupIds, ...revealedToExclude];
-    
-    const activeGroups = puzzle.groups.filter(
-      (g) => !excludedGroups.includes(g.category),
-    );
-    const allActiveItems = activeGroups.flatMap((g) => g.items);
+  // Keep the board order stable when a solved group drops out, and reshuffle
+  // only when the remaining set actually changes. The update is deferred so it
+  // is not a synchronous setState in the effect, and Math.random stays out of render.
+  const revealedToExclude = revealedGroups
+    .slice(0, revealedCount)
+    .map((g) => g.category);
+  const excludedGroups = [...(gameState.completedGroups || []), ...revealedToExclude];
+  const allActiveItems = puzzle.groups
+    .filter((g) => !excludedGroups.includes(g.category))
+    .flatMap((g) => g.items);
+  const activeKey = allActiveItems.join("\0");
 
-    setShuffledItems((prev) => {
-      const remaining = prev.filter((item) => allActiveItems.includes(item));
-      if (remaining.length !== allActiveItems.length) {
-        return [...allActiveItems].sort(() => Math.random() - 0.5);
-      }
-      return remaining;
+  useEffect(() => {
+    const items = activeKey ? activeKey.split("\0") : [];
+    let cancelled = false;
+
+    void Promise.resolve().then(() => {
+      if (cancelled) return;
+      setShuffledItems((prev) => {
+        const remaining = prev.filter((item) => items.includes(item));
+        if (remaining.length !== items.length) {
+          return [...items].sort(() => Math.random() - 0.5);
+        }
+        return remaining;
+      });
     });
-  }, [gameState.completedGroups, puzzle, revealedGroups, revealedCount]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeKey]);
 
   const handleSelect = useCallback(
     (item: string) => {

@@ -40,6 +40,7 @@ export function SearchSelect({
 }: SearchSelectProps) {
     const [query, setQuery] = useState('');
     const [debouncedQuery, setDebouncedQuery] = useState('');
+    const [seenVisible, setSeenVisible] = useState(visible);
 
     const updateDebouncedQuery = useCallback(() => {
         const timer = setTimeout(() => {
@@ -53,12 +54,13 @@ export function SearchSelect({
         return cleanup;
     }, [query, updateDebouncedQuery]);
 
-    React.useEffect(() => {
+    if (visible !== seenVisible) {
+        setSeenVisible(visible);
         if (!visible) {
             setQuery('');
             setDebouncedQuery('');
         }
-    }, [visible]);
+    }
 
     const filteredOptions = useMemo(() => {
         if (!debouncedQuery) {

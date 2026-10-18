@@ -39,7 +39,7 @@ export default function GameLeaderboardScreen() {
   const [week, setWeek] = useState(getCurrentWeek);
   const [activeCity, setActiveCity] = useState<string | null>(null);
 
-  const { entries, totalPlayers, loading } = useWeeklyLeaderboard(
+  const { entries, loading } = useWeeklyLeaderboard(
     gt,
     week.start,
     week.end,
@@ -47,10 +47,8 @@ export default function GameLeaderboardScreen() {
   );
 
   // Only show Global + user's own city/town
-  const userCityTabs = useMemo(() => {
-    if (!user?.city) return [];
-    return [user.city];
-  }, [user?.city]);
+  const userCity = user?.city ?? null;
+  const userCityTabs = userCity ? [userCity] : [];
 
   // Cap at top 50; find user entry if outside
   const { top, userOutside } = useMemo(() => {
