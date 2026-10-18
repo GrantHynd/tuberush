@@ -58,21 +58,21 @@ describe('ProfileScreen', () => {
     });
   });
 
-  it('renders sign-in prompt when not logged in', () => {
+  it('renders sign-in prompt when not logged in', async () => {
     (useAuthStore as unknown as jest.Mock).mockReturnValue({
       user: null,
       signOut: jest.fn(),
       updateProfile: jest.fn(),
     });
 
-    const { getByText } = render(<ProfileScreen />);
+    const { getByText } = await render(<ProfileScreen />);
 
     expect(getByText('Not Signed In')).toBeTruthy();
     expect(getByText('Sign in to save your game progress and compete on the leaderboard.')).toBeTruthy();
     expect(getByText('Sign In')).toBeTruthy();
   });
 
-  it('renders City/Town preference when logged in', () => {
+  it('renders City/Town preference when logged in', async () => {
     (useAuthStore as unknown as jest.Mock).mockReturnValue({
       user: {
         id: 'user1',
@@ -85,13 +85,13 @@ describe('ProfileScreen', () => {
       updateProfile: jest.fn(),
     });
 
-    const { getByText } = render(<ProfileScreen />);
+    const { getByText } = await render(<ProfileScreen />);
 
     expect(getByText('City/Town')).toBeTruthy();
     expect(getByText('Manchester')).toBeTruthy();
   });
 
-  it('shows London, borough when user has London and borough', () => {
+  it('shows London, borough when user has London and borough', async () => {
     (useAuthStore as unknown as jest.Mock).mockReturnValue({
       user: {
         id: 'user1',
@@ -104,13 +104,13 @@ describe('ProfileScreen', () => {
       updateProfile: jest.fn(),
     });
 
-    const { getByText } = render(<ProfileScreen />);
+    const { getByText } = await render(<ProfileScreen />);
 
     expect(getByText('City/Town')).toBeTruthy();
     expect(getByText('London, Islington')).toBeTruthy();
   });
 
-  it('shows Not set when user has no city', () => {
+  it('shows Not set when user has no city', async () => {
     (useAuthStore as unknown as jest.Mock).mockReturnValue({
       user: {
         id: 'user1',
@@ -123,13 +123,13 @@ describe('ProfileScreen', () => {
       updateProfile: jest.fn(),
     });
 
-    const { getByText } = render(<ProfileScreen />);
+    const { getByText } = await render(<ProfileScreen />);
 
     expect(getByText('City/Town')).toBeTruthy();
     expect(getByText('Not set')).toBeTruthy();
   });
 
-  it('opens SearchSelect when tapping City/Town row', () => {
+  it('opens SearchSelect when tapping City/Town row', async () => {
     (useAuthStore as unknown as jest.Mock).mockReturnValue({
       user: {
         id: 'user1',
@@ -142,11 +142,11 @@ describe('ProfileScreen', () => {
       updateProfile: jest.fn(),
     });
 
-    const { getByText, getByTestId, queryByTestId } = render(<ProfileScreen />);
+    const { getByText, getByTestId, queryByTestId } = await render(<ProfileScreen />);
 
     expect(queryByTestId('search-select-modal')).toBeNull();
 
-    fireEvent.press(getByText('Manchester'));
+    await fireEvent.press(getByText('Manchester'));
 
     expect(getByTestId('search-select-modal')).toBeTruthy();
     expect(getByText('SearchSelect')).toBeTruthy();
@@ -166,10 +166,10 @@ describe('ProfileScreen', () => {
       updateProfile: mockUpdateProfile,
     });
 
-    const { getByText, getByTestId } = render(<ProfileScreen />);
+    const { getByText, getByTestId } = await render(<ProfileScreen />);
 
-    fireEvent.press(getByText('Not set'));
-    fireEvent.press(getByTestId('search-select-manchester'));
+    await fireEvent.press(getByText('Not set'));
+    await fireEvent.press(getByTestId('search-select-manchester'));
 
     expect(mockUpdateProfile).toHaveBeenCalledWith({
       city: 'Manchester',

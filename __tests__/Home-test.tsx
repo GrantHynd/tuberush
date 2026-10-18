@@ -55,13 +55,13 @@ describe('HomeScreen', () => {
     });
   });
 
-  it('renders correctly when not logged in', () => {
+  it('renders correctly when not logged in', async () => {
     // Mock user as null
     (useAuthStore as unknown as jest.Mock).mockReturnValue({
       user: null,
     });
 
-    const { getByText } = render(<HomeScreen />);
+    const { getByText } = await render(<HomeScreen />);
 
     // Check for header and games
     expect(getByText('TubeRush')).toBeTruthy();
@@ -70,13 +70,13 @@ describe('HomeScreen', () => {
     expect(getByText('Crossword')).toBeTruthy();
   });
 
-  it('renders correctly when logged in', () => {
+  it('renders correctly when logged in', async () => {
     // Mock user as logged in
     (useAuthStore as unknown as jest.Mock).mockReturnValue({
       user: { email: 'test@example.com', isPremium: false },
     });
 
-    const { getByText, queryByText } = render(<HomeScreen />);
+    const { getByText, queryByText } = await render(<HomeScreen />);
 
     // Check for header and games
     expect(getByText('TubeRush')).toBeTruthy();
@@ -88,56 +88,56 @@ describe('HomeScreen', () => {
     expect(queryByText('Sign In / Register')).toBeNull();
   });
 
-  it('navigates to auth when clicking a puzzle card if not logged in', () => {
+  it('navigates to auth when clicking a puzzle card if not logged in', async () => {
     (useAuthStore as unknown as jest.Mock).mockReturnValue({
       user: null,
     });
 
-    const { getAllByText } = render(<HomeScreen />);
+    const { getAllByText } = await render(<HomeScreen />);
 
     const puzzleCards = getAllByText('Today');
-    fireEvent.press(puzzleCards[0]);
+    await fireEvent.press(puzzleCards[0]);
 
     expect(mockPush).toHaveBeenCalledWith('/auth');
   });
 
-  it('navigates to connections game when logged in and puzzle card pressed', () => {
+  it('navigates to connections game when logged in and puzzle card pressed', async () => {
     (useAuthStore as unknown as jest.Mock).mockReturnValue({
       user: { id: 'user1', email: 'test@example.com', isPremium: false },
     });
 
-    const { getAllByText } = render(<HomeScreen />);
+    const { getAllByText } = await render(<HomeScreen />);
 
     const puzzleCards = getAllByText('Today');
-    fireEvent.press(puzzleCards[0]);
+    await fireEvent.press(puzzleCards[0]);
 
     expect(mockPush).toHaveBeenCalledWith(
       '/games/play-connections?date=2025-03-15',
     );
   });
 
-  it('navigates to subscribe when clicking crossword puzzle card if not premium', () => {
+  it('navigates to subscribe when clicking crossword puzzle card if not premium', async () => {
     (useAuthStore as unknown as jest.Mock).mockReturnValue({
       user: { id: 'user1', email: 'test@example.com', isPremium: false },
     });
 
-    const { getAllByText } = render(<HomeScreen />);
+    const { getAllByText } = await render(<HomeScreen />);
 
     const todayLabels = getAllByText('Today');
-    fireEvent.press(todayLabels[1]);
+    await fireEvent.press(todayLabels[1]);
 
     expect(mockPush).toHaveBeenCalledWith('/subscribe');
   });
 
-  it('navigates to crossword game when logged in and premium', () => {
+  it('navigates to crossword game when logged in and premium', async () => {
     (useAuthStore as unknown as jest.Mock).mockReturnValue({
       user: { id: 'user1', email: 'test@example.com', isPremium: true },
     });
 
-    const { getAllByText } = render(<HomeScreen />);
+    const { getAllByText } = await render(<HomeScreen />);
 
     const todayLabels = getAllByText('Today');
-    fireEvent.press(todayLabels[1]);
+    await fireEvent.press(todayLabels[1]);
 
     expect(mockPush).toHaveBeenCalledWith(
       '/games/play-crossword?puzzleId=1',

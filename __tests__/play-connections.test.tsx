@@ -118,24 +118,26 @@ describe("PlayConnectionsScreen", () => {
     mockSaveGame.mockResolvedValue(undefined);
   });
 
-  afterEach(() => {
-    jest.runOnlyPendingTimers();
+  afterEach(async () => {
+    await act(async () => {
+      jest.runOnlyPendingTimers();
+    });
     jest.useRealTimers();
   });
 
   describe("Initialization", () => {
-    it("redirects to auth if user is not logged in", () => {
+    it("redirects to auth if user is not logged in", async () => {
       (useAuthStore as unknown as jest.Mock).mockReturnValue({
         user: null,
       });
 
-      render(<PlayConnectionsScreen />);
+      await render(<PlayConnectionsScreen />);
 
       expect(mockRouter.replace).toHaveBeenCalledWith("/auth");
     });
 
     it("loads existing game for the day", async () => {
-      render(<PlayConnectionsScreen />);
+      await render(<PlayConnectionsScreen />);
 
       await waitFor(() => {
         expect(mockLoadGame).toHaveBeenCalledWith(
@@ -148,7 +150,7 @@ describe("PlayConnectionsScreen", () => {
     it("creates new game if none exists for the day", async () => {
       mockLoadGame.mockResolvedValue(null);
 
-      render(<PlayConnectionsScreen />);
+      await render(<PlayConnectionsScreen />);
 
       await waitFor(() => {
         expect(mockCreateNewGame).toHaveBeenCalledWith(
@@ -159,7 +161,7 @@ describe("PlayConnectionsScreen", () => {
       });
     });
 
-    it("shows loading indicator while initializing", () => {
+    it("shows loading indicator while initializing", async () => {
       (useGameStore as unknown as jest.Mock).mockReturnValue({
         currentGame: null,
         loadGame: mockLoadGame,
@@ -167,7 +169,7 @@ describe("PlayConnectionsScreen", () => {
         saveGame: mockSaveGame,
       });
 
-      const { getByAccessibilityHint } = render(<PlayConnectionsScreen />);
+      const { getByAccessibilityHint } = await render(<PlayConnectionsScreen />);
 
       // ActivityIndicator should be visible
       expect(getByAccessibilityHint).toBeTruthy();
@@ -176,7 +178,7 @@ describe("PlayConnectionsScreen", () => {
 
   describe("Game Logic - handleSubmitGuess", () => {
     it("marks group as completed on correct guess", async () => {
-      const { getByText } = render(<PlayConnectionsScreen />);
+      const { getByText } = await render(<PlayConnectionsScreen />);
 
       // Wait for component to render
       await waitFor(() => {
@@ -193,7 +195,7 @@ describe("PlayConnectionsScreen", () => {
       const spy = jest.spyOn(connections, "Connections");
 
       // Re-render to capture the spy
-      const { rerender } = render(<PlayConnectionsScreen />);
+      const { rerender } = await render(<PlayConnectionsScreen />);
 
       await waitFor(() => {
         expect(spy).toHaveBeenCalled();
@@ -223,10 +225,11 @@ describe("PlayConnectionsScreen", () => {
     });
 
     it("adds guess to history", async () => {
-      render(<PlayConnectionsScreen />);
-
       const connections = require("@/components/games/Connections");
       const spy = jest.spyOn(connections, "Connections");
+
+      await render(<PlayConnectionsScreen />);
+
 
       await waitFor(() => {
         expect(spy).toHaveBeenCalled();
@@ -267,10 +270,11 @@ describe("PlayConnectionsScreen", () => {
         saveGame: mockSaveGame,
       });
 
-      render(<PlayConnectionsScreen />);
-
       const connections = require("@/components/games/Connections");
       const spy = jest.spyOn(connections, "Connections");
+
+      await render(<PlayConnectionsScreen />);
+
 
       await waitFor(() => {
         expect(spy).toHaveBeenCalled();
@@ -320,10 +324,11 @@ describe("PlayConnectionsScreen", () => {
         saveGame: mockSaveGame,
       });
 
-      render(<PlayConnectionsScreen />);
-
       const connections = require("@/components/games/Connections");
       const spy = jest.spyOn(connections, "Connections");
+
+      await render(<PlayConnectionsScreen />);
+
 
       await waitFor(() => {
         expect(spy).toHaveBeenCalled();
@@ -368,10 +373,11 @@ describe("PlayConnectionsScreen", () => {
         saveGame: mockSaveGame,
       });
 
-      render(<PlayConnectionsScreen />);
-
       const connections = require("@/components/games/Connections");
       const spy = jest.spyOn(connections, "Connections");
+
+      await render(<PlayConnectionsScreen />);
+
 
       await waitFor(() => {
         expect(spy).toHaveBeenCalled();
@@ -395,10 +401,11 @@ describe("PlayConnectionsScreen", () => {
     });
 
     it("decreases mistakes remaining on incorrect guess", async () => {
-      render(<PlayConnectionsScreen />);
-
       const connections = require("@/components/games/Connections");
       const spy = jest.spyOn(connections, "Connections");
+
+      await render(<PlayConnectionsScreen />);
+
 
       await waitFor(() => {
         expect(spy).toHaveBeenCalled();
@@ -439,10 +446,11 @@ describe("PlayConnectionsScreen", () => {
         saveGame: mockSaveGame,
       });
 
-      render(<PlayConnectionsScreen />);
-
       const connections = require("@/components/games/Connections");
       const spy = jest.spyOn(connections, "Connections");
+
+      await render(<PlayConnectionsScreen />);
+
 
       await waitFor(() => {
         expect(spy).toHaveBeenCalled();
@@ -493,7 +501,7 @@ describe("PlayConnectionsScreen", () => {
         saveGame: mockSaveGame,
       });
 
-      const { getByText } = render(<PlayConnectionsScreen />);
+      const { getByText } = await render(<PlayConnectionsScreen />);
 
       await waitFor(() => {
         expect(getByText("Well done!")).toBeTruthy();
@@ -516,7 +524,7 @@ describe("PlayConnectionsScreen", () => {
         saveGame: mockSaveGame,
       });
 
-      const { getByText } = render(<PlayConnectionsScreen />);
+      const { getByText } = await render(<PlayConnectionsScreen />);
 
       await waitFor(() => {
         expect(getByText("Better luck next time")).toBeTruthy();
@@ -543,13 +551,13 @@ describe("PlayConnectionsScreen", () => {
         saveGame: mockSaveGame,
       });
 
-      const { getByText, getByLabelText } = render(<PlayConnectionsScreen />);
+      const { getByText, getByLabelText } = await render(<PlayConnectionsScreen />);
 
       await waitFor(() => {
         expect(getByText("Well done!")).toBeTruthy();
       });
 
-      fireEvent.press(getByLabelText("View leaderboard"));
+      await fireEvent.press(getByLabelText("View leaderboard"));
 
       // Modal should be visible (we can't test Modal content easily, but we can verify button works)
       expect(getByLabelText("View leaderboard")).toBeTruthy();
@@ -575,13 +583,13 @@ describe("PlayConnectionsScreen", () => {
         saveGame: mockSaveGame,
       });
 
-      const { getByText, getByLabelText } = render(<PlayConnectionsScreen />);
+      const { getByText, getByLabelText } = await render(<PlayConnectionsScreen />);
 
       await waitFor(() => {
         expect(getByText("Well done!")).toBeTruthy();
       });
 
-      fireEvent.press(getByLabelText("Return home"));
+      await fireEvent.press(getByLabelText("Return home"));
 
       expect(mockRouter.back).toHaveBeenCalled();
     });
@@ -601,7 +609,7 @@ describe("PlayConnectionsScreen", () => {
         saveGame: mockSaveGame,
       });
 
-      const { queryByText } = render(<PlayConnectionsScreen />);
+      const { queryByText } = await render(<PlayConnectionsScreen />);
 
       await waitFor(() => {
         expect(queryByText(/Solved in/)).toBeNull();
@@ -615,7 +623,7 @@ describe("PlayConnectionsScreen", () => {
       const consoleSpy = jest.spyOn(console, "error").mockImplementation();
       mockLoadGame.mockRejectedValue(new Error("Network error"));
 
-      render(<PlayConnectionsScreen />);
+      await render(<PlayConnectionsScreen />);
 
       await waitFor(
         () => {
@@ -651,16 +659,15 @@ describe("PlayConnectionsScreen", () => {
         saveGame: mockSaveGame,
       });
 
-      render(<PlayConnectionsScreen />);
+      const connections = require("@/components/games/Connections");
+      const spy = jest.spyOn(connections, "Connections");
+
+      await render(<PlayConnectionsScreen />);
 
       await waitFor(() => {
-        const connections = require("@/components/games/Connections");
-        const spy = jest.spyOn(connections, "Connections");
         expect(spy).toHaveBeenCalled();
       });
 
-      const connections = require("@/components/games/Connections");
-      const spy = jest.spyOn(connections, "Connections");
       const onSubmitGuess = (
         spy.mock.calls[spy.mock.calls.length - 1][0] as any
       ).onSubmitGuess;
@@ -679,10 +686,11 @@ describe("PlayConnectionsScreen", () => {
     });
 
     it("does not duplicate completed groups", async () => {
-      render(<PlayConnectionsScreen />);
-
       const connections = require("@/components/games/Connections");
       const spy = jest.spyOn(connections, "Connections");
+
+      await render(<PlayConnectionsScreen />);
+
 
       await waitFor(() => {
         expect(spy).toHaveBeenCalled();
@@ -736,33 +744,63 @@ describe("PlayConnectionsScreen", () => {
 
   describe("Loss Reveal Flow", () => {
     it("delays game over banner until reveal completes", async () => {
-      const lostGameState: ConnectionsState = {
+      const gameStateOneLifeLeft: ConnectionsState = {
         ...mockGameState,
-        status: "lost",
-        mistakesRemaining: 0,
+        mistakesRemaining: 1,
         completedGroups: ["TUBE LINES"],
-        endTime: Date.now(),
       };
 
+      (useGameStore as unknown as jest.Mock).mockReturnValue({
+        currentGame: { ...mockGame, state: gameStateOneLifeLeft },
+        loadGame: mockLoadGame,
+        createNewGame: mockCreateNewGame,
+        saveGame: mockSaveGame,
+      });
+
+      const connections = require("@/components/games/Connections");
+      const spy = jest.spyOn(connections, "Connections");
+
+      const { queryByText, rerender } = await render(<PlayConnectionsScreen />);
+
+      await waitFor(() => {
+        expect(spy).toHaveBeenCalled();
+      });
+
+      const onSubmitGuess = (
+        spy.mock.calls[spy.mock.calls.length - 1][0] as any
+      ).onSubmitGuess;
+
+      // Losing guess
+      await act(async () => {
+        await onSubmitGuess(["BAKERLOO", "HYDE", "HEATHROW", "VINE"]);
+      });
+
+      // Store now reflects the lost game
+      const lostGameState: ConnectionsState = {
+        ...gameStateOneLifeLeft,
+        status: "lost",
+        mistakesRemaining: 0,
+        endTime: Date.now(),
+      };
       (useGameStore as unknown as jest.Mock).mockReturnValue({
         currentGame: { ...mockGame, state: lostGameState },
         loadGame: mockLoadGame,
         createNewGame: mockCreateNewGame,
         saveGame: mockSaveGame,
       });
+      await rerender(<PlayConnectionsScreen />);
 
-      const { queryByText } = render(<PlayConnectionsScreen />);
-
-      // Game over banner should not be visible immediately
+      // Game over banner should not be visible until the reveal finishes
       expect(queryByText("Better luck next time")).toBeNull();
 
-      // Wait for reveal to complete
       await waitFor(
         () => {
           expect(queryByText("Better luck next time")).toBeTruthy();
         },
         { timeout: 2000 },
       );
+
+      spy.mockRestore();
     });
 
     it("shows game over banner immediately for already-lost game on reload", async () => {
@@ -781,7 +819,7 @@ describe("PlayConnectionsScreen", () => {
         saveGame: mockSaveGame,
       });
 
-      const { getByText } = render(<PlayConnectionsScreen />);
+      const { getByText } = await render(<PlayConnectionsScreen />);
 
       // Game over banner should be visible immediately for reload
       await waitFor(() => {
@@ -803,10 +841,11 @@ describe("PlayConnectionsScreen", () => {
         saveGame: mockSaveGame,
       });
 
-      render(<PlayConnectionsScreen />);
-
       const connections = require("@/components/games/Connections");
       const spy = jest.spyOn(connections, "Connections");
+
+      await render(<PlayConnectionsScreen />);
+
 
       await waitFor(() => {
         expect(spy).toHaveBeenCalled();
