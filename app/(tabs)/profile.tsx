@@ -5,7 +5,11 @@ import { useGameStore } from '@/stores/game-store';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
+    ActivityIndicator,
     Alert,
+    AlertButton,
+    Linking,
+    Platform,
     ScrollView,
     StyleSheet,
     Text,
@@ -21,6 +25,23 @@ import { UK_CITIES, isLondon } from '@/constants/UKCities';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import Constants from 'expo-constants';
 
+const APPLE_SUBSCRIPTIONS_URL = 'https://apps.apple.com/account/subscriptions';
+const PLAY_SUBSCRIPTIONS_URL = 'https://play.google.com/store/account/subscriptions';
+
+const APPLE_SUBSCRIPTION_NOTICE =
+    'Deleting your account does not cancel an Apple subscription. It keeps renewing until you cancel it in the App Store: Settings → [your name] → Subscriptions.';
+
+const PLAY_SUBSCRIPTION_NOTICE =
+    'Deleting your account does not cancel a Google Play subscription. It keeps renewing until you cancel it in the Play Store under Payments & subscriptions.';
+
+function subscriptionNotice(): string {
+    return Platform.OS === 'android' ? PLAY_SUBSCRIPTION_NOTICE : APPLE_SUBSCRIPTION_NOTICE;
+}
+
+function subscriptionManagementUrl(): string {
+    return Platform.OS === 'android' ? PLAY_SUBSCRIPTIONS_URL : APPLE_SUBSCRIPTIONS_URL;
+}
+
 function getLocationDisplayValue(user: { city?: string | null; borough?: string | null }): string {
     if (!user.city) return 'Not set';
     if (isLondon(user.city) && user.borough) {
@@ -31,9 +52,10 @@ function getLocationDisplayValue(user: { city?: string | null; borough?: string 
 
 export default function ProfileScreen() {
     const router = useRouter();
-    const { user, signOut, updateProfile } = useAuthStore();
+    const { user, signOut, updateProfile, deleteAccount } = useAuthStore();
     const { syncNow } = useGameStore();
     const [locationModalVisible, setLocationModalVisible] = useState(false);
+    const [deletingAccount, setDeletingAccount] = useState(false);
     const [locationStep, setLocationStep] = useState<'city' | 'borough'>('city');
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [selectedCity, setSelectedCity] = useState<string | null>(null);
@@ -54,6 +76,44 @@ export default function ProfileScreen() {
                 },
             ]
         );
+    };
+
+    const handleDeleteAccount = () => {
+        if (!user || deletingAccount) return;
+
+        const notice = subscriptionNotice();
+        const message =
+            `This permanently deletes your account, profile, scores, and custom puzzles. This cannot be undone.\n\n${notice}`;
+
+        const buttons: AlertButton[] = [{ text: 'Cancel', style: 'cancel' }];
+        if (user.isPremium) {
+            buttons.push({
+                text: 'Manage Subscription',
+                onPress: () => {
+                    Linking.openURL(subscriptionManagementUrl()).catch(() => {
+                        Alert.alert('Subscriptions', notice);
+                    });
+                },
+            });
+        }
+        buttons.push({
+            text: 'Delete Account',
+            style: 'destructive',
+            onPress: async () => {
+                setDeletingAccount(true);
+                try {
+                    await deleteAccount();
+                    router.replace('/');
+                } catch (error: unknown) {
+                    const detail = error instanceof Error ? error.message : 'Please try again.';
+                    Alert.alert('Could not delete account', detail);
+                } finally {
+                    setDeletingAccount(false);
+                }
+            },
+        });
+
+        Alert.alert('Delete account?', message, buttons);
     };
 
     const handleSync = async () => {
@@ -205,6 +265,21 @@ export default function ProfileScreen() {
             >
                 <IconSymbol name="arrow.right.square" size={20} color={TFL.red} />
                 <Text style={styles.signOutButtonText}>Sign Out</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+                testID="profile-delete-account-button"
+                style={styles.deleteAccountButton}
+                onPress={handleDeleteAccount}
+                disabled={deletingAccount}
+                accessibilityRole="button"
+                accessibilityLabel="Delete account"
+            >
+                {deletingAccount ? (
+                    <ActivityIndicator color={TFL.red} />
+                ) : (
+                    <Text style={styles.deleteAccountButtonText}>Delete Account</Text>
+                )}
             </TouchableOpacity>
 
             <Text style={styles.version}>TubeRush v{Constants.expoConfig?.version || '1.0.0'}</Text>
@@ -393,6 +468,19 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     signOutButtonText: {
+        color: TFL.red,
+        fontWeight: '600',
+        fontSize: 16,
+    },
+    deleteAccountButton: {
+        marginTop: Spacing.md,
+        marginHorizontal: Spacing.md,
+        minHeight: 44,
+        paddingVertical: Spacing.sm,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    deleteAccountButtonText: {
         color: TFL.red,
         fontWeight: '600',
         fontSize: 16,
