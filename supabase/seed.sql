@@ -124,13 +124,12 @@ SELECT
 FROM _seed_users s
 ON CONFLICT DO NOTHING;
 
--- Small pause for trigger to fire (profiles auto-created)
--- Then update profiles with location + premium status
+-- Profiles are created by the signup trigger. Premium is not stored on
+-- profiles; _seed_users.is_premium only decides who gets crossword scores.
 UPDATE profiles p
 SET
-  city       = s.city,
-  borough    = s.borough,
-  is_premium = s.is_premium
+  city    = s.city,
+  borough = s.borough
 FROM _seed_users s
 WHERE p.id = s.id;
 

@@ -13,39 +13,27 @@ export interface Database {
         Row: {
           id: string;
           email: string;
-          is_premium: boolean;
+          username: string | null;
           city: string | null;
           borough: string | null;
-          subscription_id: string | null;
-          subscription_status: string | null;
-          expires_at: string | null;
-          apple_original_transaction_id: string | null;
           created_at: string;
           updated_at: string;
         };
         Insert: {
           id: string;
           email: string;
-          is_premium?: boolean;
+          username?: string | null;
           city?: string | null;
           borough?: string | null;
-          subscription_id?: string | null;
-          subscription_status?: string | null;
-          expires_at?: string | null;
-          apple_original_transaction_id?: string | null;
           created_at?: string;
           updated_at?: string;
         };
         Update: {
           id?: string;
           email?: string;
-          is_premium?: boolean;
+          username?: string | null;
           city?: string | null;
           borough?: string | null;
-          subscription_id?: string | null;
-          subscription_status?: string | null;
-          expires_at?: string | null;
-          apple_original_transaction_id?: string | null;
           created_at?: string;
           updated_at?: string;
         };
