@@ -192,6 +192,24 @@ export class StorageManager {
     }
 
     /**
+     * Drop this device's copy of the signed-in player's games and pending uploads.
+     * Called after the server account is deleted so a later signup cannot sync them back.
+     */
+    static async clearLocalAccountData(): Promise<void> {
+        try {
+            const keys = await AsyncStorage.getAllKeys();
+            const gameKeys = keys.filter((key) => key.startsWith(STORAGE_KEYS.GAME_STATE));
+            const toRemove = [...gameKeys, STORAGE_KEYS.SYNC_QUEUE, STORAGE_KEYS.LAST_SYNC];
+            if (toRemove.length > 0) {
+                await AsyncStorage.multiRemove(toRemove);
+            }
+        } catch (error) {
+            console.error('Error clearing local account data:', error);
+            throw error;
+        }
+    }
+
+    /**
      * Get last sync timestamp
      */
     static async getLastSyncTimestamp(): Promise<string | null> {

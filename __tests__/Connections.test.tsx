@@ -1,7 +1,7 @@
 import { Connections } from "@/components/games/Connections";
 import { ConnectionsPuzzle } from "@/constants/ConnectionsData";
 import { ConnectionsState } from "@/types/game";
-import { fireEvent, render, waitFor } from "@testing-library/react-native";
+import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 import * as Haptics from "expo-haptics";
 import React from "react";
 
@@ -79,14 +79,16 @@ describe("Connections Component", () => {
     jest.useFakeTimers();
   });
 
-  afterEach(() => {
-    jest.runOnlyPendingTimers();
+  afterEach(async () => {
+    await act(async () => {
+      jest.runOnlyPendingTimers();
+    });
     jest.useRealTimers();
   });
 
   describe("Rendering", () => {
-    it("renders all cards for incomplete groups", () => {
-      const { getByText } = render(
+    it("renders all cards for incomplete groups", async () => {
+      const { getByText } = await render(
         <Connections
           gameState={initialGameState}
           puzzle={mockPuzzle}
@@ -101,13 +103,13 @@ describe("Connections Component", () => {
       expect(getByText("VINE")).toBeTruthy();
     });
 
-    it("renders completed groups correctly", () => {
+    it("renders completed groups correctly", async () => {
       const gameStateWithCompleted: ConnectionsState = {
         ...initialGameState,
         completedGroups: ["TUBE LINES"],
       };
 
-      const { getByText, queryByLabelText } = render(
+      const { getByText, queryByLabelText } = await render(
         <Connections
           gameState={gameStateWithCompleted}
           puzzle={mockPuzzle}
@@ -122,13 +124,13 @@ describe("Connections Component", () => {
       expect(queryByLabelText("HYDE, not selected")).toBeTruthy();
     });
 
-    it("displays correct number of mistakes remaining", () => {
+    it("displays correct number of mistakes remaining", async () => {
       const gameState: ConnectionsState = {
         ...initialGameState,
         mistakesRemaining: 2,
       };
 
-      const { getByLabelText } = render(
+      const { getByLabelText } = await render(
         <Connections
           gameState={gameState}
           puzzle={mockPuzzle}
@@ -139,8 +141,8 @@ describe("Connections Component", () => {
       expect(getByLabelText("2 mistakes remaining")).toBeTruthy();
     });
 
-    it("renders shuffle and deselect all buttons", () => {
-      const { getByText } = render(
+    it("renders shuffle and deselect all buttons", async () => {
+      const { getByText } = await render(
         <Connections
           gameState={initialGameState}
           puzzle={mockPuzzle}
@@ -154,8 +156,8 @@ describe("Connections Component", () => {
   });
 
   describe("Card Selection", () => {
-    it("selects a card when pressed", () => {
-      const { getByText, getByLabelText } = render(
+    it("selects a card when pressed", async () => {
+      const { getByText, getByLabelText } = await render(
         <Connections
           gameState={initialGameState}
           puzzle={mockPuzzle}
@@ -163,12 +165,12 @@ describe("Connections Component", () => {
         />,
       );
 
-      fireEvent.press(getByText("BAKERLOO"));
+      await fireEvent.press(getByText("BAKERLOO"));
       expect(getByLabelText("BAKERLOO, selected")).toBeTruthy();
     });
 
-    it("deselects a card when pressed again", () => {
-      const { getByText, getByLabelText } = render(
+    it("deselects a card when pressed again", async () => {
+      const { getByText, getByLabelText } = await render(
         <Connections
           gameState={initialGameState}
           puzzle={mockPuzzle}
@@ -176,14 +178,14 @@ describe("Connections Component", () => {
         />,
       );
 
-      fireEvent.press(getByText("BAKERLOO"));
+      await fireEvent.press(getByText("BAKERLOO"));
       expect(getByLabelText("BAKERLOO, selected")).toBeTruthy();
-      fireEvent.press(getByText("BAKERLOO"));
+      await fireEvent.press(getByText("BAKERLOO"));
       expect(getByLabelText("BAKERLOO, not selected")).toBeTruthy();
     });
 
-    it("allows selecting up to 4 cards", () => {
-      const { getByText, getByLabelText } = render(
+    it("allows selecting up to 4 cards", async () => {
+      const { getByText, getByLabelText } = await render(
         <Connections
           gameState={initialGameState}
           puzzle={mockPuzzle}
@@ -191,10 +193,10 @@ describe("Connections Component", () => {
         />,
       );
 
-      fireEvent.press(getByText("BAKERLOO"));
-      fireEvent.press(getByText("CENTRAL"));
-      fireEvent.press(getByText("DISTRICT"));
-      fireEvent.press(getByText("NORTHERN"));
+      await fireEvent.press(getByText("BAKERLOO"));
+      await fireEvent.press(getByText("CENTRAL"));
+      await fireEvent.press(getByText("DISTRICT"));
+      await fireEvent.press(getByText("NORTHERN"));
 
       expect(getByLabelText("BAKERLOO, selected")).toBeTruthy();
       expect(getByLabelText("CENTRAL, selected")).toBeTruthy();
@@ -202,8 +204,8 @@ describe("Connections Component", () => {
       expect(getByLabelText("NORTHERN, selected")).toBeTruthy();
     });
 
-    it("does not allow selecting more than 4 cards", () => {
-      const { getByText, getByLabelText } = render(
+    it("does not allow selecting more than 4 cards", async () => {
+      const { getByText, getByLabelText } = await render(
         <Connections
           gameState={initialGameState}
           puzzle={mockPuzzle}
@@ -211,17 +213,17 @@ describe("Connections Component", () => {
         />,
       );
 
-      fireEvent.press(getByText("BAKERLOO"));
-      fireEvent.press(getByText("CENTRAL"));
-      fireEvent.press(getByText("DISTRICT"));
-      fireEvent.press(getByText("NORTHERN"));
-      fireEvent.press(getByText("HYDE"));
+      await fireEvent.press(getByText("BAKERLOO"));
+      await fireEvent.press(getByText("CENTRAL"));
+      await fireEvent.press(getByText("DISTRICT"));
+      await fireEvent.press(getByText("NORTHERN"));
+      await fireEvent.press(getByText("HYDE"));
 
       expect(getByLabelText("HYDE, not selected")).toBeTruthy();
     });
 
-    it("triggers haptic feedback on selection", () => {
-      const { getByText } = render(
+    it("triggers haptic feedback on selection", async () => {
+      const { getByText } = await render(
         <Connections
           gameState={initialGameState}
           puzzle={mockPuzzle}
@@ -229,19 +231,19 @@ describe("Connections Component", () => {
         />,
       );
 
-      fireEvent.press(getByText("BAKERLOO"));
+      await fireEvent.press(getByText("BAKERLOO"));
       expect(Haptics.impactAsync).toHaveBeenCalledWith(
         Haptics.ImpactFeedbackStyle.Light,
       );
     });
 
-    it("prevents selection when game is not playing", () => {
+    it("prevents selection when game is not playing", async () => {
       const gameState: ConnectionsState = {
         ...initialGameState,
         status: "won",
       };
 
-      const { getByText, getByLabelText } = render(
+      const { getByText, getByLabelText } = await render(
         <Connections
           gameState={gameState}
           puzzle={mockPuzzle}
@@ -249,14 +251,14 @@ describe("Connections Component", () => {
         />,
       );
 
-      fireEvent.press(getByText("BAKERLOO"));
+      await fireEvent.press(getByText("BAKERLOO"));
       expect(getByLabelText("BAKERLOO, not selected")).toBeTruthy();
     });
   });
 
   describe("Submit Button", () => {
     it("submits when Submit button is pressed with 4 cards selected", async () => {
-      const { getByText } = render(
+      const { getByText } = await render(
         <Connections
           gameState={initialGameState}
           puzzle={mockPuzzle}
@@ -266,14 +268,14 @@ describe("Connections Component", () => {
 
       await waitFor(() => expect(getByText("BAKERLOO")).toBeTruthy());
 
-      fireEvent.press(getByText("BAKERLOO"));
-      fireEvent.press(getByText("CENTRAL"));
-      fireEvent.press(getByText("DISTRICT"));
-      fireEvent.press(getByText("NORTHERN"));
+      await fireEvent.press(getByText("BAKERLOO"));
+      await fireEvent.press(getByText("CENTRAL"));
+      await fireEvent.press(getByText("DISTRICT"));
+      await fireEvent.press(getByText("NORTHERN"));
 
       expect(mockOnSubmitGuess).not.toHaveBeenCalled();
 
-      fireEvent.press(getByText("Submit"));
+      await fireEvent.press(getByText("Submit"));
 
       expect(mockOnSubmitGuess).toHaveBeenCalledWith([
         "BAKERLOO",
@@ -284,7 +286,7 @@ describe("Connections Component", () => {
     });
 
     it("clears selection after submit", async () => {
-      const { getByText, getByLabelText } = render(
+      const { getByText, getByLabelText } = await render(
         <Connections
           gameState={initialGameState}
           puzzle={mockPuzzle}
@@ -294,18 +296,18 @@ describe("Connections Component", () => {
 
       await waitFor(() => expect(getByText("BAKERLOO")).toBeTruthy());
 
-      fireEvent.press(getByText("BAKERLOO"));
-      fireEvent.press(getByText("CENTRAL"));
-      fireEvent.press(getByText("DISTRICT"));
-      fireEvent.press(getByText("NORTHERN"));
+      await fireEvent.press(getByText("BAKERLOO"));
+      await fireEvent.press(getByText("CENTRAL"));
+      await fireEvent.press(getByText("DISTRICT"));
+      await fireEvent.press(getByText("NORTHERN"));
 
-      fireEvent.press(getByText("Submit"));
+      await fireEvent.press(getByText("Submit"));
 
       expect(getByLabelText("BAKERLOO, not selected")).toBeTruthy();
     });
 
-    it("is disabled when fewer than 4 cards are selected", () => {
-      const { getByText, getByLabelText } = render(
+    it("is disabled when fewer than 4 cards are selected", async () => {
+      const { getByText, getByLabelText } = await render(
         <Connections
           gameState={initialGameState}
           puzzle={mockPuzzle}
@@ -316,8 +318,8 @@ describe("Connections Component", () => {
       const submitButton = getByLabelText("Submit guess");
       expect(submitButton.props.accessibilityState.disabled).toBe(true);
 
-      fireEvent.press(getByText("BAKERLOO"));
-      fireEvent.press(getByText("CENTRAL"));
+      await fireEvent.press(getByText("BAKERLOO"));
+      await fireEvent.press(getByText("CENTRAL"));
       expect(getByLabelText("Submit guess").props.accessibilityState.disabled).toBe(true);
     });
 
@@ -327,7 +329,7 @@ describe("Connections Component", () => {
         status: "won",
       };
 
-      const { getByText } = render(
+      const { getByText } = await render(
         <Connections
           gameState={gameState}
           puzzle={mockPuzzle}
@@ -335,7 +337,7 @@ describe("Connections Component", () => {
         />,
       );
 
-      fireEvent.press(getByText("Submit"));
+      await fireEvent.press(getByText("Submit"));
 
       await waitFor(() => {
         expect(mockOnSubmitGuess).not.toHaveBeenCalled();
@@ -344,8 +346,8 @@ describe("Connections Component", () => {
   });
 
   describe("Deselect All Button", () => {
-    it("deselects all selected cards", () => {
-      const { getByText, getByLabelText } = render(
+    it("deselects all selected cards", async () => {
+      const { getByText, getByLabelText } = await render(
         <Connections
           gameState={initialGameState}
           puzzle={mockPuzzle}
@@ -353,18 +355,18 @@ describe("Connections Component", () => {
         />,
       );
 
-      fireEvent.press(getByText("BAKERLOO"));
-      fireEvent.press(getByText("CENTRAL"));
-      fireEvent.press(getByText("DISTRICT"));
-      fireEvent.press(getByText("Deselect All"));
+      await fireEvent.press(getByText("BAKERLOO"));
+      await fireEvent.press(getByText("CENTRAL"));
+      await fireEvent.press(getByText("DISTRICT"));
+      await fireEvent.press(getByText("Deselect All"));
 
       expect(getByLabelText("BAKERLOO, not selected")).toBeTruthy();
       expect(getByLabelText("CENTRAL, not selected")).toBeTruthy();
       expect(getByLabelText("DISTRICT, not selected")).toBeTruthy();
     });
 
-    it("is disabled when no cards are selected", () => {
-      const { getByLabelText } = render(
+    it("is disabled when no cards are selected", async () => {
+      const { getByLabelText } = await render(
         <Connections
           gameState={initialGameState}
           puzzle={mockPuzzle}
@@ -376,8 +378,8 @@ describe("Connections Component", () => {
       expect(deselectButton.props.accessibilityState.disabled).toBe(true);
     });
 
-    it("is enabled when cards are selected", () => {
-      const { getByText, getByLabelText } = render(
+    it("is enabled when cards are selected", async () => {
+      const { getByText, getByLabelText } = await render(
         <Connections
           gameState={initialGameState}
           puzzle={mockPuzzle}
@@ -385,15 +387,15 @@ describe("Connections Component", () => {
         />,
       );
 
-      fireEvent.press(getByText("BAKERLOO"));
+      await fireEvent.press(getByText("BAKERLOO"));
       const deselectButton = getByLabelText("Deselect all items");
       expect(deselectButton.props.accessibilityState.disabled).toBe(false);
     });
   });
 
   describe("Shuffle Button", () => {
-    it("shuffle button is accessible and enabled during play", () => {
-      const { getByLabelText } = render(
+    it("shuffle button is accessible and enabled during play", async () => {
+      const { getByLabelText } = await render(
         <Connections
           gameState={initialGameState}
           puzzle={mockPuzzle}
@@ -406,8 +408,8 @@ describe("Connections Component", () => {
       expect(shuffleButton.props.accessibilityState.disabled).toBe(false);
     });
 
-    it("shuffles the card order", () => {
-      const { getByText, getAllByRole } = render(
+    it("shuffles the card order", async () => {
+      const { getByText, getAllByRole } = await render(
         <Connections
           gameState={initialGameState}
           puzzle={mockPuzzle}
@@ -426,7 +428,7 @@ describe("Connections Component", () => {
 
       const mockRandom = jest.spyOn(Math, "random");
       mockRandom.mockReturnValue(0.5);
-      fireEvent.press(getByText("Shuffle"));
+      await fireEvent.press(getByText("Shuffle"));
 
       const cardsAfterShuffle = getAllByRole("button").filter(
         (button) =>
@@ -437,13 +439,13 @@ describe("Connections Component", () => {
       mockRandom.mockRestore();
     });
 
-    it("is disabled when game is not playing", () => {
+    it("is disabled when game is not playing", async () => {
       const gameState: ConnectionsState = {
         ...initialGameState,
         status: "won",
       };
 
-      const { getByLabelText } = render(
+      const { getByLabelText } = await render(
         <Connections
           gameState={gameState}
           puzzle={mockPuzzle}
@@ -457,18 +459,18 @@ describe("Connections Component", () => {
   });
 
   describe("Haptic Feedback", () => {
-    it("is mocked and available", () => {
+    it("is mocked and available", async () => {
       expect(Haptics.impactAsync).toBeDefined();
       expect(Haptics.notificationAsync).toBeDefined();
     });
 
-    it("triggers error haptic on mistake", () => {
+    it("triggers error haptic on mistake", async () => {
       const initialState: ConnectionsState = {
         ...initialGameState,
         mistakesRemaining: 4,
       };
 
-      const { rerender } = render(
+      const { rerender } = await render(
         <Connections
           gameState={initialState}
           puzzle={mockPuzzle}
@@ -481,7 +483,7 @@ describe("Connections Component", () => {
         mistakesRemaining: 3,
       };
 
-      rerender(
+      await rerender(
         <Connections
           gameState={updatedState}
           puzzle={mockPuzzle}
@@ -494,13 +496,13 @@ describe("Connections Component", () => {
       );
     });
 
-    it("triggers success haptic on correct guess", () => {
+    it("triggers success haptic on correct guess", async () => {
       const initialState: ConnectionsState = {
         ...initialGameState,
         completedGroups: [],
       };
 
-      const { rerender } = render(
+      const { rerender } = await render(
         <Connections
           gameState={initialState}
           puzzle={mockPuzzle}
@@ -513,7 +515,7 @@ describe("Connections Component", () => {
         completedGroups: ["TUBE LINES"],
       };
 
-      rerender(
+      await rerender(
         <Connections
           gameState={updatedState}
           puzzle={mockPuzzle}
@@ -528,8 +530,8 @@ describe("Connections Component", () => {
   });
 
   describe("Accessibility", () => {
-    it("has proper accessibility labels on cards", () => {
-      const { getByLabelText } = render(
+    it("has proper accessibility labels on cards", async () => {
+      const { getByLabelText } = await render(
         <Connections
           gameState={initialGameState}
           puzzle={mockPuzzle}
@@ -542,13 +544,13 @@ describe("Connections Component", () => {
       expect(card.props.accessibilityHint).toBe("Tap to select or deselect");
     });
 
-    it("has proper accessibility labels on completed groups", () => {
+    it("has proper accessibility labels on completed groups", async () => {
       const gameState: ConnectionsState = {
         ...initialGameState,
         completedGroups: ["TUBE LINES"],
       };
 
-      const { getByLabelText } = render(
+      const { getByLabelText } = await render(
         <Connections
           gameState={gameState}
           puzzle={mockPuzzle}
@@ -563,8 +565,8 @@ describe("Connections Component", () => {
       ).toBeTruthy();
     });
 
-    it("has proper accessibility labels on mistakes indicator", () => {
-      const { getByLabelText } = render(
+    it("has proper accessibility labels on mistakes indicator", async () => {
+      const { getByLabelText } = await render(
         <Connections
           gameState={initialGameState}
           puzzle={mockPuzzle}
@@ -575,13 +577,13 @@ describe("Connections Component", () => {
       expect(getByLabelText("4 mistakes remaining")).toBeTruthy();
     });
 
-    it("has proper accessibility state on disabled buttons", () => {
+    it("has proper accessibility state on disabled buttons", async () => {
       const gameState: ConnectionsState = {
         ...initialGameState,
         status: "won",
       };
 
-      const { getByLabelText } = render(
+      const { getByLabelText } = await render(
         <Connections
           gameState={gameState}
           puzzle={mockPuzzle}
@@ -595,10 +597,10 @@ describe("Connections Component", () => {
   });
 
   describe("Responsive Design", () => {
-    it("renders cards at different screen widths", () => {
+    it("renders cards at different screen widths", async () => {
       mockUseWindowDimensions.mockReturnValue({ width: 320, height: 568 });
 
-      const { getAllByRole } = render(
+      const { getAllByRole } = await render(
         <Connections
           gameState={initialGameState}
           puzzle={mockPuzzle}
@@ -626,7 +628,7 @@ describe("Connections Component", () => {
         completedGroups: ["TUBE LINES"],
       };
 
-      const { getByLabelText } = render(
+      const { getByLabelText } = await render(
         <Connections
           gameState={lostGameState}
           puzzle={mockPuzzle}
@@ -655,7 +657,7 @@ describe("Connections Component", () => {
       );
     });
 
-    it("shows revealed groups immediately when reloading a lost game", () => {
+    it("shows revealed groups immediately when reloading a lost game", async () => {
       const lostGameState: ConnectionsState = {
         ...initialGameState,
         status: "lost",
@@ -663,7 +665,7 @@ describe("Connections Component", () => {
         completedGroups: ["TUBE LINES", "ROYAL PARKS"],
       };
 
-      const { getByLabelText } = render(
+      const { getByLabelText } = await render(
         <Connections
           gameState={lostGameState}
           puzzle={mockPuzzle}
@@ -686,7 +688,7 @@ describe("Connections Component", () => {
         completedGroups: [],
       };
 
-      const { getByLabelText, queryByLabelText } = render(
+      const { getByLabelText, queryByLabelText } = await render(
         <Connections
           gameState={lostGameState}
           puzzle={mockPuzzle}
@@ -729,7 +731,7 @@ describe("Connections Component", () => {
         completedGroups: ["TUBE LINES"],
       };
 
-      render(
+      await render(
         <Connections
           gameState={lostGameState}
           puzzle={mockPuzzle}
@@ -757,7 +759,7 @@ describe("Connections Component", () => {
         completedGroups: ["TUBE LINES"],
       };
 
-      const { getByLabelText, queryByLabelText, rerender } = render(
+      const { getByLabelText, queryByLabelText, rerender } = await render(
         <Connections
           gameState={playingState}
           puzzle={mockPuzzle}
@@ -778,7 +780,7 @@ describe("Connections Component", () => {
         mistakesRemaining: 0,
       };
 
-      rerender(
+      await rerender(
         <Connections
           gameState={lostGameState}
           puzzle={mockPuzzle}
@@ -812,7 +814,7 @@ describe("Connections Component", () => {
         completedGroups: [],
       };
 
-      const { getByLabelText } = render(
+      const { getByLabelText } = await render(
         <Connections
           gameState={lostGameState}
           puzzle={mockPuzzle}
@@ -840,7 +842,7 @@ describe("Connections Component", () => {
         completedGroups: ["TUBE LINES"],
       };
 
-      const { unmount } = render(
+      const { unmount } = await render(
         <Connections
           gameState={lostGameState}
           puzzle={mockPuzzle}
@@ -849,7 +851,7 @@ describe("Connections Component", () => {
       );
 
       // Unmount before reveal completes
-      unmount();
+      await unmount();
 
       // If timers weren't cleared, this would cause warnings
       // Wait to ensure no errors occur

@@ -10,7 +10,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
-import { Colors, TFL, Spacing, Typography } from '@/constants/theme';
+import { Colors, Spacing, Typography } from '@/constants/theme';
 import { GAMES, GameId } from '@/constants/Games';
 import { GameType } from '@/types/game';
 import { getCurrentWeek, shiftWeek } from '@/lib/week-utils';

@@ -40,10 +40,21 @@ describe('usePuzzle hook', () => {
   });
 
   it('starts loading then returns daily puzzle from DB layer', async () => {
-    const { result } = renderHook(() => usePuzzle());
+    // Hold the DB call open so the initial loading state is observable
+    // (RNTL v14's async renderHook flushes already-resolved promises).
+    let resolveDaily!: (p: CrosswordPuzzle) => void;
+    (getDailyGame as jest.Mock).mockReturnValue(
+      new Promise<CrosswordPuzzle>((resolve) => {
+        resolveDaily = resolve;
+      }),
+    );
+
+    const { result } = await renderHook(() => usePuzzle());
 
     expect(result.current.loading).toBe(true);
     expect(result.current.puzzle).toBeNull();
+
+    resolveDaily(mockDaily);
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
@@ -54,7 +65,7 @@ describe('usePuzzle hook', () => {
   });
 
   it('returns a specific puzzle when puzzleId matches DB', async () => {
-    const { result } = renderHook(() => usePuzzle('specific-1'));
+    const { result } = await renderHook(() => usePuzzle('specific-1'));
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
@@ -64,7 +75,7 @@ describe('usePuzzle hook', () => {
   });
 
   it('returns null when puzzleId is not found', async () => {
-    const { result } = renderHook(() => usePuzzle('non-existent'));
+    const { result } = await renderHook(() => usePuzzle('non-existent'));
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
@@ -73,7 +84,7 @@ describe('usePuzzle hook', () => {
   });
 
   it('recomputes when puzzleId changes', async () => {
-    const { result, rerender } = renderHook<
+    const { result, rerender } = await renderHook<
       { puzzle: CrosswordPuzzle | null; gameDate: string | null; loading: boolean },
       { id: string | undefined }
     >(
@@ -85,7 +96,7 @@ describe('usePuzzle hook', () => {
       expect(result.current.puzzle?.id).toBe('daily-1');
     });
 
-    rerender({ id: 'specific-1' });
+    await rerender({ id: 'specific-1' });
 
     await waitFor(() => {
       expect(result.current.puzzle?.id).toBe('specific-1');

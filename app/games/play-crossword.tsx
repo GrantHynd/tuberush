@@ -96,16 +96,10 @@ export default function PlayCrossword() {
                     { text: 'Cancel', onPress: () => router.back() },
                 ]
             );
-            setLoading(false);
             return;
         }
 
-        if (puzzleLoading) {
-            return;
-        }
-
-        if (!puzzle) {
-            setLoading(false);
+        if (puzzleLoading || !puzzle) {
             return;
         }
 
@@ -292,7 +286,9 @@ export default function PlayCrossword() {
         puzzleId: '', grid: [], clues: { across: {}, down: {} },
         userAnswers: {}, completed: false,
     });
-    timerRef.current.accumulatedPause = timer.accumulatedPause;
+    useEffect(() => {
+        timerRef.current.accumulatedPause = timer.accumulatedPause;
+    }, [timer.accumulatedPause]);
 
     if (!user?.isPremium) {
         return null;

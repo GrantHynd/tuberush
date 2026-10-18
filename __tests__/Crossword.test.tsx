@@ -63,8 +63,8 @@ describe('Crossword Component', () => {
   });
 
   describe('Rendering', () => {
-    it('renders across clues in the default tab', () => {
-      const { getByText } = render(
+    it('renders across clues in the default tab', async () => {
+      const { getByText } = await render(
         <Crossword puzzle={testPuzzle} gameState={baseGameState} onCellChange={mockOnCellChange} />
       );
 
@@ -73,19 +73,19 @@ describe('Crossword Component', () => {
       expect(getByText('Second across clue')).toBeTruthy();
     });
 
-    it('renders down clues when Down tab is pressed', () => {
-      const { getByText } = render(
+    it('renders down clues when Down tab is pressed', async () => {
+      const { getByText } = await render(
         <Crossword puzzle={testPuzzle} gameState={baseGameState} onCellChange={mockOnCellChange} />
       );
 
-      fireEvent.press(getByText('Down'));
+      await fireEvent.press(getByText('Down'));
 
       expect(getByText('First down clue')).toBeTruthy();
       expect(getByText('Second down clue')).toBeTruthy();
     });
 
-    it('renders cell numbers for numbered cells', () => {
-      const { getAllByText } = render(
+    it('renders cell numbers for numbered cells', async () => {
+      const { getAllByText } = await render(
         <Crossword puzzle={testPuzzle} gameState={baseGameState} onCellChange={mockOnCellChange} />
       );
 
@@ -95,13 +95,13 @@ describe('Crossword Component', () => {
       expect(getAllByText('3').length).toBeGreaterThanOrEqual(1);
     });
 
-    it('displays user answers in the grid', () => {
+    it('displays user answers in the grid', async () => {
       const gameStateWithAnswers: CrosswordState = {
         ...baseGameState,
         userAnswers: { '0-0': 'A', '0-1': 'B' },
       };
 
-      const { getAllByText } = render(
+      const { getAllByText } = await render(
         <Crossword puzzle={testPuzzle} gameState={gameStateWithAnswers} onCellChange={mockOnCellChange} />
       );
 
@@ -111,8 +111,8 @@ describe('Crossword Component', () => {
   });
 
   describe('Disabled state', () => {
-    it('disables all non-black cells when disabled prop is true', () => {
-      const { UNSAFE_getAllByType } = render(
+    it('disables all non-black cells when disabled prop is true', async () => {
+      const { getAllByRole } = await render(
         <Crossword
           puzzle={testPuzzle}
           gameState={baseGameState}
@@ -121,19 +121,17 @@ describe('Crossword Component', () => {
         />
       );
 
-      const touchables = UNSAFE_getAllByType(
-        require('react-native').TouchableOpacity
-      );
+      const touchables = getAllByRole('button');
 
       // All grid cell touchables should be disabled
       // (tabs and clue rows are also TouchableOpacity but they don't have disabled prop)
-      const gridCells = touchables.filter((t) => t.props.disabled === true);
+      const gridCells = touchables.filter((t) => t.props.accessibilityState?.disabled === true);
       // 9 cells total: 6 non-black (disabled via prop) + 3 black (always disabled)
       expect(gridCells.length).toBe(9);
     });
 
-    it('enables non-black cells when disabled prop is false', () => {
-      const { UNSAFE_getAllByType } = render(
+    it('enables non-black cells when disabled prop is false', async () => {
+      const { getAllByRole } = await render(
         <Crossword
           puzzle={testPuzzle}
           gameState={baseGameState}
@@ -142,18 +140,16 @@ describe('Crossword Component', () => {
         />
       );
 
-      const touchables = UNSAFE_getAllByType(
-        require('react-native').TouchableOpacity
-      );
+      const touchables = getAllByRole('button');
 
       // Only 3 black cells should be disabled
-      const disabledCells = touchables.filter((t) => t.props.disabled === true);
+      const disabledCells = touchables.filter((t) => t.props.accessibilityState?.disabled === true);
       expect(disabledCells.length).toBe(3);
     });
   });
 
   describe('Completed state display', () => {
-    it('renders correctly when puzzle is completed with all answers', () => {
+    it('renders correctly when puzzle is completed with all answers', async () => {
       const completedState: CrosswordState = {
         ...baseGameState,
         userAnswers: {
@@ -167,7 +163,7 @@ describe('Crossword Component', () => {
         completed: true,
       };
 
-      const { getByText } = render(
+      const { getByText } = await render(
         <Crossword
           puzzle={testPuzzle}
           gameState={completedState}
@@ -182,17 +178,15 @@ describe('Crossword Component', () => {
   });
 
   describe('Active clue panel', () => {
-    it('shows the active clue when a cell is tapped', () => {
-      const { UNSAFE_getAllByType, getByText } = render(
+    it('shows the active clue when a cell is tapped', async () => {
+      const { getAllByRole, getByText } = await render(
         <Crossword puzzle={testPuzzle} gameState={baseGameState} onCellChange={mockOnCellChange} />
       );
 
-      const touchables = UNSAFE_getAllByType(
-        require('react-native').TouchableOpacity
-      );
+      const touchables = getAllByRole('button');
 
       // Press first cell (row 0, col 0)
-      fireEvent.press(touchables[0]);
+      await fireEvent.press(touchables[0]);
 
       // Should show the active clue for 1 Across
       expect(getByText('First across clue')).toBeTruthy();
@@ -200,7 +194,7 @@ describe('Crossword Component', () => {
   });
 
   describe('Clue completion', () => {
-    it('applies strikethrough style to completed clues', () => {
+    it('applies strikethrough style to completed clues', async () => {
       const gameStateWithCompleted: CrosswordState = {
         ...baseGameState,
         userAnswers: {
@@ -209,7 +203,7 @@ describe('Crossword Component', () => {
         },
       };
 
-      const { getByText } = render(
+      const { getByText } = await render(
         <Crossword
           puzzle={testPuzzle}
           gameState={gameStateWithCompleted}

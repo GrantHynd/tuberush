@@ -1,8 +1,10 @@
 import { capture, identify, resetIdentity } from '@/lib/posthog';
 import { setUser as setSentryUser } from '@/lib/sentry';
 import { hasActiveEntitlement, logInRevenueCat, logOutRevenueCat } from '@/lib/revenuecat';
+import { StorageManager } from '@/lib/storage-manager';
 import { APP_SCHEME } from '@/constants/Games';
 import { supabase } from '@/lib/supabase-client';
+import { useGameStore } from '@/stores/game-store';
 import type { User } from '@/types/game';
 import { BOROUGHS } from '@/constants/Boroughs';
 import { Platform } from 'react-native';
@@ -47,6 +49,35 @@ function normalizeProfile(profile: { city?: string | null; borough?: string | nu
     return { city, borough };
 }
 
+const DELETE_ACCOUNT_FAILURE = 'Could not delete your account. Please try again.';
+
+/** Pull a safe message out of a failed `functions.invoke` response. */
+async function readFunctionError(error: unknown): Promise<string> {
+    if (!error || typeof error !== 'object') return DELETE_ACCOUNT_FAILURE;
+
+    const context = (error as { context?: { json?: () => Promise<unknown> } }).context;
+    if (typeof context?.json === 'function') {
+        try {
+            const body = await context.json();
+            if (
+                body &&
+                typeof body === 'object' &&
+                typeof (body as { error?: unknown }).error === 'string'
+            ) {
+                return (body as { error: string }).error;
+            }
+        } catch {
+            // Response body was empty or not JSON.
+        }
+    }
+
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === 'string' && message.length > 0 && !message.includes('non-2xx')) {
+        return message;
+    }
+    return DELETE_ACCOUNT_FAILURE;
+}
+
 interface AuthState {
     user: User | null;
     session: any;
@@ -55,6 +86,7 @@ interface AuthState {
     signUp: (email: string, password: string, username?: string) => Promise<void>;
     signIn: (email: string, password: string) => Promise<void>;
     signOut: () => Promise<void>;
+    deleteAccount: () => Promise<void>;
     checkSession: () => Promise<void>;
     refreshPremiumStatus: () => Promise<void>;
     refreshPremiumStatusFromRevenueCat: () => Promise<void>;
@@ -158,6 +190,42 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         syncSentryUser(null);
         await supabase.auth.signOut();
         set({ user: null, session: null });
+    },
+
+    deleteAccount: async () => {
+        const { data, error } = await supabase.functions.invoke('delete-account', {
+            method: 'POST',
+        });
+
+        if (error) {
+            throw new Error(await readFunctionError(error));
+        }
+        if (data && typeof data === 'object' && typeof (data as { error?: unknown }).error === 'string') {
+            throw new Error((data as { error: string }).error);
+        }
+
+        // The auth user is already gone, so local cleanup must succeed even when
+        // RevenueCat or the logout endpoint rejects the dead session.
+        try {
+            await logOutRevenueCat();
+        } catch {
+            // Ignore RevenueCat logout errors
+        }
+        capture('account_deleted');
+        resetIdentity();
+        syncSentryUser(null);
+        try {
+            await supabase.auth.signOut({ scope: 'local' });
+        } catch {
+            // A server sign-out can fail once the auth user no longer exists.
+        }
+        try {
+            await StorageManager.clearLocalAccountData();
+        } catch {
+            // Cached games must not keep the deleted account on screen.
+        }
+        useGameStore.setState({ currentGame: null, gameHistory: [] });
+        set({ user: null, session: null, pendingPasswordReset: false });
     },
 
     checkSession: async () => {

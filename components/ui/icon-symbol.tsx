@@ -1,9 +1,11 @@
 // Fallback for using MaterialIcons on Android and web.
 
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { SymbolViewProps, SymbolWeight } from 'expo-symbols';
+import { SymbolWeight } from 'expo-symbols';
 import { ComponentProps } from 'react';
 import { OpaqueColorValue, StyleProp, TextStyle } from 'react-native';
+
+type MaterialIconName = ComponentProps<typeof MaterialIcons>['name'];
 
 // Add your SFSymbol to MaterialIcons mappings here.
 const MAPPING = {
@@ -19,7 +21,7 @@ const MAPPING = {
   'arrow.clockwise': 'refresh',
   'arrow.right.square': 'logout',
   'ticket.fill': 'confirmation-number',
-} as Partial<Record<SymbolViewProps['name'], ComponentProps<typeof MaterialIcons>['name']>>;
+} as const satisfies Record<string, MaterialIconName>;
 
 export type IconSymbolName = keyof typeof MAPPING;
 

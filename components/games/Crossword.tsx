@@ -7,6 +7,7 @@ import {
     StyleSheet,
     Text,
     TextInput,
+    type TextInputInstance,
     TouchableOpacity,
     View,
     useWindowDimensions,
@@ -128,7 +129,7 @@ export function Crossword({ puzzle, gameState, onCellChange, disabled = false }:
     const { width: screenWidth } = useWindowDimensions();
     const [selectedCell, setSelectedCell] = useState<{ row: number; col: number } | null>(null);
     const [direction, setDirection] = useState<Direction>('across');
-    const inputRef = useRef<TextInput>(null);
+    const inputRef = useRef<TextInputInstance>(null);
 
     const grid = gameState.grid;
     const rows = grid.length;

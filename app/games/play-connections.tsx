@@ -62,6 +62,7 @@ export default function PlayConnectionsScreen() {
   const [loadError, setLoadError] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [revealComplete, setRevealComplete] = useState(false);
+  const [syncedGameId, setSyncedGameId] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     if (!user) {
@@ -229,16 +230,15 @@ export default function PlayConnectionsScreen() {
   const puzzleDate =
     dateParam || puzzle?.date || new Date().toISOString().split("T")[0];
 
-  // Handle already-lost game on mount
-  useEffect(() => {
-    if (currentGame) {
-      const state = currentGame.state as ConnectionsState;
-      if (state.status === "lost") {
-        setRevealComplete(true);
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentGame?.id]); // Only run when game id changes (mount or game switch)
+  // A reloaded lost game should skip the reveal animation. A loss during this
+  // session keeps the same id, so the submit handler can hold the banner back.
+  const loadedGameId = currentGame?.id;
+  const loadedIsLost =
+    !!currentGame && (currentGame.state as ConnectionsState).status === "lost";
+  if (loadedGameId !== syncedGameId) {
+    setSyncedGameId(loadedGameId);
+    setRevealComplete(loadedIsLost);
+  }
 
   if (loadError) {
     return (

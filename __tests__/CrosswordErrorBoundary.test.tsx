@@ -23,8 +23,8 @@ describe('CrosswordErrorBoundary', () => {
         console.error = originalConsoleError;
     });
 
-    it('renders children when no error', () => {
-        const { getByText } = render(
+    it('renders children when no error', async () => {
+        const { getByText } = await render(
             <CrosswordErrorBoundary>
                 <NormalChild />
             </CrosswordErrorBoundary>
@@ -32,8 +32,8 @@ describe('CrosswordErrorBoundary', () => {
         expect(getByText('Normal content')).toBeTruthy();
     });
 
-    it('renders fallback UI when a child throws', () => {
-        const { getByText } = render(
+    it('renders fallback UI when a child throws', async () => {
+        const { getByText } = await render(
             <CrosswordErrorBoundary>
                 <ThrowingChild />
             </CrosswordErrorBoundary>
@@ -42,16 +42,16 @@ describe('CrosswordErrorBoundary', () => {
         expect(getByText('Try Again')).toBeTruthy();
     });
 
-    it('calls onReset when Try Again is pressed', () => {
+    it('calls onReset when Try Again is pressed', async () => {
         const onReset = jest.fn();
-        const { getByText } = render(
+        const { getByText } = await render(
             <CrosswordErrorBoundary onReset={onReset}>
                 <ThrowingChild />
             </CrosswordErrorBoundary>
         );
 
         const { fireEvent } = require('@testing-library/react-native');
-        fireEvent.press(getByText('Try Again'));
+        await fireEvent.press(getByText('Try Again'));
 
         expect(onReset).toHaveBeenCalledTimes(1);
     });
