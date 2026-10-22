@@ -1,4 +1,5 @@
 import { capture, identify, resetIdentity } from '@/lib/posthog';
+import { userFromProfile, type ProfileRow } from '@/lib/profile';
 import { setUser as setSentryUser } from '@/lib/sentry';
 import { hasActiveEntitlement, logInRevenueCat, logOutRevenueCat } from '@/lib/revenuecat';
 import { StorageManager } from '@/lib/storage-manager';
@@ -6,7 +7,7 @@ import { APP_SCHEME } from '@/constants/Games';
 import { supabase } from '@/lib/supabase-client';
 import { useGameStore } from '@/stores/game-store';
 import type { User } from '@/types/game';
-import { BOROUGHS } from '@/constants/Boroughs';
+import type { Session } from '@supabase/supabase-js';
 import { Platform } from 'react-native';
 import { create } from 'zustand';
 
@@ -40,15 +41,6 @@ function syncSentryUser(
     });
 }
 
-/** Normalize profile: borough-only (legacy) → city=London, borough=value */
-function normalizeProfile(profile: { city?: string | null; borough?: string | null }) {
-    const city = profile.city ?? (profile.borough && BOROUGHS.includes(profile.borough as any) ? 'London' : null);
-    const borough = profile.borough && BOROUGHS.includes(profile.borough as any)
-        ? (profile.borough as import('@/constants/Boroughs').Borough)
-        : undefined;
-    return { city, borough };
-}
-
 const DELETE_ACCOUNT_FAILURE = 'Could not delete your account. Please try again.';
 
 /** Pull a safe message out of a failed `functions.invoke` response. */
@@ -80,7 +72,7 @@ async function readFunctionError(error: unknown): Promise<string> {
 
 interface AuthState {
     user: User | null;
-    session: any;
+    session: Session | null;
     loading: boolean;
     pendingPasswordReset: boolean;
     signUp: (email: string, password: string, username?: string) => Promise<void>;
@@ -167,13 +159,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             const isPremium = await resolvePremiumStatus();
 
             set({
-                user: {
+                user: userFromProfile({
                     id: data.user.id,
                     email: data.user.email!,
-                    username: profile?.username ?? undefined,
                     isPremium,
-                    ...normalizeProfile(profile || {}),
-                },
+                    profile: profile as ProfileRow | null,
+                }),
                 session: data.session,
             });
         }
@@ -253,13 +244,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             const isPremium = await resolvePremiumStatus();
 
             set({
-                user: {
+                user: userFromProfile({
                     id: session.user.id,
                     email: session.user.email!,
-                    username: profile?.username ?? undefined,
                     isPremium,
-                    ...normalizeProfile(profile || {}),
-                },
+                    profile: profile as ProfileRow | null,
+                }),
                 session,
                 loading: false,
             });
@@ -282,12 +272,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         const isPremium = await resolvePremiumStatus();
 
         set({
-            user: {
-                ...user,
-                isPremium,
-                ...(profile?.username ? { username: profile.username } : {}),
-                ...(profile ? normalizeProfile(profile) : {}),
-            },
+            user: profile
+                ? userFromProfile({
+                    id: user.id,
+                    email: user.email,
+                    isPremium,
+                    profile: profile as ProfileRow,
+                })
+                : { ...user, isPremium },
         });
     },
 
@@ -309,7 +301,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         if (!user) return;
 
         // Map camelCase to snake_case if needed
-        const dbUpdates: any = {};
+        const dbUpdates: { city?: string | null; borough?: string | null } = {};
         if (updates.city !== undefined) dbUpdates.city = updates.city;
         if (updates.borough !== undefined) dbUpdates.borough = updates.borough;
 

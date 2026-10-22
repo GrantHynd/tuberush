@@ -1,10 +1,12 @@
 import type { ConnectionsPuzzle } from '@/constants/ConnectionsData';
 import type { CrosswordPuzzle } from '@/types/game';
 import { getRecentAndUpcomingGames } from '@/lib/daily-games';
+import { formatScore } from '@/lib/display-utils';
 import { offlineSyncManager } from '@/lib/offline-sync-manager';
 import { supabase } from '@/lib/supabase-client';
+import { toLocalDateString } from '@/lib/week-utils';
 import { useAuthStore } from '@/stores/auth-store';
-import type { ConnectionsState, CrosswordState, GameState } from '@/types/game';
+import type { ConnectionsState, CrosswordState } from '@/types/game';
 import { useCallback, useEffect, useState } from 'react';
 
 async function getConnectionsPlayCount(date: string): Promise<number> {
@@ -52,19 +54,6 @@ export interface CrosswordCarouselItem extends PuzzleCarouselItem {
     puzzle: CrosswordPuzzle;
 }
 
-function formatTime(seconds: number): string {
-    const minutes = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${minutes}:${secs.toString().padStart(2, '0')}`;
-}
-
-function toLocalDateStr(d: Date): string {
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${y}-${m}-${day}`;
-}
-
 async function loadConnectionsCarousel(
     userId: string,
     limit: number = 7,
@@ -74,7 +63,7 @@ async function loadConnectionsCarousel(
     const playCounts = await Promise.all(
         sliced.map(g => getConnectionsPlayCount(g.game_date))
     );
-    const today = toLocalDateStr(new Date());
+    const today = toLocalDateString(new Date());
     const items: ConnectionsCarouselItem[] = [];
 
     for (let i = 0; i < sliced.length; i++) {
@@ -92,7 +81,7 @@ async function loadConnectionsCarousel(
 
         if (isCompleted && state?.startTime && state?.endTime) {
             const duration = Math.floor((state.endTime - state.startTime) / 1000);
-            completionTime = formatTime(duration);
+            completionTime = formatScore(duration);
             score = `${state.mistakesRemaining}/4`;
         }
 
@@ -115,7 +104,7 @@ async function loadConnectionsCarousel(
 async function loadCrosswordCarousel(userId: string): Promise<CrosswordCarouselItem[]> {
     const games = await getRecentAndUpcomingGames('crossword', 7, 0);
     const sliced = games.slice(0, 7);
-    const today = toLocalDateStr(new Date());
+    const today = toLocalDateString(new Date());
     const items: CrosswordCarouselItem[] = [];
 
     for (let i = 0; i < sliced.length; i++) {

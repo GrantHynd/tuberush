@@ -2,6 +2,7 @@ import { GameTypeBadge } from '@/components/ui/GameTypeBadge';
 import { Colors, Layout, Spacing, TFL, Typography } from '@/constants/theme';
 import { useGameHistory } from '@/hooks/useGameHistory';
 import { useUserStats } from '@/hooks/useUserStats';
+import { formatScore } from '@/lib/display-utils';
 import React from 'react';
 import { ActivityIndicator, FlatList, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -15,12 +16,6 @@ export default function StatsScreen() {
     function formatDate(dateString: string): string {
         const date = new Date(dateString + 'T00:00:00');
         return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-    }
-
-    function formatTime(seconds: number): string {
-        const mins = Math.floor(seconds / 60);
-        const secs = seconds % 60;
-        return `${mins}:${secs.toString().padStart(2, '0')}`;
     }
 
     return (
@@ -74,7 +69,7 @@ export default function StatsScreen() {
                                                                 {formatDate(item.date)}
                                                             </Text>
                                                             <Text style={styles.historyTime}>
-                                                                {formatTime(item.score)}
+                                                                {formatScore(item.score)}
                                                             </Text>
                                                         </View>
                                                         <View style={styles.historyRight}>

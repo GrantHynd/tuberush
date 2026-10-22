@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '@/lib/supabase-client';
 import { useAuthStore } from '@/stores/auth-store';
 import { useGameStore } from '@/stores/game-store';
+import type { Session } from '@supabase/supabase-js';
 
 jest.mock('@/lib/revenuecat', () => ({
   hasActiveEntitlement: jest.fn(() => Promise.resolve(false)),
@@ -21,7 +22,7 @@ describe('deleteAccount', () => {
         email: 'rider@example.com',
         isPremium: true,
       },
-      session: { access_token: 'token' },
+      session: { access_token: 'token' } as Session,
       loading: false,
       pendingPasswordReset: true,
     });

@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { ConnectionsPuzzle } from '@/constants/ConnectionsData';
 import type { CrosswordPuzzle } from '@/types/game';
 import { supabase } from './supabase-client';
+import { toLocalDateString } from './week-utils';
 
 type GameType = 'connections' | 'crossword';
 
@@ -26,13 +27,6 @@ interface CacheEntry {
 
 function cacheKey(gameType: GameType): string {
   return `${CACHE_KEY_PREFIX}${gameType}`;
-}
-
-function toLocalDateStr(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -71,10 +65,10 @@ async function fetchFromSupabase(
   days: number,
 ): Promise<DailyGameRow[] | null> {
   try {
-    const today = toLocalDateStr(new Date());
+    const today = toLocalDateString(new Date());
     const future = new Date();
     future.setDate(future.getDate() + days);
-    const futureStr = toLocalDateStr(future);
+    const futureStr = toLocalDateString(future);
 
     const { data, error } = await supabase
       .from('games')
@@ -100,11 +94,11 @@ async function fetchRecentAndUpcoming(
   try {
     const past = new Date();
     past.setDate(past.getDate() - pastDays);
-    const pastStr = toLocalDateStr(past);
+    const pastStr = toLocalDateString(past);
 
     const future = new Date();
     future.setDate(future.getDate() + futureDays);
-    const futureStr = toLocalDateStr(future);
+    const futureStr = toLocalDateString(future);
 
     const { data, error } = await supabase
       .from('games')
@@ -160,7 +154,7 @@ export async function prefetchDailyGames(
 export async function getDailyGame(
   gameType: GameType,
 ): Promise<ConnectionsPuzzle | CrosswordPuzzle | undefined> {
-  const today = toLocalDateStr(new Date());
+  const today = toLocalDateString(new Date());
 
   const games = await fetchFromSupabase(gameType, 7);
   if (games && games.length > 0) {
@@ -264,11 +258,11 @@ export async function getRecentAndUpcomingGames(
 ): Promise<GameWithDate[]> {
   const past = new Date();
   past.setDate(past.getDate() - pastDays);
-  const pastStr = toLocalDateStr(past);
+  const pastStr = toLocalDateString(past);
 
   const future = new Date();
   future.setDate(future.getDate() + futureDays);
-  const futureStr = toLocalDateStr(future);
+  const futureStr = toLocalDateString(future);
 
   const games = await fetchRecentAndUpcoming(gameType, pastDays, futureDays);
   if (games && games.length > 0) {

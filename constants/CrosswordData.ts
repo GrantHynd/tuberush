@@ -1,3 +1,4 @@
+import { toLocalDateString } from '@/lib/week-utils';
 import type { CrosswordPuzzle } from '@/types/game';
 
 /**
@@ -198,23 +199,15 @@ export const getRecentPuzzles = (limit = 7): CrosswordPuzzle[] => {
         .slice(0, limit);
 };
 
-/** Format a date as YYYY-MM-DD in local timezone (avoids UTC off-by-one) */
-function toLocalDateStr(d: Date): string {
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${y}-${m}-${day}`;
-}
-
 /** Returns recent puzzles with offset for pagination (most recent first).
  *  Fix dates before sorting: puzzle 1 = today, puzzle 2 = yesterday, so order is correct.
  *  Uses local timezone for correct "Today"/"Yesterday" labels. */
 export const getRecentPuzzlesWithOffset = (limit: number, offset: number): CrosswordPuzzle[] => {
     const today = new Date();
-    const todayStr = toLocalDateStr(today);
+    const todayStr = toLocalDateString(today);
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = toLocalDateStr(yesterday);
+    const yesterdayStr = toLocalDateString(yesterday);
 
     const withFixedDates = CROSSWORD_DATA.map(p => {
         if (p.id === '1') return { ...p, date: todayStr };

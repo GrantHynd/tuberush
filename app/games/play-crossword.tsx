@@ -3,6 +3,7 @@ import { CrosswordErrorBoundary } from '@/components/games/CrosswordErrorBoundar
 import { Leaderboard } from '@/components/ui/Leaderboard';
 import { Colors, Layout, Spacing, TFL, Typography } from '@/constants/theme';
 import { getCustomPuzzle, saveCustomPuzzleScore } from '@/lib/custom-puzzles';
+import { formatScore } from '@/lib/display-utils';
 import { leaderboard } from '@/lib/leaderboard';
 import { capture } from '@/lib/posthog';
 import { useAuthStore } from '@/stores/auth-store';
@@ -36,12 +37,6 @@ function formatPuzzleDate(dateStr: string): string {
     const month = date.toLocaleString('en-GB', { month: 'short' });
     const year = date.getFullYear();
     return `${day} ${month} ${year}`;
-}
-
-function formatTime(seconds: number): string {
-    const minutes = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${minutes}:${secs.toString().padStart(2, '0')}`;
 }
 
 export default function PlayCrossword() {
@@ -371,7 +366,7 @@ export default function PlayCrossword() {
 
     const handleShare = async () => {
         if (completionTimeSecs == null) return;
-        const timeStr = formatTime(completionTimeSecs);
+        const timeStr = formatScore(completionTimeSecs);
         capture('game_shared', { game_type: 'crossword', is_custom: isCustomPuzzle });
         try {
             const message = isCustomPuzzle
@@ -454,7 +449,7 @@ export default function PlayCrossword() {
                             <Text style={styles.gameOverTitle}>Well done!</Text>
                             {completionTimeSecs != null && (
                                 <Text style={styles.gameOverTime}>
-                                    Solved in {formatTime(completionTimeSecs)}
+                                    Solved in {formatScore(completionTimeSecs)}
                                 </Text>
                             )}
                             <View style={styles.gameOverActions}>

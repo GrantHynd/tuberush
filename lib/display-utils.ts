@@ -30,7 +30,7 @@ export function getAvatarInitial(displayName: string): string {
   return first;
 }
 
-/** Format seconds as M:SS */
+/** Format a duration in seconds as M:SS. Shared by stats, games, and leaderboards. */
 export function formatScore(seconds: number): string {
   const mins = Math.floor(seconds / 60);
   const secs = seconds % 60;

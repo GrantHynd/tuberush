@@ -1,15 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { leaderboard } from '@/lib/leaderboard';
-import { GameType, WeeklyLeaderboardEntry, GameOverviewData } from '@/types/game';
+import { buildLeaderboardOverview, type OverviewStats } from '@/lib/leaderboard-overview';
+import { GameType, GameOverviewData } from '@/types/game';
 import { GAMES, GameId } from '@/constants/Games';
 import { useAuthStore } from '@/stores/auth-store';
-
-interface OverviewStats {
-    overallRank: number | null;
-    totalScore: number;
-    topPercent: number | null;
-    totalPlayers: number;
-}
 
 interface UseLeaderboardOverviewResult {
     games: GameOverviewData[];
@@ -17,18 +11,6 @@ interface UseLeaderboardOverviewResult {
     loading: boolean;
     error: string | null;
     refetch: () => void;
-}
-
-function getNearbyEntries(
-    entries: WeeklyLeaderboardEntry[],
-    userId: string,
-    windowSize: number = 3
-): WeeklyLeaderboardEntry[] {
-    const idx = entries.findIndex((e) => e.userId === userId);
-    if (idx === -1) return entries.slice(0, windowSize * 2 + 1);
-    const start = Math.max(0, idx - windowSize);
-    const end = Math.min(entries.length, idx + windowSize + 1);
-    return entries.slice(start, end);
 }
 
 export function useLeaderboardOverview(
@@ -61,55 +43,17 @@ export function useLeaderboardOverview(
                 )
             );
 
-            let combinedScore = 0;
-            let maxPlayers = 0;
-            const avgRanks: number[] = [];
+            const overview = buildLeaderboardOverview(
+                gameIds as GameType[],
+                results,
+                user?.id,
+            );
 
-            const gameData: GameOverviewData[] = gameIds.map((gt, i) => {
-                const { entries, totalPlayers } = results[i];
-                const userEntry = user
-                    ? entries.find((e) => e.userId === user.id)
-                    : undefined;
-
-                if (userEntry) {
-                    combinedScore += userEntry.totalScore;
-                    avgRanks.push(userEntry.rank);
-                }
-
-                if (totalPlayers > maxPlayers) maxPlayers = totalPlayers;
-
-                return {
-                    gameType: gt as GameType,
-                    userRank: userEntry?.rank ?? null,
-                    totalPlayers,
-                    userScore: userEntry?.totalScore ?? null,
-                    nearbyEntries: user
-                        ? getNearbyEntries(entries, user.id)
-                        : entries.slice(0, 7),
-                };
-            });
-
-            const overallRank =
-                avgRanks.length > 0
-                    ? Math.round(
-                          avgRanks.reduce((a, b) => a + b, 0) / avgRanks.length
-                      )
-                    : null;
-
-            const topPercent =
-                overallRank != null && maxPlayers > 0
-                    ? Math.max(1, Math.round((overallRank / maxPlayers) * 100))
-                    : null;
-
-            setGames(gameData);
-            setStats({
-                overallRank,
-                totalScore: combinedScore,
-                topPercent,
-                totalPlayers: maxPlayers,
-            });
-        } catch (e: any) {
-            setError(e?.message ?? 'Failed to load overview');
+            setGames(overview.games);
+            setStats(overview.stats);
+        } catch (e: unknown) {
+            const message = e instanceof Error ? e.message : 'Failed to load overview';
+            setError(message);
         } finally {
             setLoading(false);
         }

@@ -47,7 +47,7 @@ A daily word game app for British commuters, built with React Native/Expo, offli
 
 ## Tech Stack
 
-- **Frontend**: React Native with Expo (SDK 54), Expo Router
+- **Frontend**: React Native with Expo (SDK 58), Expo Router
 - **Language**: TypeScript
 - **State Management**: Zustand
 - **Backend**: Supabase (PostgreSQL, Auth, Edge Functions)
@@ -88,6 +88,16 @@ tuberush-v2/
     ├── schema.sql / seed.sql
     └── README.md            # Setup guide
 ```
+
+## Area guides
+
+How the main product areas fit together:
+
+- [Auth](docs/areas/auth.md) — session, profile, premium, account deletion
+- [Games](docs/areas/games.md) — daily puzzles, custom puzzles, offline play
+- [Leaderboard](docs/areas/leaderboard.md) — weekly ranks and score submission
+- [Stats](docs/areas/stats.md) — streak, best time, history
+- [Settings](docs/areas/settings.md) — location, sync, account actions
 
 ## Getting Started
 

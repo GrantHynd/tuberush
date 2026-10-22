@@ -3,7 +3,8 @@ const MONTHS = [
   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
 ];
 
-function toDateString(d: Date): string {
+/** YYYY-MM-DD in the device's local timezone. */
+export function toLocalDateString(d: Date): string {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
@@ -24,7 +25,7 @@ export function getWeekRange(date: Date): { start: string; end: string } {
   monday.setDate(d.getDate() + diffToMonday);
   const sunday = new Date(monday);
   sunday.setDate(monday.getDate() + 6);
-  return { start: toDateString(monday), end: toDateString(sunday) };
+  return { start: toLocalDateString(monday), end: toLocalDateString(sunday) };
 }
 
 export function getCurrentWeek(): { start: string; end: string } {
