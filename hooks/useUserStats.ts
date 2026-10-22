@@ -1,6 +1,11 @@
 import { leaderboard } from '@/lib/leaderboard';
 import { offlineSyncManager } from '@/lib/offline-sync-manager';
 import { StorageManager } from '@/lib/storage-manager';
+import {
+    calculateStreakFromDates,
+    selectBestTime,
+    type BestTimeGameType,
+} from '@/lib/user-stats';
 import { useAuthStore } from '@/stores/auth-store';
 import type { ConnectionsState, CrosswordState } from '@/types/game';
 import {
@@ -9,55 +14,20 @@ import {
 } from '@/config/gameHistoryConfigs';
 import { useCallback, useEffect, useState } from 'react';
 
-function formatTime(seconds: number): string {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-}
-
-/** Check if connections state is a win */
-function isConnectionsWin(state: ConnectionsState | undefined): boolean {
-    return state?.status === 'won';
-}
-
-/** Check if crossword state is completed (crossword completion = win) */
-function isCrosswordWin(state: CrosswordState | undefined): boolean {
-    return state?.completed === true;
-}
-
-/** Format date as YYYY-MM-DD in local timezone (matches game puzzle dates) */
-function toLocalDateStr(d: Date): string {
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${y}-${m}-${day}`;
-}
-
-/** Calculate streak from set of dates where user completed any game. Counts consecutive days from today backwards. */
-function calculateStreakFromDates(completedDates: Set<string>): number {
-    const today = new Date();
-    today.setHours(12, 0, 0, 0);
-    let streak = 0;
-    let checkDate = new Date(today);
-
-    for (let i = 0; i < 365; i++) {
-        const dateStr = toLocalDateStr(checkDate);
-        if (completedDates.has(dateStr)) {
-            streak++;
-            checkDate.setDate(checkDate.getDate() - 1);
-        } else {
-            break;
-        }
-    }
-    return streak;
-}
-
-export type BestTimeGameType = 'connections' | 'crossword';
+export type { BestTimeGameType };
 
 export interface UserStats {
     bestTime: string | null;
     bestTimeGameType: BestTimeGameType | null;
     streak: number;
+}
+
+function isConnectionsWin(state: ConnectionsState | undefined): boolean {
+    return state?.status === 'won';
+}
+
+function isCrosswordWin(state: CrosswordState | undefined): boolean {
+    return state?.completed === true;
 }
 
 export function useUserStats() {
@@ -83,28 +53,8 @@ export function useUserStats() {
                 loadUserStreak(user.id),
             ]);
 
-            let bestTime: string | null = null;
-            let bestTimeGameType: BestTimeGameType | null = null;
-
-            if (connectionsBest !== null && crosswordBest !== null) {
-                if (connectionsBest <= crosswordBest) {
-                    bestTime = formatTime(connectionsBest);
-                    bestTimeGameType = 'connections';
-                } else {
-                    bestTime = formatTime(crosswordBest);
-                    bestTimeGameType = 'crossword';
-                }
-            } else if (connectionsBest !== null) {
-                bestTime = formatTime(connectionsBest);
-                bestTimeGameType = 'connections';
-            } else if (crosswordBest !== null) {
-                bestTime = formatTime(crosswordBest);
-                bestTimeGameType = 'crossword';
-            }
-
             setStats({
-                bestTime,
-                bestTimeGameType,
+                ...selectBestTime(connectionsBest, crosswordBest),
                 streak,
             });
         } catch (err) {
@@ -122,9 +72,9 @@ export function useUserStats() {
     return { stats, loading, refresh: load };
 }
 
-/** Load game states for both connections and crossword, compute streak from wins per day */
+/** Wins across both games over the last 60 published puzzles, counted as a daily streak. */
 async function loadUserStreak(userId: string): Promise<number> {
-    const DAYS_TO_CHECK = 60; // Check last 60 days for streak
+    const DAYS_TO_CHECK = 60;
     const connPuzzles = await Promise.resolve(connectionsGameHistoryConfig.getPuzzlesWithOffset(
         DAYS_TO_CHECK,
         0

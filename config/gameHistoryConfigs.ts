@@ -1,19 +1,8 @@
+import { formatScore } from "@/lib/display-utils";
 import { supabase } from "@/lib/supabase-client";
+import { toLocalDateString } from "@/lib/week-utils";
 import type { ConnectionsState, CrosswordState } from "@/types/game";
 import type { BasePuzzle, GameHistoryConfig } from "@/types/game-history";
-
-function formatTime(seconds: number): string {
-  const minutes = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  return `${minutes}:${secs.toString().padStart(2, "0")}`;
-}
-
-function toLocalDateStr(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
 
 async function fetchPuzzlesFromDB(
   gameType: "connections" | "crossword",
@@ -32,8 +21,8 @@ async function fetchPuzzlesFromDB(
       .select("game_date, puzzle_data")
       .eq("game_type", gameType)
       .eq("is_published", true)
-      .lte("game_date", toLocalDateStr(startDate))
-      .gte("game_date", toLocalDateStr(endDate))
+      .lte("game_date", toLocalDateString(startDate))
+      .gte("game_date", toLocalDateString(endDate))
       .order("game_date", { ascending: false })
       .limit(limit);
 
@@ -90,7 +79,7 @@ export const connectionsGameHistoryConfig: GameHistoryConfig = {
     let score: string | undefined;
     if (isCompleted && state?.startTime && state?.endTime) {
       const duration = Math.floor((state.endTime - state.startTime) / 1000);
-      completionTime = formatTime(duration);
+      completionTime = formatScore(duration);
       score = `${state.mistakesRemaining}/4`;
     }
     return { isCompleted, isWon, completionTime, score };
@@ -143,7 +132,7 @@ export const crosswordGameHistoryConfig: GameHistoryConfig = {
     if (isCompleted && state?.startTime != null && state?.endTime != null) {
       const pauseMs = state.accumulatedPause ?? 0;
       const duration = Math.floor((state.endTime - state.startTime - pauseMs) / 1000);
-      completionTime = formatTime(Math.max(0, duration));
+      completionTime = formatScore(Math.max(0, duration));
     }
     return { isCompleted, isWon: isCompleted, completionTime };
   },

@@ -23,6 +23,7 @@ import { Colors, TFL, Typography, Spacing, Layout } from '@/constants/theme';
 import { BOROUGHS, Borough } from '@/constants/Boroughs';
 import { UK_CITIES, isLondon } from '@/constants/UKCities';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { formatSettingsLocation } from '@/lib/profile';
 import Constants from 'expo-constants';
 
 const APPLE_SUBSCRIPTIONS_URL = 'https://apps.apple.com/account/subscriptions';
@@ -42,14 +43,6 @@ function subscriptionManagementUrl(): string {
     return Platform.OS === 'android' ? PLAY_SUBSCRIPTIONS_URL : APPLE_SUBSCRIPTIONS_URL;
 }
 
-function getLocationDisplayValue(user: { city?: string | null; borough?: string | null }): string {
-    if (!user.city) return 'Not set';
-    if (isLondon(user.city) && user.borough) {
-        return `London, ${user.borough}`;
-    }
-    return user.city;
-}
-
 export default function ProfileScreen() {
     const router = useRouter();
     const { user, signOut, updateProfile, deleteAccount } = useAuthStore();
@@ -57,8 +50,6 @@ export default function ProfileScreen() {
     const [locationModalVisible, setLocationModalVisible] = useState(false);
     const [deletingAccount, setDeletingAccount] = useState(false);
     const [locationStep, setLocationStep] = useState<'city' | 'borough'>('city');
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const [selectedCity, setSelectedCity] = useState<string | null>(null);
 
     const handleSignOut = () => {
         Alert.alert(
@@ -123,7 +114,6 @@ export default function ProfileScreen() {
 
     const handleCitySelect = (city: string) => {
         if (isLondon(city)) {
-            setSelectedCity(city);
             setLocationStep('borough');
         } else {
             handleLocationComplete(city, null);
@@ -139,7 +129,6 @@ export default function ProfileScreen() {
             await updateProfile({ city, borough });
             setLocationModalVisible(false);
             setLocationStep('city');
-            setSelectedCity(null);
         } catch (err) {
             console.error('Failed to update location:', err);
             Alert.alert(
@@ -152,12 +141,10 @@ export default function ProfileScreen() {
     const handleLocationModalClose = () => {
         setLocationModalVisible(false);
         setLocationStep('city');
-        setSelectedCity(null);
     };
 
     const openLocationModal = () => {
         setLocationStep('city');
-        setSelectedCity(null);
         setLocationModalVisible(true);
     };
 
@@ -213,7 +200,7 @@ export default function ProfileScreen() {
                         style={styles.cardRow}
                         onPress={openLocationModal}
                         accessibilityRole="button"
-                        accessibilityLabel={`City or town: ${getLocationDisplayValue(user)}`}
+                        accessibilityLabel={`City or town: ${formatSettingsLocation(user)}`}
                     >
                         <Text style={styles.rowLabel}>City/Town</Text>
                         <View style={styles.rowRight}>
@@ -221,9 +208,9 @@ export default function ProfileScreen() {
                                 style={styles.rowValueTruncatable}
                                 numberOfLines={1}
                                 ellipsizeMode="tail"
-                                accessibilityLabel={getLocationDisplayValue(user)}
+                                accessibilityLabel={formatSettingsLocation(user)}
                             >
-                                {getLocationDisplayValue(user)}
+                                {formatSettingsLocation(user)}
                             </Text>
                             <IconSymbol name="chevron.right" size={20} color={Colors.light.icon} />
                         </View>

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { Colors, Typography, Spacing, Layout } from '@/constants/theme';
+import { formatScore } from '@/lib/display-utils';
 import { leaderboard, getLocationDisplay, LeaderboardFilter } from '@/lib/leaderboard';
 import { useAuthStore } from '@/stores/auth-store';
 
@@ -42,12 +43,6 @@ export function Leaderboard({ gameType, date, onClose }: LeaderboardProps) {
             cancelled = true;
         };
     }, [gameType, date, filter, user, requestKey]);
-
-    const formatTime = (seconds: number) => {
-        const mins = Math.floor(seconds / 60);
-        const secs = seconds % 60;
-        return `${mins}:${secs.toString().padStart(2, '0')}`;
-    };
 
     const getMyAreaLabel = () => {
         if (!user?.city) return 'My Area';
@@ -118,7 +113,7 @@ export function Leaderboard({ gameType, date, onClose }: LeaderboardProps) {
                                     {getLocationDisplay(item)}
                                 </Text>
                             </View>
-                            <Text style={styles.score}>{formatTime(item.score)}</Text>
+                            <Text style={styles.score}>{formatScore(item.score)}</Text>
                         </View>
                     )}
                     ListEmptyComponent={

@@ -4,7 +4,7 @@
 React Native / Expo mobile app using Expo Router, Supabase backend, and TypeScript.
 
 ## Tech Stack
-- **Framework**: Expo SDK 54 with Expo Router
+- **Framework**: Expo SDK 58 with Expo Router
 - **Language**: TypeScript
 - **Backend**: Supabase (auth, database, edge functions)
 - **State**: Zustand (stores/)

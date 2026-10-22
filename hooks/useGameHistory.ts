@@ -1,30 +1,16 @@
+import { toGameHistoryEntry, type GameHistoryEntry } from '@/lib/game-history';
 import { supabase } from '@/lib/supabase-client';
 import { useAuthStore } from '@/stores/auth-store';
-import { GameType } from '@/types/game';
+import type { GameType } from '@/types/game';
 import { useCallback, useEffect, useState } from 'react';
 
-export interface GameHistoryEntry {
+export type { GameHistoryEntry };
+
+interface LeaderboardHistoryRow {
     id: string;
-    gameType: GameType;
-    date: string;
+    game_type: GameType;
+    game_date: string;
     score: number;
-    result: 'win' | 'loss';
-    points: number;
-}
-
-function formatTime(seconds: number): string {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-}
-
-function calculatePoints(score: number, gameType: GameType): number {
-    if (score < 60) return 32;
-    if (score < 120) return 18;
-    if (score < 180) return 8;
-    if (score < 240) return 4;
-    if (score < 300) return 3;
-    return 2;
 }
 
 export function useGameHistory() {
@@ -52,20 +38,7 @@ export function useGameHistory() {
 
             if (error) throw error;
 
-            const historyEntries: GameHistoryEntry[] = (data || []).map((entry: any) => {
-                const timeString = formatTime(entry.score);
-                const result: 'win' | 'loss' = entry.score < 600 ? 'win' : 'loss';
-                const points = calculatePoints(entry.score, entry.game_type);
-
-                return {
-                    id: entry.id,
-                    gameType: entry.game_type,
-                    date: entry.game_date,
-                    score: entry.score,
-                    result,
-                    points,
-                };
-            });
+            const historyEntries = ((data ?? []) as LeaderboardHistoryRow[]).map(toGameHistoryEntry);
 
             setHistory(historyEntries);
             setGamesPlayed(historyEntries.length);
