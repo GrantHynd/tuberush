@@ -1,3 +1,4 @@
+import { PRIVACY_POLICY_ROUTE, TERMS_OF_USE_ROUTE } from '@/lib/legal';
 import { capture } from '@/lib/posthog';
 import { useAuthStore } from '@/stores/auth-store';
 import { useRouter } from 'expo-router';
@@ -6,6 +7,7 @@ import {
     ActivityIndicator,
     Alert,
     Platform,
+    ScrollView,
     StyleSheet,
     Text,
     TouchableOpacity,
@@ -78,8 +80,8 @@ export default function SubscribeScreen() {
     };
 
     return (
-        <View style={styles.container}>
-            <View style={styles.content}>
+        <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+            <View style={styles.inner}>
                 <Text style={styles.logo}>⭐</Text>
                 <Text style={styles.title}>Go Premium!</Text>
                 <Text style={styles.subtitle}>Unlock exclusive features</Text>
@@ -120,10 +122,32 @@ export default function SubscribeScreen() {
                 </TouchableOpacity>
 
                 <Text style={styles.disclaimer}>
-                    Cancel anytime. Monthly and yearly plans available.
+                    TubeRush Pro is an auto-renewable subscription, billed monthly or yearly.
+                    The price and length are shown on the purchase screen before you confirm.
+                    Payment is charged to your Apple ID or Google Play account. The plan renews
+                    unless you cancel at least 24 hours before the period ends, in your store
+                    account settings. Deleting your TubeRush account does not cancel the subscription.
                 </Text>
+
+                <View style={styles.legalRow}>
+                    <TouchableOpacity
+                        onPress={() => router.push(PRIVACY_POLICY_ROUTE)}
+                        accessibilityRole="link"
+                        testID="subscribe-privacy-link"
+                    >
+                        <Text style={styles.legalLink}>Privacy Policy</Text>
+                    </TouchableOpacity>
+                    <Text style={styles.legalSeparator}>·</Text>
+                    <TouchableOpacity
+                        onPress={() => router.push(TERMS_OF_USE_ROUTE)}
+                        accessibilityRole="link"
+                        testID="subscribe-terms-link"
+                    >
+                        <Text style={styles.legalLink}>Terms of Use (EULA)</Text>
+                    </TouchableOpacity>
+                </View>
             </View>
-        </View>
+        </ScrollView>
     );
 }
 
@@ -134,6 +158,9 @@ const styles = StyleSheet.create({
     },
     content: {
         padding: 30,
+        paddingBottom: 48,
+    },
+    inner: {
         alignItems: 'center',
     },
     logo: {
@@ -189,8 +216,25 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
     },
     disclaimer: {
-        fontSize: 12,
-        color: '#95a5a6',
+        fontSize: 13,
+        lineHeight: 18,
+        color: '#7f8c8d',
         textAlign: 'center',
+    },
+    legalRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 10,
+        marginTop: 16,
+    },
+    legalLink: {
+        color: '#3498db',
+        fontSize: 15,
+        fontWeight: '600',
+    },
+    legalSeparator: {
+        color: '#95a5a6',
+        fontSize: 15,
     },
 });

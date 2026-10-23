@@ -1,4 +1,5 @@
 import ProfileScreen from '@/app/(tabs)/profile';
+import { PRIVACY_POLICY_ROUTE, TERMS_OF_USE_ROUTE } from '@/lib/legal';
 import { useAuthStore } from '@/stores/auth-store';
 import { useGameStore } from '@/stores/game-store';
 import { act, fireEvent, render } from '@testing-library/react-native';
@@ -72,6 +73,53 @@ describe('ProfileScreen', () => {
     expect(getByText('Sign in to save your game progress and compete on the leaderboard.')).toBeTruthy();
     expect(getByText('Sign In')).toBeTruthy();
     expect(queryByText('Delete Account')).toBeNull();
+    expect(getByText('Privacy Policy')).toBeTruthy();
+    expect(getByText('Terms of Use')).toBeTruthy();
+  });
+
+  it('opens the privacy policy from settings', async () => {
+    const push = jest.fn();
+    (useRouter as jest.Mock).mockReturnValue({
+      push,
+      replace: jest.fn(),
+      back: jest.fn(),
+    });
+    (useAuthStore as unknown as jest.Mock).mockReturnValue({
+      user: null,
+      signOut: jest.fn(),
+      updateProfile: jest.fn(),
+    });
+
+    const { getByTestId } = await render(<ProfileScreen />);
+    await fireEvent.press(getByTestId('settings-privacy-link'));
+
+    expect(push).toHaveBeenCalledWith(PRIVACY_POLICY_ROUTE);
+  });
+
+  it('opens the terms of use from settings when signed in', async () => {
+    const push = jest.fn();
+    (useRouter as jest.Mock).mockReturnValue({
+      push,
+      replace: jest.fn(),
+      back: jest.fn(),
+    });
+    (useAuthStore as unknown as jest.Mock).mockReturnValue({
+      user: {
+        id: 'user1',
+        email: 'test@example.com',
+        isPremium: false,
+        city: null,
+        borough: null,
+      },
+      signOut: jest.fn(),
+      updateProfile: jest.fn(),
+      deleteAccount: jest.fn(),
+    });
+
+    const { getByTestId } = await render(<ProfileScreen />);
+    await fireEvent.press(getByTestId('settings-terms-link'));
+
+    expect(push).toHaveBeenCalledWith(TERMS_OF_USE_ROUTE);
   });
 
   it('renders City/Town preference when logged in', async () => {

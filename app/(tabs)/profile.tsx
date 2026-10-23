@@ -1,3 +1,4 @@
+import { LegalSection } from '@/components/LegalSection';
 import { HeaderBackButton } from '@/components/ui/HeaderBackButton';
 import { SearchSelect } from '@/components/ui/SearchSelect';
 import { useAuthStore } from '@/stores/auth-store';
@@ -167,6 +168,7 @@ export default function ProfileScreen() {
                         <Text style={styles.primaryButtonText}>Sign In</Text>
                     </TouchableOpacity>
                 </View>
+                <LegalSection />
             </SafeAreaView>
         );
     }
@@ -244,6 +246,8 @@ export default function ProfileScreen() {
                     </View>
                 </View>
             </View>
+
+            <LegalSection />
 
             <TouchableOpacity
                 testID="profile-sign-out-button"

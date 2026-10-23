@@ -1,5 +1,6 @@
-import { useAuthStore } from '@/stores/auth-store';
 import { TFL } from '@/constants/theme';
+import { PRIVACY_POLICY_ROUTE, TERMS_OF_USE_ROUTE } from '@/lib/legal';
+import { useAuthStore } from '@/stores/auth-store';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
@@ -134,6 +135,30 @@ export default function AuthScreen() {
                         )}
                     </TouchableOpacity>
 
+                    {isSignUp && (
+                        <Text style={styles.legalText}>
+                            By creating an account, you agree to our{' '}
+                            <Text
+                                style={styles.legalLink}
+                                onPress={() => router.push(TERMS_OF_USE_ROUTE)}
+                                accessibilityRole="link"
+                                testID="auth-terms-link"
+                            >
+                                Terms of Use
+                            </Text>
+                            {' '}and{' '}
+                            <Text
+                                style={styles.legalLink}
+                                onPress={() => router.push(PRIVACY_POLICY_ROUTE)}
+                                accessibilityRole="link"
+                                testID="auth-privacy-link"
+                            >
+                                Privacy Policy
+                            </Text>
+                            .
+                        </Text>
+                    )}
+
                     <TouchableOpacity
                         testID="auth-switch-button"
                         style={styles.switchButton}
@@ -238,5 +263,16 @@ const styles = StyleSheet.create({
     switchText: {
         color: TFL.blue,
         fontSize: 14,
+    },
+    legalText: {
+        color: '#4B5563',
+        fontSize: 14,
+        lineHeight: 20,
+        textAlign: 'center',
+    },
+    legalLink: {
+        color: TFL.blue,
+        fontSize: 14,
+        fontWeight: '600',
     },
 });
