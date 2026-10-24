@@ -1,52 +1,41 @@
 import React from 'react';
 import { Card } from '@/components/ui/Card';
 import { View, Text, StyleSheet } from 'react-native';
-import { Colors, TFL } from '@/constants/theme';
-import { formatMaybe, formatScore } from '@/lib/display-utils';
+import { Colors, Spacing, TFL, Typography } from '@/constants/theme';
+import { formatScore } from '@/lib/display-utils';
 
 interface PersonalSummaryCardProps {
     overallRank: number | null;
     totalScore: number;
-    topPercent: number | null;
+    /** Only rendered once ranked; unranked users see the Trophy EmptyState instead. */
+    topPercent: number;
 }
 
-export function PersonalSummaryCard({
-    overallRank,
-    totalScore,
-    topPercent,
-}: PersonalSummaryCardProps) {
+export function PersonalSummaryCard({ overallRank, totalScore, topPercent }: PersonalSummaryCardProps) {
     return (
-        <Card variant="tinted" style={styles.card}>
-            <View style={styles.column}>
-                <Text style={styles.label}>Overall</Text>
-                <Text style={styles.value}>
-                    {formatMaybe(overallRank, (r) => `#${r}`)}
-                </Text>
+        <Card variant="tinted">
+            <View style={styles.row}>
+                <View style={styles.column} accessible>
+                    <Text style={styles.label}>Overall</Text>
+                    <Text style={styles.value}>{overallRank != null ? `#${overallRank}` : ''}</Text>
+                </View>
+
+                <View style={styles.divider} />
+
+                <View style={styles.column} accessible>
+                    <Text style={styles.label}>Total Score</Text>
+                    <Text style={styles.value}>{formatScore(totalScore)}</Text>
+                </View>
             </View>
 
-            <View style={styles.divider} />
-
-            <View style={styles.column}>
-                <Text style={styles.label}>Total Score</Text>
-                <Text style={styles.value}>
-                    {formatMaybe(totalScore > 0 ? totalScore : null, formatScore)}
-                </Text>
-            </View>
-
-            <View style={styles.divider} />
-
-            <View style={styles.column}>
-                <Text style={styles.label}>Top %</Text>
-                <Text style={[styles.value, styles.percentValue]}>
-                    {formatMaybe(topPercent, (t) => `${t}%`)}
-                </Text>
-            </View>
+            <View style={styles.hairline} />
+            <Text style={styles.topPercent}>Top {topPercent}% of commuters this week</Text>
         </Card>
     );
 }
 
 const styles = StyleSheet.create({
-    card: {
+    row: {
         flexDirection: 'row',
         alignItems: 'center',
     },
@@ -58,6 +47,11 @@ const styles = StyleSheet.create({
         width: 1,
         height: 36,
         backgroundColor: Colors.light.border,
+    },
+    hairline: {
+        height: StyleSheet.hairlineWidth,
+        backgroundColor: Colors.light.border,
+        marginTop: Spacing.md,
     },
     label: {
         fontSize: 12,
@@ -72,7 +66,11 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         color: Colors.light.text,
     },
-    percentValue: {
+    topPercent: {
+        ...Typography.body,
+        fontWeight: '600',
         color: TFL.blue,
+        textAlign: 'center',
+        paddingTop: Spacing.s12,
     },
 });

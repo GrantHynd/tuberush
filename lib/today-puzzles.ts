@@ -108,3 +108,11 @@ export function getTodaysNextGame(
     }
     return null;
 }
+
+/** Trophy empty-state body: borough when a London borough is set, else city, else generic. */
+export function getRankingPrompt(user: { city?: string | null; borough?: string | null } | null): string {
+    const area = user?.city === 'London' && user?.borough ? user.borough : user?.city || null;
+    return area
+        ? `Play today's puzzle to get ranked against commuters in ${area}.`
+        : "Play today's puzzle to get ranked against other commuters.";
+}
