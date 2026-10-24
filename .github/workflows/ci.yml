@@ -50,6 +50,60 @@ jobs:
       - name: Unit Tests
         run: npm test
 
+  lambda:
+    name: Lambda (Typecheck, Test, SAM Build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        function: [generate-crossword, generate-connections]
+    defaults:
+      run:
+        working-directory: lambda/${{ matrix.function }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+          cache-dependency-path: lambda/${{ matrix.function }}/package-lock.json
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Type Check
+        run: npx tsc --noEmit -p .
+
+      - name: Unit Tests
+        run: npm run test --if-present
+
+  sam:
+    name: SAM Validate & Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: aws-actions/setup-sam@v2
+        with:
+          use-installer: true
+
+      - name: Install esbuild (required by SAM esbuild BuildMethod)
+        run: npm install -g esbuild
+
+      - name: SAM Validate
+        # --lint runs cfn-lint offline; region is only needed for the validate call
+        run: sam validate --lint --region us-east-1
+
+      - name: SAM Build
+        run: sam build
+
   e2e-test:
     name: E2E Tests (iOS)
     runs-on: macos-latest
