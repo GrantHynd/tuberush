@@ -1,13 +1,23 @@
 import { Tabs } from 'expo-router';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import React from 'react';
+import { Text } from 'react-native';
 
-import { TFL } from '@/constants/theme';
+import { Colors } from '@/constants/theme';
 import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 
 function tabIconColor(color: unknown): string {
-  return typeof color === 'string' ? color : TFL.grey.medium;
+  return typeof color === 'string' ? color : Colors.light.tabIconDefault;
+}
+
+/** Active tabs are distinguished by hue (brand blue) plus weight, not lightness alone. */
+function TabLabel({ focused, color, children }: { focused: boolean; color: string; children: string }) {
+  return (
+    <Text style={{ color, fontSize: 10, fontWeight: focused ? '600' : '400' }} numberOfLines={1}>
+      {children}
+    </Text>
+  );
 }
 
 export default function TabLayout() {
@@ -16,14 +26,22 @@ export default function TabLayout() {
       screenOptions={{
         headerShown: false,
         tabBarButton: HapticTab,
-        tabBarActiveTintColor: TFL.blue,
-        tabBarInactiveTintColor: TFL.grey.medium,
+        tabBarActiveTintColor: Colors.light.tabIconSelected,
+        tabBarInactiveTintColor: Colors.light.tabIconDefault,
+        tabBarStyle: { backgroundColor: Colors.light.tabBarBackground },
+        tabBarLabel: ({ focused, color, children }) => (
+          <TabLabel focused={focused} color={tabIconColor(color)}>
+            {children}
+          </TabLabel>
+        ),
       }}>
       <Tabs.Screen
         name="index"
         options={{
           title: 'Games',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={tabIconColor(color)} />,
+          tabBarIcon: ({ color, focused }) => (
+            <IconSymbol size={28} name={focused ? 'house.fill' : 'house'} color={tabIconColor(color)} />
+          ),
         }}
       />
       <Tabs.Screen
@@ -44,7 +62,9 @@ export default function TabLayout() {
         name="profile"
         options={{
           title: 'Profile',
-          tabBarIcon: ({ color }) => <MaterialIcons name="person" size={26} color={tabIconColor(color)} />,
+          tabBarIcon: ({ color, focused }) => (
+            <MaterialIcons name={focused ? 'person' : 'person-outline'} size={26} color={tabIconColor(color)} />
+          ),
         }}
       />
     </Tabs>
