@@ -3,6 +3,7 @@ import { render, fireEvent } from '@testing-library/react-native';
 import HomeScreen from '@/app/(tabs)/index';
 import { useAuthStore } from '@/stores/auth-store';
 import { useRouter } from 'expo-router';
+import { useLocationRank } from '@/hooks/useLocationRank';
 
 // Mock dependencies
 jest.mock('@/stores/auth-store', () => ({
@@ -142,5 +143,20 @@ describe('HomeScreen', () => {
     expect(mockPush).toHaveBeenCalledWith(
       '/games/play-crossword?puzzleId=1',
     );
+  });
+
+  it('explains how to get ranked when the user has no area rank yet', async () => {
+    (useAuthStore as unknown as jest.Mock).mockReturnValue({ user: null });
+    (useLocationRank as jest.Mock).mockReturnValueOnce({
+      rank: { location: 'Barking and Dagenham', rank: 0 },
+      loading: false,
+      refresh: jest.fn(),
+    });
+
+    const { getByText } = await render(<HomeScreen />);
+
+    expect(
+      getByText("Play today's puzzle to get ranked in Barking and Dagenham"),
+    ).toBeTruthy();
   });
 });

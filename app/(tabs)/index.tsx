@@ -11,6 +11,7 @@ import { useLocationRank } from '@/hooks/useLocationRank';
 import { usePuzzleCarousel } from '@/hooks/usePuzzleCarousel';
 import { useUserStats } from '@/hooks/useUserStats';
 import { formatMaybe } from '@/lib/display-utils';
+import { useTabBarBottomInset } from '@/hooks/useTabBarBottomInset';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Sentry from '@sentry/react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -30,6 +31,7 @@ const CARD_GAP = 12;
 
 export default function HomeScreen() {
     const router = useRouter();
+    const bottomInset = useTabBarBottomInset();
     const { user } = useAuthStore();
     const { items: connectionsItems, refresh: refreshConnections } = usePuzzleCarousel('connections');
     const { items: crosswordItems, refresh: refreshCrossword } = usePuzzleCarousel('crossword');
@@ -67,7 +69,7 @@ export default function HomeScreen() {
     return (
         <SafeAreaView style={styles.container} edges={['top']}>
             <ScrollView
-                contentContainerStyle={styles.scrollContent}
+                contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomInset }]}
                 showsVerticalScrollIndicator={false}
             >
                 {/* Header */}
@@ -201,7 +203,7 @@ export default function HomeScreen() {
                             <Text style={styles.boroughRank}>
                                 {rank.rank > 0
                                     ? `Rank #${rank.rank} in your area`
-                                    : 'No rank yet in your area'}
+                                    : `Play today's puzzle to get ranked in ${rank.location}`}
                             </Text>
                         </View>
                         <MaterialIcons
@@ -223,7 +225,6 @@ const styles = StyleSheet.create({
     },
     scrollContent: {
         paddingHorizontal: HORIZONTAL_PADDING,
-        paddingBottom: Spacing.xl,
     },
     sentryTestButton: {
         backgroundColor: TFL.blue,
