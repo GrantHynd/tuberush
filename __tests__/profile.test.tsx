@@ -393,4 +393,37 @@ describe('ProfileScreen', () => {
     expect(alertSpy).toHaveBeenLastCalledWith('Could not delete account', 'Please try again.');
     alertSpy.mockRestore();
   });
+
+  describe('membership (TUB-267)', () => {
+    const base = { id: 'u1', email: 'a@b.com', city: null, borough: null, username: null };
+    const mockUser = (isPremium: boolean) =>
+      (useAuthStore as unknown as jest.Mock).mockReturnValue({
+        user: { ...base, isPremium },
+        signOut: jest.fn(),
+        updateProfile: jest.fn(),
+        deleteAccount: jest.fn(),
+      });
+
+    it('free user sees upsell card instead of Membership row', async () => {
+      const push = jest.fn();
+      (useRouter as jest.Mock).mockReturnValue({ push, replace: jest.fn(), back: jest.fn() });
+      mockUser(false);
+      const { getByTestId, queryByText, getByText } = await render(<ProfileScreen />);
+      expect(queryByText('Membership')).toBeNull();
+      expect(getByTestId('profile-upsell')).toBeTruthy();
+      expect(getByText('Crossword leaderboards and more')).toBeTruthy();
+      expect(queryByText('Manage subscription')).toBeNull();
+      await fireEvent.press(getByText('See 1st Class'));
+      expect(push).toHaveBeenCalledWith('/subscribe');
+    });
+
+    it('paid user sees Manage subscription row, no upsell', async () => {
+      const open = jest.spyOn(Linking, 'openURL').mockResolvedValue(true as never);
+      mockUser(true);
+      const { queryByTestId, getByText } = await render(<ProfileScreen />);
+      expect(queryByTestId('profile-upsell')).toBeNull();
+      await fireEvent.press(getByText('Manage subscription'));
+      expect(open).toHaveBeenCalled();
+    });
+  });
 });

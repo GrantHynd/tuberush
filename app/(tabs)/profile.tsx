@@ -1,6 +1,7 @@
 import { Card } from '@/components/ui/Card';
 import { LegalSection } from '@/components/LegalSection';
 import { SyncStatusRow } from '@/components/ui/SyncStatusRow';
+import { UpsellCard } from '@/components/ui/UpsellCard';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { SearchSelect } from '@/components/ui/SearchSelect';
 import { useAuthStore } from '@/stores/auth-store';
@@ -73,6 +74,12 @@ export default function ProfileScreen() {
                 },
             ]
         );
+    };
+
+    const handleManageSubscription = () => {
+        Linking.openURL(subscriptionManagementUrl()).catch(() => {
+            Alert.alert('Subscriptions', subscriptionNotice());
+        });
     };
 
     const handleDeleteAccount = () => {
@@ -275,17 +282,38 @@ export default function ProfileScreen() {
 
                     <View style={styles.cardDivider} />
 
-                    <View style={styles.cardRow}>
-                        <Text style={styles.rowLabel}>Membership</Text>
-                        <Text style={styles.rowValueTruncatable} numberOfLines={1} ellipsizeMode="tail">
-                            {getMembershipTier()}
-                        </Text>
-                    </View>
-                    
-                    <View style={styles.cardDivider} />
-                    
+                    {user.isPremium ? (
+                        <>
+                            <TouchableOpacity
+                                testID="profile-manage-subscription"
+                                style={styles.cardRow}
+                                onPress={handleManageSubscription}
+                                accessibilityRole="button"
+                                accessibilityLabel="Manage subscription"
+                            >
+                                <Text style={styles.rowLabel}>Manage subscription</Text>
+                                <IconSymbol name="chevron.right" size={20} color={Colors.light.icon} />
+                            </TouchableOpacity>
+                            <View style={styles.cardDivider} />
+                        </>
+                    ) : null}
+
                     <SyncStatusRow syncStatus={syncStatus} onRetry={handleSync} />
                 </Card>
+
+                {!user.isPremium ? (
+                    <View style={styles.upsell}>
+                        <UpsellCard
+                            testID="profile-upsell"
+                            icon={<IconSymbol name="ticket.fill" size={24} color={Colors.light.text} />}
+                            title="Upgrade to 1st Class"
+                            badge={null}
+                            valueProp="Crossword leaderboards and more"
+                            ctaLabel="See 1st Class"
+                            onPress={() => router.push('/subscribe')}
+                        />
+                    </View>
+                ) : null}
             </View>
 
             <LegalSection />
@@ -388,6 +416,9 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
+    upsell: {
+        marginTop: Spacing.md,
+    },
     headerGutter: {
         paddingHorizontal: Layout.screenPadding,
     },

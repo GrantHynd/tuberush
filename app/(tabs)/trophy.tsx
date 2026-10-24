@@ -2,6 +2,8 @@ import { GameSummaryCard } from "@/components/leaderboard/GameSummaryCard";
 import { LiveBadge } from "@/components/leaderboard/LiveBadge";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { UpsellCard } from "@/components/ui/UpsellCard";
+import { MaterialIcons } from "@expo/vector-icons";
 import { PersonalSummaryCard } from "@/components/leaderboard/PersonalSummaryCard";
 import { GAMES, GameId } from "@/constants/Games";
 import { Colors, Layout, Spacing, Typography } from "@/constants/theme";
@@ -91,12 +93,31 @@ export default function TrophyScreen() {
                 const game = GAMES[gameId];
                 const isLocked = game.isPremium && !user?.isPremium;
 
+                if (isLocked) {
+                  return (
+                    <UpsellCard
+                      key={gameId}
+                      testID={`upsell-${gameId}`}
+                      icon={
+                        <MaterialIcons
+                          name={game.icon}
+                          size={24}
+                          color={Colors.light.text}
+                        />
+                      }
+                      title={game.name}
+                      titleIsHeader
+                      valueProp={`See your ${game.name.split(" ")[0]} rank and the full weekly board`}
+                      onPress={() => router.push("/subscribe" as never)}
+                    />
+                  );
+                }
+
                 return (
                   <GameSummaryCard
                     key={gameId}
                     data={gameData}
                     currentUserId={user?.id}
-                    isLocked={isLocked}
                     onFullBoard={() =>
                       router.push(
                         `/leaderboard/game?gameType=${gameId}` as never,
