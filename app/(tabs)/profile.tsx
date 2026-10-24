@@ -1,5 +1,6 @@
 import { LegalSection } from '@/components/LegalSection';
 import { HeaderBackButton } from '@/components/ui/HeaderBackButton';
+import { SyncStatusRow } from '@/components/ui/SyncStatusRow';
 import { SearchSelect } from '@/components/ui/SearchSelect';
 import { useAuthStore } from '@/stores/auth-store';
 import { useGameStore } from '@/stores/game-store';
@@ -48,7 +49,7 @@ function subscriptionManagementUrl(): string {
 export default function ProfileScreen() {
     const router = useRouter();
     const { user, signOut, updateProfile, deleteAccount } = useAuthStore();
-    const { syncNow } = useGameStore();
+    const { syncNow, syncStatus } = useGameStore();
     const [locationModalVisible, setLocationModalVisible] = useState(false);
     const [deletingAccount, setDeletingAccount] = useState(false);
     const [locationStep, setLocationStep] = useState<'city' | 'borough'>('city');
@@ -110,8 +111,8 @@ export default function ProfileScreen() {
     };
 
     const handleSync = async () => {
+        // Result is reflected passively in the Sync Status row.
         await syncNow();
-        Alert.alert('Sync', 'Sync completed!');
     };
 
     const handleCitySelect = (city: string) => {
@@ -246,17 +247,7 @@ export default function ProfileScreen() {
                     
                     <View style={styles.cardDivider} />
                     
-                    <View style={styles.cardRow}>
-                        <Text style={styles.rowLabel}>Sync Status</Text>
-                        <View style={styles.rowRight}>
-                            <Text style={styles.rowValueTruncatable} numberOfLines={1} ellipsizeMode="tail">
-                                Synced
-                            </Text>
-                            <TouchableOpacity onPress={handleSync} style={styles.syncButton} accessibilityLabel="Sync now">
-                                <IconSymbol name="arrow.clockwise" size={20} color={Colors.light.tint} />
-                            </TouchableOpacity>
-                        </View>
-                    </View>
+                    <SyncStatusRow syncStatus={syncStatus} onRetry={handleSync} />
                 </View>
             </View>
 
@@ -454,10 +445,6 @@ const styles = StyleSheet.create({
         gap: Spacing.sm,
         flex: 1,
         minWidth: 0,
-    },
-    syncButton: {
-        marginLeft: 4,
-        flexShrink: 0,
     },
     sentryTestButton: {
         marginHorizontal: Spacing.md,
