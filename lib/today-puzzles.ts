@@ -93,14 +93,15 @@ export function getTodaysNextGame(
     user: UserLike,
     items: { connections: PuzzleCarouselItem[]; crossword: PuzzleCarouselItem[] },
     now: Date = new Date(),
+    only?: TodayGameType,
 ): { route: string; gameType: TodayGameType | null } | null {
     if (!user) return { route: '/auth', gameType: null };
     const today = toLocalDateString(now);
     const conn = findToday(items.connections, now);
-    if (!conn || conn.status !== 'completed') {
+    if (only !== 'crossword' && (!conn || conn.status !== 'completed')) {
         return { route: `/games/play-connections?date=${conn?.date ?? today}`, gameType: 'connections' };
     }
-    if (user.isPremium) {
+    if (user.isPremium && only !== 'connections') {
         const cw = findToday(items.crossword, now);
         if (cw && cw.status !== 'completed') {
             return { route: `/games/play-crossword?puzzleId=${cw.puzzleId}`, gameType: 'crossword' };

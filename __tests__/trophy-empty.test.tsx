@@ -62,7 +62,7 @@ describe('TrophyScreen personal summary', () => {
         );
         const { getByText, queryByText } = await render(<TrophyScreen />);
         expect(getByText('#4')).toBeTruthy();
-        expect(getByText('Top 12% of commuters this week')).toBeTruthy();
+        expect(getByText('Top 12% of commuters in Hackney this week')).toBeTruthy();
         expect(queryByText('Top %')).toBeNull();
         expect(queryByText('—')).toBeNull();
         expect(queryByText("You're not on the board yet")).toBeNull();

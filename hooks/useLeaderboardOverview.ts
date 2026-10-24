@@ -15,7 +15,9 @@ interface UseLeaderboardOverviewResult {
 
 export function useLeaderboardOverview(
     weekStart: string,
-    weekEnd: string
+    weekEnd: string,
+    /** TUB-265: restrict every board (and the personal summary) to this area. */
+    area?: { city: string; borough: string | null } | null
 ): UseLeaderboardOverviewResult {
     const { user } = useAuthStore();
     const [games, setGames] = useState<GameOverviewData[]>([]);
@@ -38,7 +40,9 @@ export function useLeaderboardOverview(
                     leaderboard.getWeeklyLeaderboard(
                         gt as GameType,
                         weekStart,
-                        weekEnd
+                        weekEnd,
+                        area?.city ?? null,
+                        area?.borough ?? null
                     )
                 )
             );
@@ -57,7 +61,7 @@ export function useLeaderboardOverview(
         } finally {
             setLoading(false);
         }
-    }, [weekStart, weekEnd, user]);
+    }, [weekStart, weekEnd, user, area?.city, area?.borough]);
 
     useEffect(() => {
         fetch();

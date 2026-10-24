@@ -9,9 +9,11 @@ interface PersonalSummaryCardProps {
     totalScore: number;
     /** Only rendered once ranked; unranked users see the Trophy EmptyState instead. */
     topPercent: number;
+    /** TUB-265: area name when the board is filtered to My area. */
+    areaName?: string | null;
 }
 
-export function PersonalSummaryCard({ overallRank, totalScore, topPercent }: PersonalSummaryCardProps) {
+export function PersonalSummaryCard({ overallRank, totalScore, topPercent, areaName }: PersonalSummaryCardProps) {
     return (
         <Card variant="tinted">
             <View style={styles.row}>
@@ -29,7 +31,7 @@ export function PersonalSummaryCard({ overallRank, totalScore, topPercent }: Per
             </View>
 
             <View style={styles.hairline} />
-            <Text style={styles.topPercent}>Top {topPercent}% of commuters this week</Text>
+            <Text style={styles.topPercent}>Top {topPercent}% of commuters{areaName ? ` in ${areaName}` : ''} this week</Text>
         </Card>
     );
 }

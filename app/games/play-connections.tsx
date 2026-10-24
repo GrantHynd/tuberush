@@ -186,7 +186,8 @@ export default function PlayConnectionsScreen() {
                   user.city,
                   user.city === "London" ? user.borough ?? null : null,
                   timeTaken,
-                  "connections"
+                  "connections",
+                  { result: "won", mistakes: 4 - newState.mistakesRemaining },
                 )
                 .catch((err) =>
                   console.error("Failed to submit score", err),
@@ -209,6 +210,22 @@ export default function PlayConnectionsScreen() {
             result: "lost",
             groups_found: newState.completedGroups.length,
           });
+          // TUB-257: record the real loss server-side (ignored by ranks).
+          if (user && !isCustomPuzzle && user.city && newState.startTime != null) {
+            const lostSeconds = Math.floor(
+              (newState.endTime - newState.startTime) / 1000,
+            );
+            leaderboard
+              .submitScore(
+                user.id,
+                user.city,
+                user.city === "London" ? user.borough ?? null : null,
+                lostSeconds,
+                "connections",
+                { result: "lost", mistakes: 4 },
+              )
+              .catch((err) => console.error("Failed to submit loss", err));
+          }
         }
       }
 

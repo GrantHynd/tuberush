@@ -36,7 +36,7 @@ describe('StatsScreen empty state', () => {
             getByText('Solve a puzzle on your next journey and your times, streaks and scores will appear here.'),
         ).toBeTruthy();
         expect(queryByText('GAME HISTORY')).toBeNull();
-        expect(queryByText('Games Played')).toBeNull();
+        expect(queryByText('Games played')).toBeNull();
         await fireEvent.press(getByText('Play now'));
         expect(push).toHaveBeenCalledWith(expect.stringContaining('/games/play-connections'));
     });
@@ -49,7 +49,7 @@ describe('StatsScreen empty state', () => {
         });
         const { getByText, queryByTestId } = await render(<StatsScreen />);
         expect(getByText('GAME HISTORY')).toBeTruthy();
-        expect(getByText('Games Played')).toBeTruthy();
+        expect(getByText('Games played')).toBeTruthy();
         expect(queryByTestId('stats-empty')).toBeNull();
     });
 });

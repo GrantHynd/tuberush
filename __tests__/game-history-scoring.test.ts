@@ -1,7 +1,5 @@
 import {
-    HISTORY_WIN_UNDER_SECONDS,
     scoreToPoints,
-    scoreToResult,
     toGameHistoryEntry,
 } from '@/lib/game-history';
 
@@ -21,12 +19,6 @@ describe('scoreToPoints', () => {
     });
 });
 
-describe('scoreToResult', () => {
-    it('counts times under 10 minutes as a win', () => {
-        expect(scoreToResult(HISTORY_WIN_UNDER_SECONDS - 1)).toBe('win');
-        expect(scoreToResult(HISTORY_WIN_UNDER_SECONDS)).toBe('loss');
-    });
-});
 
 describe('toGameHistoryEntry', () => {
     it('maps a leaderboard row into a history entry', () => {
@@ -42,6 +34,20 @@ describe('toGameHistoryEntry', () => {
             score: 45,
             result: 'win',
             points: 32,
+            mistakes: null,
         });
+    });
+
+    it('uses the stored result, not the time (TUB-257)', () => {
+        const slowWin = toGameHistoryEntry({ id: 'a', game_type: 'connections', game_date: '2026-10-21', score: 900, result: 'won', mistakes: 2 });
+        expect(slowWin.result).toBe('win');
+        expect(slowWin.mistakes).toBe(2);
+        const fastLoss = toGameHistoryEntry({ id: 'b', game_type: 'connections', game_date: '2026-10-21', score: 30, result: 'lost', mistakes: 4 });
+        expect(fastLoss.result).toBe('loss');
+        expect(fastLoss.points).toBe(0);
+    });
+
+    it('treats legacy rows (no result) as wins, since only wins were submitted', () => {
+        expect(toGameHistoryEntry({ id: 'c', game_type: 'crossword', game_date: '2026-10-21', score: 1200 }).result).toBe('win');
     });
 });
