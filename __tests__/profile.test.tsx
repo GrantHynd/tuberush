@@ -77,6 +77,19 @@ describe('ProfileScreen', () => {
     expect(getByText('Terms of Use')).toBeTruthy();
   });
 
+  it('titles the tab root "Profile" with no back button (TUB-266)', async () => {
+    (useAuthStore as unknown as jest.Mock).mockReturnValue({
+      user: null,
+      signOut: jest.fn(),
+      updateProfile: jest.fn(),
+    });
+
+    const { getByText, queryByLabelText } = await render(<ProfileScreen />);
+
+    expect(getByText('Profile')).toBeTruthy();
+    expect(queryByLabelText('Go back')).toBeNull();
+  });
+
   it('opens the privacy policy from settings', async () => {
     const push = jest.fn();
     (useRouter as jest.Mock).mockReturnValue({
