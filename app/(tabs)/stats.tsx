@@ -1,3 +1,4 @@
+import { Card } from '@/components/ui/Card';
 import { GameTypeBadge } from '@/components/ui/GameTypeBadge';
 import { Colors, Layout, Spacing, TFL, Typography } from '@/constants/theme';
 import { useGameHistory } from '@/hooks/useGameHistory';
@@ -30,23 +31,23 @@ export default function StatsScreen() {
                 ) : (
                     <>
                         <View style={styles.statsRow}>
-                            <View style={styles.statCard}>
+                            <Card variant="tinted" style={styles.statCard} accessible>
                                 <Text style={styles.statValue}>{gamesPlayed}</Text>
                                 <Text style={styles.statLabel}>Games Played</Text>
-                            </View>
-                            <View style={styles.statCard}>
+                            </Card>
+                            <Card variant="tinted" style={styles.statCard} accessible>
                                 <Text style={styles.statValue}>{stats.streak}</Text>
                                 <Text style={styles.statLabel}>Win Streak</Text>
-                            </View>
-                            <View style={styles.statCard}>
+                            </Card>
+                            <Card variant="tinted" style={styles.statCard} accessible>
                                 <Text style={styles.statValue}>{formatMaybe(stats.bestTime)}</Text>
                                 <Text style={styles.statLabel}>Best Time</Text>
-                            </View>
+                            </Card>
                         </View>
 
                         <View style={styles.historySection}>
                             <Text style={styles.sectionHeader}>GAME HISTORY</Text>
-                            <View style={styles.historyCard}>
+                            <Card variant="tinted">
                                 {history.length === 0 ? (
                                     <View style={styles.emptyState}>
                                         <Text style={styles.emptyText}>No games played yet</Text>
@@ -97,7 +98,7 @@ export default function StatsScreen() {
                                         </View>
                                     </>
                                 )}
-                            </View>
+                            </Card>
                         </View>
                     </>
                 )}
@@ -127,14 +128,11 @@ const styles = StyleSheet.create({
     },
     statsRow: {
         flexDirection: 'row',
-        gap: Spacing.sm,
+        gap: Layout.cardGap,
         marginBottom: Spacing.lg,
     },
     statCard: {
         flex: 1,
-        backgroundColor: Colors.light.card,
-        borderRadius: Layout.borderRadius.lg,
-        padding: Spacing.md,
         minHeight: 100,
         justifyContent: 'center',
         alignItems: 'center',
@@ -155,11 +153,6 @@ const styles = StyleSheet.create({
     sectionHeader: {
         ...Typography.label,
         marginBottom: Spacing.sm,
-    },
-    historyCard: {
-        backgroundColor: Colors.light.card,
-        borderRadius: Layout.borderRadius.lg,
-        padding: Spacing.md,
     },
     emptyState: {
         paddingVertical: Spacing.xl,

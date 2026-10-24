@@ -1,7 +1,8 @@
-import { Colors, Layout, Spacing, TFL, Typography } from '@/constants/theme';
+import { Card } from '@/components/ui/Card';
+import { Colors, Spacing, TFL, Typography } from '@/constants/theme';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 
 export interface StatCardProps {
     icon: keyof typeof MaterialIcons.glyphMap;
@@ -13,7 +14,7 @@ export interface StatCardProps {
 
 export function StatCard({ icon, label, value, sublabel }: StatCardProps) {
     return (
-        <View style={styles.card}>
+        <Card variant="tinted" style={styles.card} accessible>
             <MaterialIcons
                 name={icon}
                 size={24}
@@ -25,16 +26,13 @@ export function StatCard({ icon, label, value, sublabel }: StatCardProps) {
             {sublabel ? (
                 <Text style={styles.sublabel}>{sublabel}</Text>
             ) : null}
-        </View>
+        </Card>
     );
 }
 
 const styles = StyleSheet.create({
     card: {
         flex: 1,
-        backgroundColor: Colors.light.card,
-        borderRadius: Layout.borderRadius.lg,
-        padding: Spacing.md,
         minHeight: 80,
     },
     icon: {

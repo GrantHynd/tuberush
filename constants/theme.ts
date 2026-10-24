@@ -107,13 +107,34 @@ export const Typography = {
 export const Spacing = {
   xs: 4,
   sm: 8,
+  s12: 12,
   md: 16,
   lg: 24,
   xl: 32,
   xxl: 48,
 };
 
+/** Corner radii. Cards always use `lg`; badges/chips inside cards use `sm` or `pill`. */
+export const Radius = {
+  sm: 4,
+  md: 8,
+  lg: 12,
+  pill: 999,
+};
+
+/** The single card elevation style: a 1px border, no shadow. */
+export const CardSurface = {
+  borderWidth: 1,
+  borderColor: Colors.light.border,
+};
+
 export const Layout = {
+  /** Horizontal gutter used on every screen. */
+  screenPadding: 16,
+  /** Gap between adjacent cards (carousels, stat rows, stacked cards). */
+  cardGap: 12,
+  /** Inner padding of a card. */
+  cardPadding: 16,
   borderRadius: {
     sm: 4,
     md: 8,

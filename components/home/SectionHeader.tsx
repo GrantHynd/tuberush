@@ -1,4 +1,4 @@
-import { Colors, Spacing, Typography } from '@/constants/theme';
+import { Colors, Radius, Spacing, Typography } from '@/constants/theme';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import React from 'react';
 import {
@@ -75,7 +75,7 @@ const styles = StyleSheet.create({
         backgroundColor: Colors.light.border,
         paddingHorizontal: 8,
         paddingVertical: 2,
-        borderRadius: 4,
+        borderRadius: Radius.sm,
     },
     badgeText: {
         fontSize: 11,
