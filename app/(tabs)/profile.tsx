@@ -1,5 +1,4 @@
 import { LegalSection } from '@/components/LegalSection';
-import { HeaderBackButton } from '@/components/ui/HeaderBackButton';
 import { SyncStatusRow } from '@/components/ui/SyncStatusRow';
 import { SearchSelect } from '@/components/ui/SearchSelect';
 import { useAuthStore } from '@/stores/auth-store';
@@ -154,7 +153,7 @@ export default function ProfileScreen() {
     if (!user) {
         return (
             <SafeAreaView style={styles.container} edges={['top']}>
-                <HeaderBackButton title="Settings" />
+                <Text style={styles.screenTitle} accessibilityRole="header">Profile</Text>
                 <View style={styles.emptyState}>
                     <View style={styles.iconCircle}>
                         <IconSymbol name="person.fill" size={40} color={Colors.light.tint} />
@@ -184,7 +183,7 @@ export default function ProfileScreen() {
     return (
         <SafeAreaView style={styles.container} edges={['top']}>
         <ScrollView style={styles.scrollContainer}>
-            <HeaderBackButton title="Settings" />
+            <Text style={styles.screenTitle} accessibilityRole="header">Profile</Text>
             <View style={styles.header}>
                 <View style={styles.avatarContainer}>
                     <Text style={styles.avatarText}>{user.email[0].toUpperCase()}</Text>
@@ -209,7 +208,7 @@ export default function ProfileScreen() {
             </TouchableOpacity>
 
             <View style={styles.section}>
-                <Text style={styles.sectionTitle}>PREFERENCES</Text>
+                <Text style={styles.sectionTitle}>SETTINGS</Text>
 
                 <View style={styles.card}>
                     <TouchableOpacity
@@ -342,6 +341,11 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
+    screenTitle: {
+        ...Typography.h1,
+        paddingHorizontal: Spacing.md,
+        paddingTop: Spacing.md,
+    },
     container: {
         flex: 1,
         backgroundColor: Colors.light.background,
