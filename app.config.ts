@@ -68,6 +68,9 @@ export default {
       supportsTablet: true,
       bundleIdentifier: 'com.tuberush.v2',
       privacyManifests,
+      infoPlist: {
+        ITSAppUsesNonExemptEncryption: false,
+      },
     },
     android: {
       adaptiveIcon: {
