@@ -4,7 +4,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { Colors, TFL, Spacing, Layout } from '@/constants/theme';
 import { GAMES, GameId } from '@/constants/Games';
 import { GameOverviewData } from '@/types/game';
-import { formatPlayerCount } from '@/lib/display-utils';
+import { EMPTY_VALUE, formatPlayerCount } from '@/lib/display-utils';
 import { RankedList } from './RankedList';
 
 interface GameSummaryCardProps {
@@ -73,7 +73,7 @@ export function GameSummaryCard({
                         <Text style={styles.rankValue}>
                             {data.userRank != null
                                 ? `#${data.userRank} of ${formatPlayerCount(data.totalPlayers)}`
-                                : `— of ${formatPlayerCount(data.totalPlayers)}`}
+                                : `${EMPTY_VALUE} of ${formatPlayerCount(data.totalPlayers)}`}
                         </Text>
                     </View>
 

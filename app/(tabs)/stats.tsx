@@ -2,7 +2,7 @@ import { GameTypeBadge } from '@/components/ui/GameTypeBadge';
 import { Colors, Layout, Spacing, TFL, Typography } from '@/constants/theme';
 import { useGameHistory } from '@/hooks/useGameHistory';
 import { useUserStats } from '@/hooks/useUserStats';
-import { formatScore } from '@/lib/display-utils';
+import { formatMaybe, formatScore } from '@/lib/display-utils';
 import React from 'react';
 import { ActivityIndicator, FlatList, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -39,7 +39,7 @@ export default function StatsScreen() {
                                 <Text style={styles.statLabel}>Win Streak</Text>
                             </View>
                             <View style={styles.statCard}>
-                                <Text style={styles.statValue}>{stats.bestTime || '--'}</Text>
+                                <Text style={styles.statValue}>{formatMaybe(stats.bestTime)}</Text>
                                 <Text style={styles.statLabel}>Best Time</Text>
                             </View>
                         </View>

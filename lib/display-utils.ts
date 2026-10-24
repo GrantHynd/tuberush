@@ -45,3 +45,20 @@ export function formatPlayerCount(count: number): string {
   }
   return count.toLocaleString();
 }
+
+/** The single glyph used app-wide for a missing / not-yet-available value. */
+export const EMPTY_VALUE = '—';
+
+/**
+ * Format a possibly-missing value. Returns EMPTY_VALUE for null, undefined or
+ * empty strings; otherwise applies the optional formatter (or String()).
+ */
+export function formatMaybe<T>(
+  value: T | null | undefined,
+  format: (v: T) => string = (v) => String(v),
+): string {
+  if (value === null || value === undefined || (typeof value === 'string' && value.trim() === '')) {
+    return EMPTY_VALUE;
+  }
+  return format(value);
+}

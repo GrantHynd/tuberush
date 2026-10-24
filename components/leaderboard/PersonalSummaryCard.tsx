@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Colors, TFL, Spacing, Layout } from '@/constants/theme';
-import { formatScore } from '@/lib/display-utils';
+import { formatMaybe, formatScore } from '@/lib/display-utils';
 
 interface PersonalSummaryCardProps {
     overallRank: number | null;
@@ -19,7 +19,7 @@ export function PersonalSummaryCard({
             <View style={styles.column}>
                 <Text style={styles.label}>Overall</Text>
                 <Text style={styles.value}>
-                    {overallRank != null ? `#${overallRank}` : '—'}
+                    {formatMaybe(overallRank, (r) => `#${r}`)}
                 </Text>
             </View>
 
@@ -28,7 +28,7 @@ export function PersonalSummaryCard({
             <View style={styles.column}>
                 <Text style={styles.label}>Total Score</Text>
                 <Text style={styles.value}>
-                    {totalScore > 0 ? formatScore(totalScore) : '—'}
+                    {formatMaybe(totalScore > 0 ? totalScore : null, formatScore)}
                 </Text>
             </View>
 
@@ -37,7 +37,7 @@ export function PersonalSummaryCard({
             <View style={styles.column}>
                 <Text style={styles.label}>Top %</Text>
                 <Text style={[styles.value, styles.percentValue]}>
-                    {topPercent != null ? `${topPercent}%` : '—'}
+                    {formatMaybe(topPercent, (t) => `${t}%`)}
                 </Text>
             </View>
         </View>

@@ -1,3 +1,4 @@
+import { EMPTY_VALUE } from '@/lib/display-utils';
 import { offlineSyncManager } from '@/lib/offline-sync-manager';
 import { StorageManager } from '@/lib/storage-manager';
 import { useAuthStore } from '@/stores/auth-store';
@@ -79,7 +80,7 @@ function calculateStreak(items: GameHistoryListItem[], hasWinLoss: boolean): num
 }
 
 function formatSublabel(playCount: number | undefined): string {
-    if (playCount === undefined) return '— commuters played';
+    if (playCount === undefined) return `${EMPTY_VALUE} commuters played`;
     return playCount > 0 ? `${playCount} commuters played` : '0 commuters played';
 }
 

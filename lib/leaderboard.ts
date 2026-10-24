@@ -1,4 +1,5 @@
 import { supabase } from './supabase-client';
+import { EMPTY_VALUE } from './display-utils';
 import { LeaderboardEntry, GameType, WeeklyLeaderboardEntry, BoroughBreakdownEntry, CityPlayerCount } from '@/types/game';
 import { Borough } from '@/constants/Boroughs';
 import type { User } from '@/types/game';
@@ -15,7 +16,7 @@ export function getLocationDisplay(entry: {
     if (city === 'London' && borough) {
         return borough;
     }
-    return city || borough || '—';
+    return city || borough || EMPTY_VALUE;
 }
 
 export const leaderboard = {

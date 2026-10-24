@@ -1,5 +1,6 @@
 import { Colors, Layout, Spacing, TFL } from '@/constants/theme';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { formatMaybe } from '@/lib/display-utils';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
@@ -98,7 +99,7 @@ export function GamePuzzleListItem({
                             hasWinLoss && !isWon ? styles.timeLost : styles.timeWon,
                         ]}
                     >
-                        {completionTime ?? '—'}
+                        {formatMaybe(completionTime)}
                     </Text>
                     {score ? <Text style={styles.score}>{score}</Text> : null}
                 </View>
