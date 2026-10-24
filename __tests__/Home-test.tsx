@@ -17,6 +17,7 @@ jest.mock('@/hooks/usePuzzleCarousel', () => ({
         label: 'Today',
         isNew: true,
         isCompleted: false,
+        status: 'unplayed',
         commuteCount: 0,
         date: '2025-03-15',
         puzzleId: '1',

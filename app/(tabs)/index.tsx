@@ -1,6 +1,6 @@
 import { Card } from '@/components/ui/Card';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
-import { PuzzleCard } from '@/components/home/PuzzleCard';
+import { getCompletionPresentation, PuzzleCard } from '@/components/home/PuzzleCard';
 import { SectionHeader } from '@/components/home/SectionHeader';
 import { StatCard } from '@/components/home/StatCard';
 import { TodayHeroCard } from '@/components/home/TodayHeroCard';
@@ -131,8 +131,10 @@ export default function HomeScreen() {
                             <PuzzleCard
                                 label={item.label}
                                 isNew={item.isNew}
-                                isCompleted={item.isCompleted}
+                                status={item.status}
                                 commuteCount={item.commuteCount}
+                                {...getCompletionPresentation('connections', item)}
+                                accessibilityGame="Connections"
                                 backgroundColor={GameColors.connections}
                                 onPress={() => handleConnectionsCardPress(item.date)}
                             />
@@ -159,8 +161,10 @@ export default function HomeScreen() {
                             <PuzzleCard
                                 label={item.label}
                                 isNew={item.isNew}
-                                isCompleted={item.isCompleted}
+                                status={item.status}
                                 commuteCount={item.commuteCount}
+                                {...getCompletionPresentation('crossword', item)}
+                                accessibilityGame="Crossword"
                                 backgroundColor={GameColors.crossword}
                                 onPress={() => handleCrosswordCardPress(item.puzzleId)}
                             />

@@ -50,6 +50,11 @@ export interface PuzzleCarouselItem {
     isWon?: boolean;
 }
 
+/** Today first, then reverse-chronological (ISO dates sort lexically). */
+export function sortTodayFirst<T extends { date: string }>(items: T[]): T[] {
+    return [...items].sort((a, b) => b.date.localeCompare(a.date));
+}
+
 export function getConnectionsStatus(state?: ConnectionsState | null): PuzzleStatus {
     if (!state) return 'unplayed';
     if (state.status === 'won' || state.status === 'lost') return 'completed';
@@ -123,7 +128,7 @@ async function loadConnectionsCarousel(
             isWon,
         });
     }
-    return items;
+    return sortTodayFirst(items);
 }
 
 async function loadCrosswordCarousel(userId: string): Promise<CrosswordCarouselItem[]> {
@@ -148,12 +153,13 @@ async function loadCrosswordCarousel(userId: string): Promise<CrosswordCarouselI
             isCompleted,
             status: getCrosswordStatus(state),
             completionTime: solveSeconds != null ? formatScore(solveSeconds) : undefined,
-            commuteCount: isCompleted ? undefined : 0,
+            // No crossword play-count RPC: leave undefined so the card hides the line.
+            commuteCount: undefined,
             date: game_date,
             puzzleId: puzzle.id,
         });
     }
-    return items;
+    return sortTodayFirst(items);
 }
 
 export function usePuzzleCarousel(gameType: GameType) {
