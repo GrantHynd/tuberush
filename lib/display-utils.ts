@@ -27,11 +27,19 @@ export function getDisplayName(username: string | null | undefined, seed?: strin
  * Display name for the signed-in user. Treats a username equal to the email
  * local part as unset, because the DB trigger historically backfilled it that way.
  */
-export function getOwnDisplayName(user: { id: string; username?: string | null; email?: string | null }): string {
+type OwnUser = { id: string; username?: string | null; email?: string | null };
+
+/** The user's chosen name, or null if unset (or just their email local part). */
+export function getChosenDisplayName(user: OwnUser): string | null {
   const local = user.email?.split('@')[0]?.trim().toLowerCase();
   const name = user.username?.trim();
-  const leaked = !!name && !!local && name.toLowerCase() === local;
-  return getDisplayName(leaked ? null : name, user.id);
+  if (!name) return null;
+  if (local && name.toLowerCase() === local) return null;
+  return name;
+}
+
+export function getOwnDisplayName(user: OwnUser): string {
+  return getDisplayName(getChosenDisplayName(user), user.id);
 }
 
 /** First letter of display name, uppercased. Handles emoji / empty edge cases. */

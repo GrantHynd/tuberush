@@ -1,3 +1,4 @@
+import { DisplayNamePrompt } from '@/components/profile/DisplayNamePrompt';
 import { Tabs } from 'expo-router';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import React from 'react';
@@ -22,6 +23,8 @@ function TabLabel({ focused, color, children }: { focused: boolean; color: strin
 
 export default function TabLayout() {
   return (
+    <>
+    <DisplayNamePrompt />
     <Tabs
       screenOptions={{
         headerShown: false,
@@ -68,5 +71,6 @@ export default function TabLayout() {
         }}
       />
     </Tabs>
+    </>
   );
 }
