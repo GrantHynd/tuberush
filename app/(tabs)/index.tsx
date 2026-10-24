@@ -11,9 +11,11 @@ import { useLocationRank } from '@/hooks/useLocationRank';
 import { usePuzzleCarousel } from '@/hooks/usePuzzleCarousel';
 import { useUserStats } from '@/hooks/useUserStats';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import * as Sentry from '@sentry/react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback } from 'react';
 import {
+    Button,
     FlatList,
     ScrollView,
     StyleSheet,
@@ -93,6 +95,14 @@ export default function HomeScreen() {
                         </View>
                     </TouchableOpacity>
                 </View>
+
+                {/* Temporary. Remove before App Store submission. */}
+                <Button
+                    title="Try!"
+                    onPress={() => {
+                        Sentry.captureException(new Error('First error'));
+                    }}
+                />
 
                 {/* Connections section */}
                 <View style={styles.section}>
