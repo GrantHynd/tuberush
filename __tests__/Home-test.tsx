@@ -171,3 +171,14 @@ describe('HomeScreen hero (TUB-251)', () => {
     expect(getByTestId('today-hero-connections').props.accessibilityLabel).toMatch(/Sign in to play/);
   });
 });
+
+describe('HomeScreen stats empty state (TUB-255)', () => {
+  it('replaces the tiles with the encouraging empty state for a new user', async () => {
+    (useAuthStore as unknown as jest.Mock).mockReturnValue({ user: null });
+    const { getByTestId, getByText, queryByText } = await render(<HomeScreen />);
+    expect(getByTestId('home-stats-empty')).toBeTruthy();
+    expect(getByText('Your stats start here')).toBeTruthy();
+    expect(getByText("Play today's puzzle")).toBeTruthy();
+    expect(queryByText('Best Time')).toBeNull();
+  });
+});

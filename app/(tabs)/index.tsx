@@ -4,7 +4,8 @@ import { getCompletionPresentation, PuzzleCard } from '@/components/home/PuzzleC
 import { SectionHeader } from '@/components/home/SectionHeader';
 import { StatCard } from '@/components/home/StatCard';
 import { TodayHeroCard } from '@/components/home/TodayHeroCard';
-import { buildTodayRows, getNextPuzzleAt } from '@/lib/today-puzzles';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { buildTodayRows, getNextPuzzleAt, getTodaysNextGame } from '@/lib/today-puzzles';
 import type {
     ConnectionsCarouselItem,
     CrosswordCarouselItem,
@@ -40,7 +41,7 @@ export default function HomeScreen() {
     const { items: connectionsItems, loading: connectionsLoading, refresh: refreshConnections } = usePuzzleCarousel('connections');
     const { items: crosswordItems, loading: crosswordLoading, refresh: refreshCrossword } = usePuzzleCarousel('crossword');
 
-    const { stats, refresh: refreshStats } = useUserStats();
+    const { stats, loading: statsLoading, refresh: refreshStats } = useUserStats();
     useFocusEffect(
         useCallback(() => {
             refreshConnections();
@@ -79,6 +80,9 @@ export default function HomeScreen() {
         onSignIn: () => router.push('/auth'),
         onUnlock: () => router.push('/subscribe'),
     });
+
+    const hasNoStats = !statsLoading && stats.bestTime == null && stats.streak === 0;
+    const nextGame = getTodaysNextGame(user, { connections: connectionsItems, crossword: crosswordItems });
 
     return (
         <SafeAreaView style={styles.container} edges={['top']}>
@@ -175,20 +179,30 @@ export default function HomeScreen() {
                 {/* Your Stats section */}
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Your Stats</Text>
-                    <View style={styles.statsRow}>
-                        <StatCard
-                            icon="timer"
-                            label="Best Time"
-                            value={formatMaybe(stats.bestTime)}
-                            sublabel={stats.bestTimeGameType ?? undefined}
-                        />
-                        <View style={styles.statCardSpacer} />
-                        <StatCard
+                    {hasNoStats ? (
+                        <EmptyState
+                            testID="home-stats-empty"
                             icon="local-fire-department"
-                            label="Streak"
-                            value={String(stats.streak)}
+                            title="Your stats start here"
+                            body="Finish today's puzzle to start your streak and see how you stack up."
+                            actionLabel="Play today's puzzle"
+                            onAction={nextGame ? () => router.push(nextGame.route as never) : undefined}
                         />
-                    </View>
+                    ) : (
+                        <View style={styles.statsRow}>
+                            <StatCard
+                                icon="timer"
+                                label="Best Time"
+                                value={formatMaybe(stats.bestTime)}
+                                sublabel={stats.bestTimeGameType ?? undefined}
+                            />
+                            <StatCard
+                                icon="local-fire-department"
+                                label="Streak"
+                                value={String(stats.streak)}
+                            />
+                        </View>
+                    )}
                 </View>
 
                 {/* Your Area section */}
@@ -265,9 +279,6 @@ const styles = StyleSheet.create({
     statsRow: {
         flexDirection: 'row',
         gap: CARD_GAP,
-    },
-    statCardSpacer: {
-        width: CARD_GAP,
     },
     boroughRow: {
         flexDirection: 'row',
