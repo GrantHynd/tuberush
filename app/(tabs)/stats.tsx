@@ -1,8 +1,10 @@
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { Card } from '@/components/ui/Card';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { GameTypeBadge } from '@/components/ui/GameTypeBadge';
 import { Colors, Layout, Spacing, TFL, Typography } from '@/constants/theme';
 import { useGameHistory } from '@/hooks/useGameHistory';
+import { useTodaysNextGame } from '@/hooks/useTodaysNextGame';
 import { useUserStats } from '@/hooks/useUserStats';
 import { formatMaybe, formatScore } from '@/lib/display-utils';
 import React from 'react';
@@ -14,10 +16,15 @@ export default function StatsScreen() {
     const { history, gamesPlayed, loading: historyLoading } = useGameHistory();
 
     const loading = statsLoading || historyLoading;
+    const playNext = useTodaysNextGame();
 
     function formatDate(dateString: string): string {
         const date = new Date(dateString + 'T00:00:00');
-        return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+        return date.toLocaleDateString('en-GB', {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric',
+        });
     }
 
     return (
@@ -29,6 +36,15 @@ export default function StatsScreen() {
                     <View style={styles.loadingContainer}>
                         <ActivityIndicator size="large" color={TFL.blue} />
                     </View>
+                ) : history.length === 0 ? (
+                    <EmptyState
+                        testID="stats-empty"
+                        icon="bar-chart"
+                        title="No games yet"
+                        body="Solve a puzzle on your next journey and your times, streaks and scores will appear here."
+                        actionLabel="Play now"
+                        onAction={playNext}
+                    />
                 ) : (
                     <>
                         <View style={styles.statsRow}>
@@ -49,56 +65,43 @@ export default function StatsScreen() {
                         <View style={styles.historySection}>
                             <Text style={styles.sectionHeader}>GAME HISTORY</Text>
                             <Card variant="tinted">
-                                {history.length === 0 ? (
-                                    <View style={styles.emptyState}>
-                                        <Text style={styles.emptyText}>No games played yet</Text>
-                                        <Text style={styles.emptySubtext}>
-                                            Start playing to track your stats!
-                                        </Text>
-                                    </View>
-                                ) : (
-                                    <>
-                                        <FlatList
-                                            data={history}
-                                            keyExtractor={item => item.id}
-                                            renderItem={({ item, index }) => (
-                                                <>
-                                                    {index > 0 && <View style={styles.divider} />}
-                                                    <View style={styles.historyRow}>
-                                                        <GameTypeBadge gameType={item.gameType} />
-                                                        <View style={styles.historyMiddle}>
-                                                            <Text style={styles.historyDate}>
-                                                                {formatDate(item.date)}
-                                                            </Text>
-                                                            <Text style={styles.historyTime}>
-                                                                {formatScore(item.score)}
-                                                            </Text>
-                                                        </View>
-                                                        <View style={styles.historyRight}>
-                                                            <Text
-                                                                style={[
-                                                                    styles.historyResult,
-                                                                    item.result === 'win'
-                                                                        ? styles.resultWin
-                                                                        : styles.resultLoss,
-                                                                ]}
-                                                            >
-                                                                {item.result === 'win' ? 'Win' : 'Loss'}
-                                                            </Text>
-                                                            <Text style={styles.historyPoints}>
-                                                                {item.points} pts
-                                                            </Text>
-                                                        </View>
+                                <>
+                                    <FlatList
+                                        data={history}
+                                        keyExtractor={item => item.id}
+                                        renderItem={({ item, index }) => (
+                                            <>
+                                                {index > 0 && <View style={styles.divider} />}
+                                                <View style={styles.historyRow}>
+                                                    <GameTypeBadge gameType={item.gameType} />
+                                                    <View style={styles.historyMiddle}>
+                                                        <Text style={styles.historyDate}>{formatDate(item.date)}</Text>
+                                                        <Text style={styles.historyTime}>
+                                                            {formatScore(item.score)}
+                                                        </Text>
                                                     </View>
-                                                </>
-                                            )}
-                                            scrollEnabled={false}
-                                        />
-                                        <View style={styles.footer}>
-                                            <Text style={styles.footerText}>More stats coming soon</Text>
-                                        </View>
-                                    </>
-                                )}
+                                                    <View style={styles.historyRight}>
+                                                        <Text
+                                                            style={[
+                                                                styles.historyResult,
+                                                                item.result === 'win'
+                                                                    ? styles.resultWin
+                                                                    : styles.resultLoss,
+                                                            ]}
+                                                        >
+                                                            {item.result === 'win' ? 'Win' : 'Loss'}
+                                                        </Text>
+                                                        <Text style={styles.historyPoints}>{item.points} pts</Text>
+                                                    </View>
+                                                </View>
+                                            </>
+                                        )}
+                                        scrollEnabled={false}
+                                    />
+                                    <View style={styles.footer}>
+                                        <Text style={styles.footerText}>More stats coming soon</Text>
+                                    </View>
+                                </>
                             </Card>
                         </View>
                     </>
@@ -151,18 +154,6 @@ const styles = StyleSheet.create({
     sectionHeader: {
         ...Typography.label,
         marginBottom: Spacing.sm,
-    },
-    emptyState: {
-        paddingVertical: Spacing.xl,
-        alignItems: 'center',
-    },
-    emptyText: {
-        ...Typography.body,
-        fontWeight: '600',
-        marginBottom: Spacing.xs,
-    },
-    emptySubtext: {
-        ...Typography.caption,
     },
     historyRow: {
         flexDirection: 'row',
