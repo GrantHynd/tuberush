@@ -349,7 +349,7 @@ describe("PlayConnectionsScreen", () => {
           "Westminster",
           expect.any(Number),
           "connections",
-          { result: "won", mistakes: expect.any(Number) },
+          { result: "won", mistakes: expect.any(Number), gameDate: expect.any(String) },
         );
       });
 

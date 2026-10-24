@@ -85,6 +85,26 @@ describe('submitScore', () => {
     });
 });
 
+describe('submitScore puzzle date (offline-sync risk 2)', () => {
+    it('files the score under the given puzzle date, not the UTC submission date', async () => {
+        const calls = mockLeaderboardTable(null, [{ error: null }]);
+        await leaderboard.submitScore('u', 'London', null, 70, 'connections', { gameDate: '2026-10-20' });
+        expect(calls[0].body).toMatchObject({ game_date: '2026-10-20' });
+    });
+    it('defaults to the local date (00:30 BST is still the same day)', async () => {
+        jest.useFakeTimers().setSystemTime(new Date(2026, 9, 25, 0, 30));
+        const calls = mockLeaderboardTable(null, [{ error: null }]);
+        await leaderboard.submitScore('u', 'London', null, 70, 'connections');
+        expect(calls[0].body).toMatchObject({ game_date: '2026-10-25' });
+        jest.useRealTimers();
+    });
+    it('retries as an update after a unique-violation race', async () => {
+        const calls = mockLeaderboardTable(null, [{ error: { code: '23505' } }, { error: null }]);
+        await leaderboard.submitScore('u', 'London', null, 70, 'connections', { gameDate: '2026-10-20' });
+        expect(calls).toHaveLength(2);
+    });
+});
+
 describe('getWeeklyLeaderboard borough option', () => {
     it('passes p_borough when given', async () => {
         mockRpc.mockResolvedValue({ data: [row('a', 'Camden', 1)], error: null });

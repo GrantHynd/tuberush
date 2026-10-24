@@ -12,6 +12,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { useColorScheme, Platform } from 'react-native';
 import 'react-native-reanimated';
+import { startScoreOutbox } from '@/lib/score-outbox';
 
 initSentry();
 
@@ -80,6 +81,9 @@ function RootLayout() {
     };
     init();
   }, [checkSession]);
+
+  // Durable leaderboard outbox: drains at launch, on reconnect and on foreground.
+  useEffect(() => startScoreOutbox(), []);
 
   useEffect(() => {
     // Handle auth deep links (email confirmation, password reset)

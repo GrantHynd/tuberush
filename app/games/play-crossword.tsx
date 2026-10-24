@@ -4,12 +4,12 @@ import { Leaderboard } from '@/components/ui/Leaderboard';
 import { Colors, Layout, Spacing, TFL, Typography } from '@/constants/theme';
 import { getCustomPuzzle, saveCustomPuzzleScore } from '@/lib/custom-puzzles';
 import { formatScore } from '@/lib/display-utils';
-import { leaderboard } from '@/lib/leaderboard';
 import { capture } from '@/lib/posthog';
 import { useAuthStore } from '@/stores/auth-store';
 import { useGameStore } from '@/stores/game-store';
 import { useCrosswordTimer } from '@/hooks/useCrosswordTimer';
 import { usePuzzle } from '@/hooks/usePuzzle';
+import { scoreOutbox } from '@/lib/score-outbox';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Haptics from 'expo-haptics';
 import type { CrosswordPuzzle, CrosswordState, GameState } from '@/types/game';
@@ -255,17 +255,16 @@ export default function PlayCrossword() {
             if (isCustomPuzzle && customPuzzleId && timeTaken != null) {
                 saveCustomPuzzleScore(customPuzzleId, timeTaken)
                     .catch((err) => console.error('Failed to save custom puzzle score', err));
-            } else if (!isCustomPuzzle && user?.city && timeTaken != null) {
-                leaderboard
-                    .submitScore(
-                        user.id,
-                        user.city,
-                        user.city === 'London' ? user.borough ?? null : null,
-                        timeTaken,
-                        'crossword',
-                        { result: 'won' },
-                    )
-                    .catch((err) => console.error('Failed to submit crossword score', err));
+            } else if (!isCustomPuzzle && user?.city && timeTaken != null && gameDate) {
+                scoreOutbox.submit({
+                    userId: user.id,
+                    city: user.city,
+                    borough: user.city === 'London' ? user.borough ?? null : null,
+                    score: timeTaken,
+                    gameType: 'crossword',
+                    gameDate,
+                    result: 'won',
+                });
             }
         } else {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -275,7 +274,7 @@ export default function PlayCrossword() {
                 [{ text: 'OK' }]
             );
         }
-    }, [gameState, saveGame, user, puzzle, isCustomPuzzle, customPuzzleId]);
+    }, [gameState, saveGame, user, puzzle, isCustomPuzzle, customPuzzleId, gameDate]);
 
     const crosswordState = (gameState?.state ?? null) as CrosswordState | null;
     const timer = useCrosswordTimer(crosswordState ?? {

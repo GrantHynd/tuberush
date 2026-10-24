@@ -3,6 +3,7 @@ import {
     getCrosswordByPuzzleId,
     getDailyGame,
 } from '@/lib/daily-games';
+import { toLocalDateString } from '@/lib/week-utils';
 import type { CrosswordPuzzle } from '@/types/game';
 
 function normalizePuzzleId(puzzleId?: string | string[]): string | undefined {
@@ -35,7 +36,8 @@ export function usePuzzle(puzzleId?: string | string[]): { puzzle: CrosswordPuzz
                     const result = (await getDailyGame('crossword')) as CrosswordPuzzle | undefined;
                     if (!cancelled) {
                         setPuzzle(result ?? null);
-                        setGameDate(result ? new Date().toISOString().split('T')[0] : null);
+                        // getDailyGame matches the device's local date, so that is the puzzle's date (not UTC).
+                        setGameDate(result ? toLocalDateString(new Date()) : null);
                     }
                 }
             } catch {

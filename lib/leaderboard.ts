@@ -3,6 +3,7 @@ import { EMPTY_VALUE } from './display-utils';
 import { LeaderboardEntry, GameType, WeeklyLeaderboardEntry, BoroughBreakdownEntry, CityPlayerCount } from '@/types/game';
 import { Borough } from '@/constants/Boroughs';
 import type { User } from '@/types/game';
+import { toLocalDateString } from './week-utils';
 
 export type LeaderboardFilter = 'all' | 'london' | 'area';
 
@@ -13,6 +14,11 @@ export interface SubmitScoreOptions {
     result?: GameResult;
     /** Connections mistakes used (0-4). */
     mistakes?: number | null;
+    /**
+     * The puzzle's date (YYYY-MM-DD). Scores are filed under the puzzle, not the submission time
+     * (offline-sync audit risk 2 / TUB-235). Falls back to the device's local date.
+     */
+    gameDate?: string;
 }
 
 /**
@@ -77,41 +83,48 @@ export const leaderboard = {
         score: number,
         gameType: GameType,
         options: SubmitScoreOptions = {}
-    ) {
+    ): Promise<void> {
         const result: GameResult = options.result ?? 'won';
         const mistakes = options.mistakes ?? null;
-        const today = new Date().toISOString().split('T')[0];
+        const gameDate = options.gameDate ?? toLocalDateString(new Date());
 
-        const { data: existingScore } = await supabase
-            .from('leaderboard')
-            .select('*')
-            .eq('user_id', userId)
-            .eq('game_date', today)
-            .eq('game_type', gameType)
-            .single();
+        // Idempotent: replaying the same submission is a no-op (shouldReplaceScore is strict).
+        // A concurrent insert from another device/retry hits the unique index from
+        // 20261025000001 (23505) once deployed; we then re-read and take the update path.
+        for (let attempt = 0; attempt < 2; attempt++) {
+            const { data: existingScore } = await supabase
+                .from('leaderboard')
+                .select('*')
+                .eq('user_id', userId)
+                .eq('game_date', gameDate)
+                .eq('game_type', gameType)
+                .single();
 
-        const legacyPayload = { city, borough, score };
-        const payload = { ...legacyPayload, result, mistakes };
+            const legacyPayload = { city, borough, score };
+            const payload = { ...legacyPayload, result, mistakes };
 
-        if (existingScore && !shouldReplaceScore(existingScore, { score, result })) return;
+            if (existingScore && !shouldReplaceScore(existingScore, { score, result })) return;
 
-        const write = (body: typeof legacyPayload | typeof payload) =>
-            existingScore
-                ? supabase.from('leaderboard').update(body).eq('id', existingScore.id)
-                : supabase.from('leaderboard').insert({
-                      user_id: userId,
-                      ...body,
-                      game_type: gameType,
-                      game_date: today,
-                  });
+            const write = (body: typeof legacyPayload | typeof payload) =>
+                existingScore
+                    ? supabase.from('leaderboard').update(body).eq('id', existingScore.id)
+                    : supabase.from('leaderboard').insert({
+                          user_id: userId,
+                          ...body,
+                          game_type: gameType,
+                          game_date: gameDate,
+                      });
 
-        let { error } = await write(payload);
-        if (error && isMissingSchemaError(error)) {
-            // Migration not applied yet: losses can't be stored safely (they'd count towards ranks).
-            if (result === 'lost') return;
-            ({ error } = await write(legacyPayload));
+            let { error } = await write(payload);
+            if (error && isMissingSchemaError(error)) {
+                // Migration not applied yet: losses can't be stored safely (they'd count towards ranks).
+                if (result === 'lost') return;
+                ({ error } = await write(legacyPayload));
+            }
+            if (error && error.code === '23505' && !existingScore && attempt === 0) continue;
+            if (error) throw error;
+            return;
         }
-        if (error) throw error;
     },
 
     /**

@@ -3,8 +3,8 @@ import { Leaderboard } from "@/components/ui/Leaderboard";
 import type { ConnectionsPuzzle } from "@/constants/ConnectionsData";
 import { getCustomPuzzle, saveCustomPuzzleScore } from "@/lib/custom-puzzles";
 import { getDailyGame, getGameByDate } from "@/lib/daily-games";
+import { scoreOutbox } from "@/lib/score-outbox";
 import { Colors, Spacing, TFL, Typography } from "@/constants/theme";
-import { leaderboard } from "@/lib/leaderboard";
 import { capture } from "@/lib/posthog";
 import { useAuthStore } from "@/stores/auth-store";
 import { useGameStore } from "@/stores/game-store";
@@ -180,18 +180,16 @@ export default function PlayConnectionsScreen() {
                   console.error("Failed to save custom puzzle score", err),
                 );
             } else if (!isCustomPuzzle && user.city) {
-              leaderboard
-                .submitScore(
-                  user.id,
-                  user.city,
-                  user.city === "London" ? user.borough ?? null : null,
-                  timeTaken,
-                  "connections",
-                  { result: "won", mistakes: 4 - newState.mistakesRemaining },
-                )
-                .catch((err) =>
-                  console.error("Failed to submit score", err),
-                );
+              scoreOutbox.submit({
+                userId: user.id,
+                city: user.city,
+                borough: user.city === "London" ? user.borough ?? null : null,
+                score: timeTaken,
+                gameType: "connections",
+                gameDate: dateParam || puzzle.date,
+                result: "won",
+                mistakes: 4 - newState.mistakesRemaining,
+              });
             }
           }
         }
@@ -215,16 +213,16 @@ export default function PlayConnectionsScreen() {
             const lostSeconds = Math.floor(
               (newState.endTime - newState.startTime) / 1000,
             );
-            leaderboard
-              .submitScore(
-                user.id,
-                user.city,
-                user.city === "London" ? user.borough ?? null : null,
-                lostSeconds,
-                "connections",
-                { result: "lost", mistakes: 4 },
-              )
-              .catch((err) => console.error("Failed to submit loss", err));
+            scoreOutbox.submit({
+              userId: user.id,
+              city: user.city,
+              borough: user.city === "London" ? user.borough ?? null : null,
+              score: lostSeconds,
+              gameType: "connections",
+              gameDate: dateParam || puzzle.date,
+              result: "lost",
+              mistakes: 4,
+            });
           }
         }
       }
@@ -237,7 +235,7 @@ export default function PlayConnectionsScreen() {
         lastUpdated: new Date().toISOString(),
       });
     },
-    [currentGame, puzzle, user, saveGame, isCustomPuzzle, customPuzzleId],
+    [currentGame, puzzle, user, saveGame, isCustomPuzzle, customPuzzleId, dateParam],
   );
 
   const handleRevealComplete = useCallback(() => {
