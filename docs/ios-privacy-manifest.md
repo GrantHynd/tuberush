@@ -19,7 +19,7 @@ The app does not track users (`NSPrivacyTracking` is false, no tracking domains)
 
 Every type is marked as linked to the user. After sign-in, `stores/auth-store.ts` passes the Supabase user ID to Sentry, PostHog and RevenueCat, the email to Sentry and PostHog, and the username to Sentry. The SDKs' own manifests say "not linked" because they can't know that. If we stop sending identity to an SDK, its rows can become unlinked.
 
-Sentry is installed and the Expo plugin is pinned to organization `grant-hynd` and project `tuberush`. Its Cocoa SDK ships the same crash, performance, and diagnostic types, marked not linked. The app manifest marks them linked because we attach the signed-in user. The temporary **Try! Send test error** buttons send that same crash data. They do not add a new data type.
+Sentry is installed and the Expo plugin is pinned to organization `grant-hynd` and project `tuberush`. Its Cocoa SDK ships the same crash, performance, and diagnostic types, marked not linked. The app manifest marks them linked because we attach the signed-in user.
 
 Required-reason APIs are the union of what the bundled native SDKs declare:
 
