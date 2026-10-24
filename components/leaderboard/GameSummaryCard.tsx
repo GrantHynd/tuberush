@@ -26,7 +26,13 @@ export function GameSummaryCard({
         <View style={[styles.card, isLocked && styles.cardLocked]}>
             <View style={styles.header}>
                 <View style={styles.headerLeft}>
-                    <Text style={styles.icon}>{game.icon}</Text>
+                    <MaterialIcons
+                        name={game.icon}
+                        size={20}
+                        color={Colors.light.text}
+                        accessibilityElementsHidden
+                        importantForAccessibility="no"
+                    />
                     <Text style={styles.gameName}>{game.name}</Text>
                     {isLocked && (
                         <View style={styles.premiumPill}>
@@ -111,9 +117,6 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 8,
-    },
-    icon: {
-        fontSize: 18,
     },
     gameName: {
         fontSize: 16,
