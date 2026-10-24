@@ -34,16 +34,40 @@ function formatPuzzleDate(dateStr: string): string {
     return date.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
 }
 
+export type PuzzleStatus = 'unplayed' | 'inProgress' | 'completed';
+
 export interface PuzzleCarouselItem {
     label: string;
     isNew: boolean;
     isCompleted: boolean;
+    status: PuzzleStatus;
+    /** Pause-adjusted solve time, M:SS, when completed. */
     commuteCount?: number;
     date: string;
     puzzleId: string;
     completionTime?: string;
     score?: string;
     isWon?: boolean;
+}
+
+export function getConnectionsStatus(state?: ConnectionsState | null): PuzzleStatus {
+    if (!state) return 'unplayed';
+    if (state.status === 'won' || state.status === 'lost') return 'completed';
+    return (state.history?.length ?? 0) > 0 ? 'inProgress' : 'unplayed';
+}
+
+export function getCrosswordStatus(state?: CrosswordState | null): PuzzleStatus {
+    if (!state) return 'unplayed';
+    if (state.completed) return 'completed';
+    const filled = Object.values(state.userAnswers ?? {}).some((v) => !!v && v.trim() !== '');
+    return filled ? 'inProgress' : 'unplayed';
+}
+
+/** Pause-adjusted crossword solve time in whole seconds, or undefined if unknown. */
+export function getCrosswordSolveSeconds(state?: CrosswordState | null): number | undefined {
+    if (!state?.completed || state.startTime == null || state.endTime == null) return undefined;
+    const ms = state.endTime - state.startTime - (state.accumulatedPause ?? 0);
+    return ms >= 0 ? Math.floor(ms / 1000) : undefined;
 }
 
 export interface ConnectionsCarouselItem extends PuzzleCarouselItem {
@@ -90,6 +114,7 @@ async function loadConnectionsCarousel(
             label: formatPuzzleDate(game_date),
             isNew: game_date === today,
             isCompleted,
+            status: getConnectionsStatus(state),
             commuteCount: isCompleted ? undefined : playCount,
             date: game_date,
             puzzleId: puzzle.id,
@@ -114,12 +139,15 @@ async function loadCrosswordCarousel(userId: string): Promise<CrosswordCarouselI
         const game = await offlineSyncManager.loadGameState(gameId, userId);
         const state = game?.state as CrosswordState | undefined;
         const isCompleted = state?.completed ?? false;
+        const solveSeconds = getCrosswordSolveSeconds(state);
 
         items.push({
             puzzle,
             label: formatPuzzleDate(game_date),
             isNew: game_date === today,
             isCompleted,
+            status: getCrosswordStatus(state),
+            completionTime: solveSeconds != null ? formatScore(solveSeconds) : undefined,
             commuteCount: isCompleted ? undefined : 0,
             date: game_date,
             puzzleId: puzzle.id,

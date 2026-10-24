@@ -3,6 +3,8 @@ import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { PuzzleCard } from '@/components/home/PuzzleCard';
 import { SectionHeader } from '@/components/home/SectionHeader';
 import { StatCard } from '@/components/home/StatCard';
+import { TodayHeroCard } from '@/components/home/TodayHeroCard';
+import { buildTodayRows, getNextPuzzleAt } from '@/lib/today-puzzles';
 import type {
     ConnectionsCarouselItem,
     CrosswordCarouselItem,
@@ -35,8 +37,8 @@ export default function HomeScreen() {
     const router = useRouter();
     const bottomInset = useTabBarBottomInset();
     const { user } = useAuthStore();
-    const { items: connectionsItems, refresh: refreshConnections } = usePuzzleCarousel('connections');
-    const { items: crosswordItems, refresh: refreshCrossword } = usePuzzleCarousel('crossword');
+    const { items: connectionsItems, loading: connectionsLoading, refresh: refreshConnections } = usePuzzleCarousel('connections');
+    const { items: crosswordItems, loading: crosswordLoading, refresh: refreshCrossword } = usePuzzleCarousel('crossword');
 
     const { stats, refresh: refreshStats } = useUserStats();
     useFocusEffect(
@@ -68,6 +70,16 @@ export default function HomeScreen() {
         router.push(`/games/play-crossword?puzzleId=${puzzleId}` as never);
     };
 
+    const todayRows = buildTodayRows({
+        user,
+        connections: connectionsItems,
+        crossword: crosswordItems,
+        onConnections: (item) => handleConnectionsCardPress(item.date),
+        onCrossword: (item) => handleCrosswordCardPress(item.puzzleId),
+        onSignIn: () => router.push('/auth'),
+        onUnlock: () => router.push('/subscribe'),
+    });
+
     return (
         <SafeAreaView style={styles.container} edges={['top']}>
             <ScrollView
@@ -93,6 +105,12 @@ export default function HomeScreen() {
                             </View>
                         </TouchableOpacity>
                     }
+                />
+
+                <TodayHeroCard
+                    rows={todayRows}
+                    nextPuzzleAt={getNextPuzzleAt()}
+                    loading={!!user && (connectionsLoading || crosswordLoading) && connectionsItems.length + crosswordItems.length === 0}
                 />
 
                 {/* Connections section */}
