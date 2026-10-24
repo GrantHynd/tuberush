@@ -1,5 +1,7 @@
 import { TFL } from '@/constants/theme';
 import { PRIVACY_POLICY_ROUTE, TERMS_OF_USE_ROUTE } from '@/lib/legal';
+import { DisplayNameField } from '@/components/profile/DisplayNameField';
+import { validateDisplayName } from '@/lib/display-name';
 import { useAuthStore } from '@/stores/auth-store';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
@@ -24,11 +26,13 @@ export default function AuthScreen() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
+    const [nameError, setNameError] = useState<string | null>(null);
 
     const handleSubmit = async () => {
-        if (isSignUp && !username) {
-            Alert.alert('Error', 'Please enter a username');
-            return;
+        if (isSignUp) {
+            const error = validateDisplayName(username);
+            setNameError(error);
+            if (error) return;
         }
         if (!email || !password) {
             Alert.alert('Error', 'Please fill in all fields');
@@ -38,7 +42,7 @@ export default function AuthScreen() {
         setLoading(true);
         try {
             if (isSignUp) {
-                await signUp(email, password, username);
+                await signUp(email, password, username.trim());
                 Alert.alert('Success', 'Account created! Please check your email to verify.');
             } else {
                 await signIn(email, password);
@@ -75,15 +79,14 @@ export default function AuthScreen() {
 
                 <View style={styles.form}>
                     {isSignUp && (
-                        <TextInput
+                        <DisplayNameField
                             testID="auth-username-input"
-                            style={styles.input}
-                            placeholder="Username"
-                            placeholderTextColor="#9CA3AF"
                             value={username}
-                            onChangeText={setUsername}
-                            autoCapitalize="none"
-                            autoComplete="username"
+                            onChangeText={(t) => {
+                                setUsername(t);
+                                if (nameError) setNameError(null);
+                            }}
+                            error={nameError}
                         />
                     )}
 

@@ -26,7 +26,8 @@ import { Colors, Layout, Radius, Spacing, TFL, Typography } from '@/constants/th
 import { BOROUGHS, Borough } from '@/constants/Boroughs';
 import { UK_CITIES, isLondon } from '@/constants/UKCities';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { getAvatarInitial, getOwnDisplayName } from '@/lib/display-utils';
+import { DisplayNameSheet } from '@/components/profile/DisplayNameSheet';
+import { getAvatarInitial, getChosenDisplayName, getOwnDisplayName } from '@/lib/display-utils';
 import { formatSettingsLocation } from '@/lib/profile';
 import * as Sentry from '@sentry/react-native';
 import Constants from 'expo-constants';
@@ -54,6 +55,7 @@ export default function ProfileScreen() {
     const { syncNow, syncStatus } = useGameStore();
     const [locationModalVisible, setLocationModalVisible] = useState(false);
     const [deletingAccount, setDeletingAccount] = useState(false);
+    const [nameSheetVisible, setNameSheetVisible] = useState(false);
     const [locationStep, setLocationStep] = useState<'city' | 'borough'>('city');
 
     const handleSignOut = () => {
@@ -196,6 +198,16 @@ export default function ProfileScreen() {
                     <Text style={styles.avatarText}>{getAvatarInitial(getOwnDisplayName(user))}</Text>
                 </View>
                 <Text style={styles.headerTitle} accessibilityRole="header">{getOwnDisplayName(user)}</Text>
+                {!getChosenDisplayName(user) && (
+                    <TouchableOpacity
+                        testID="profile-add-display-name"
+                        onPress={() => setNameSheetVisible(true)}
+                        accessibilityRole="button"
+                        style={styles.addNameLink}
+                    >
+                        <Text style={styles.addNameLinkText}>Add a display name</Text>
+                    </TouchableOpacity>
+                )}
                 <View style={styles.membershipBadge}>
                     <IconSymbol name="ticket.fill" size={14} color={TFL.black} />
                     <Text style={styles.membershipBadgeText}>{getMembershipTier()}</Text>
@@ -244,6 +256,25 @@ export default function ProfileScreen() {
                 <Text style={styles.sectionTitle}>ACCOUNT</Text>
 
                 <Card variant="grouped">
+                    <TouchableOpacity
+                        testID="profile-display-name-row"
+                        style={styles.cardRow}
+                        onPress={() => setNameSheetVisible(true)}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Display name, ${getOwnDisplayName(user)}`}
+                        accessibilityHint="Opens the display name editor"
+                    >
+                        <Text style={styles.rowLabel}>Display name</Text>
+                        <View style={styles.rowRight}>
+                            <Text style={styles.rowValueTruncatable} numberOfLines={1}>
+                                {getChosenDisplayName(user) ?? 'Add'}
+                            </Text>
+                            <IconSymbol name="chevron.right" size={20} color={Colors.light.icon} />
+                        </View>
+                    </TouchableOpacity>
+
+                    <View style={styles.cardDivider} />
+
                     <View
                         style={styles.cardRow}
                         accessible
@@ -355,6 +386,15 @@ export default function ProfileScreen() {
                     />
                 </SafeAreaView>
             </Modal>
+            <DisplayNameSheet
+                visible={nameSheetVisible}
+                initialValue={getChosenDisplayName(user)}
+                onSave={async (name) => {
+                    await updateProfile({ username: name });
+                    setNameSheetVisible(false);
+                }}
+                onDismiss={() => setNameSheetVisible(false)}
+            />
         </ScrollView>
         </SafeAreaView>
     );
@@ -395,6 +435,16 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         color: Colors.light.text,
         marginBottom: Spacing.sm,
+    },
+    addNameLink: {
+        minHeight: 44,
+        justifyContent: 'center',
+        marginBottom: Spacing.xs,
+    },
+    addNameLinkText: {
+        color: Colors.light.tint,
+        fontWeight: '600',
+        fontSize: 15,
     },
     membershipBadge: {
         flexDirection: 'row',

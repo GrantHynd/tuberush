@@ -173,6 +173,23 @@ describe('ProfileScreen', () => {
     expect(getByText('London, Islington')).toBeTruthy();
   });
 
+  it('shows fallback name, Add a display name link and opens the edit sheet (TUB-268)', async () => {
+    const updateProfile = jest.fn().mockResolvedValue(undefined);
+    (useAuthStore as unknown as jest.Mock).mockReturnValue({
+      user: { id: 'user1', email: 'test@example.com', isPremium: false, city: null, borough: null },
+      signOut: jest.fn(),
+      updateProfile,
+    });
+    const { getByTestId, getByText, queryAllByText } = await render(<ProfileScreen />);
+    expect(queryAllByText(/^Commuter \d{4}$/).length).toBeGreaterThan(0);
+    expect(getByText('test@example.com')).toBeTruthy();
+    await fireEvent.press(getByTestId('profile-display-name-row'));
+    await fireEvent.changeText(getByTestId('display-name-sheet-input'), 'Night Tube');
+    await fireEvent.press(getByTestId('display-name-save'));
+    expect(updateProfile).toHaveBeenCalledWith({ username: 'Night Tube' });
+    expect(getByTestId('profile-add-display-name')).toBeTruthy();
+  });
+
   it('shows Not set when user has no city', async () => {
     (useAuthStore as unknown as jest.Mock).mockReturnValue({
       user: {
