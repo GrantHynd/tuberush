@@ -86,7 +86,7 @@ export default function GameLeaderboardScreen() {
             color={Colors.light.text}
           />
         </TouchableOpacity>
-        <Text style={styles.gameIcon}>{game.icon}</Text>
+        <MaterialIcons name={game.icon} size={22} color={Colors.light.text} />
         <Text style={styles.gameName}>{game.name}</Text>
       </View>
 
@@ -144,9 +144,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
     gap: 8,
-  },
-  gameIcon: {
-    fontSize: 20,
   },
   gameName: {
     ...Typography.h3,

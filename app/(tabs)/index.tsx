@@ -5,6 +5,7 @@ import type {
     ConnectionsCarouselItem,
     CrosswordCarouselItem,
 } from '@/hooks/usePuzzleCarousel';
+import { GAMES } from '@/constants/Games';
 import { Colors, Layout, Spacing, TFL, Typography } from '@/constants/theme';
 import { useAuthStore } from '@/stores/auth-store';
 import { useLocationRank } from '@/hooks/useLocationRank';
@@ -113,7 +114,7 @@ export default function HomeScreen() {
                 {/* Connections section */}
                 <View style={styles.section}>
                     <SectionHeader
-                        icon="hub"
+                        icon={GAMES.connections.icon}
                         title="Connections"
                         onSeeAllPress={() => router.push('/games/connections-list' as never)}
                     />
@@ -140,7 +141,7 @@ export default function HomeScreen() {
                 {/* Crossword section */}
                 <View style={styles.section}>
                     <SectionHeader
-                        icon="grid-on"
+                        icon={GAMES.crossword.icon}
                         title="Crossword"
                         badge={user?.isPremium ? '1st Class' : undefined}
                         onSeeAllPress={() => router.push('/games/crossword-list' as never)}
