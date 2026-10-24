@@ -73,3 +73,22 @@ describe('formatSettingsLocation', () => {
         expect(formatSettingsLocation({ city: 'Manchester', borough: 'Camden' })).toBe('Manchester');
     });
 });
+
+describe('userFromProfile username loading (TUB-268)', () => {
+    it('falls back to auth metadata username when the profile row has none', () => {
+        const u = userFromProfile({
+            id: 'u1', email: 'a@b.com', isPremium: false,
+            profile: { username: null, city: null, borough: null },
+            metadataUsername: ' Runner ',
+        });
+        expect(u.username).toBe('Runner');
+    });
+
+    it('prefers the profile username', () => {
+        const u = userFromProfile({
+            id: 'u1', email: 'a@b.com', isPremium: false,
+            profile: { username: 'FromDb' }, metadataUsername: 'FromMeta',
+        });
+        expect(u.username).toBe('FromDb');
+    });
+});

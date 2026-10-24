@@ -80,7 +80,7 @@ export const leaderboard = {
             .select(
                 `
                 *,
-                profiles:user_id (email)
+                profiles:user_id (username)
             `
             )
             .eq('game_date', queryDate)
@@ -100,7 +100,7 @@ export const leaderboard = {
         const { data, error } = await query;
         if (error) throw error;
 
-        return data as (LeaderboardEntry & { profiles: { email: string } })[];
+        return data as (LeaderboardEntry & { profiles: { username: string | null } | null })[];
     },
 
     /**

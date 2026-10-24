@@ -26,7 +26,7 @@ export function Podium({ entries, currentUserId }: PodiumProps) {
                 const actualRank = entry.rank;
                 const ringIdx = actualRank - 1;
                 const isCenter = actualRank === 1;
-                const name = getDisplayName(entry.username);
+                const name = getDisplayName(entry.username, entry.userId);
                 const initial = getAvatarInitial(name);
                 const isMe = entry.userId === currentUserId;
 

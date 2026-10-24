@@ -33,12 +33,15 @@ export function userFromProfile(input: {
     email: string;
     isPremium: boolean;
     profile?: ProfileRow | null;
+    /** auth user_metadata.username, used when the profile row has none. */
+    metadataUsername?: string | null;
 }): User {
     const profile = input.profile ?? {};
+    const username = profile.username?.trim() || input.metadataUsername?.trim() || undefined;
     return {
         id: input.id,
         email: input.email,
-        username: profile.username ?? undefined,
+        username,
         isPremium: input.isPremium,
         ...normalizeProfile(profile),
     };

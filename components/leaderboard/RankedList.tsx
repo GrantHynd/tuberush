@@ -33,7 +33,7 @@ function EntryRow({
     isMe: boolean;
     compact: boolean;
 }) {
-    const name = getDisplayName(item.username);
+    const name = getDisplayName(item.username, item.userId);
     const initial = getAvatarInitial(name);
     const location = getLocationDisplay({
         city: item.city,
