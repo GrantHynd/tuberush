@@ -6,6 +6,35 @@ import type { User } from '@/types/game';
 
 export type LeaderboardFilter = 'all' | 'london' | 'area';
 
+export type GameResult = 'won' | 'lost';
+
+export interface SubmitScoreOptions {
+    /** Real outcome. Defaults to 'won' (every pre-TUB-257 submission was a win/completion). */
+    result?: GameResult;
+    /** Connections mistakes used (0-4). */
+    mistakes?: number | null;
+}
+
+/**
+ * True when PostgREST says a column/function from migration 20261024000002 isn't there yet
+ * (PGRST204 unknown column, PGRST202 unknown function signature, 42703 undefined column).
+ * Lets this build ship before the migration is applied.
+ */
+export function isMissingSchemaError(error: { code?: string; message?: string } | null | undefined): boolean {
+    if (!error) return false;
+    return ['PGRST204', 'PGRST202', '42703'].includes(error.code ?? '');
+}
+
+/** A new submission replaces the stored one if it's a win over a loss, or a faster game of the same outcome. */
+export function shouldReplaceScore(
+    existing: { score: number; result?: GameResult | null },
+    next: { score: number; result: GameResult },
+): boolean {
+    const existingResult: GameResult = existing.result ?? 'won';
+    if (existingResult !== next.result) return next.result === 'won';
+    return next.score < existing.score;
+}
+
 /** Display string for a leaderboard entry: London → borough, else → city */
 export function getLocationDisplay(entry: {
     city?: string | null;
@@ -19,6 +48,23 @@ export function getLocationDisplay(entry: {
     return city || borough || EMPTY_VALUE;
 }
 
+type WeeklyRow = {
+    user_id: string;
+    username: string;
+    city: string | null;
+    borough: string | null;
+    total_score: number;
+    games_played: number;
+    rank: number;
+    total_players: number;
+};
+
+/** Client-side borough filter used only until the p_borough RPC is deployed. */
+export function filterAndRerank(rows: WeeklyRow[], borough: string): WeeklyRow[] {
+    const kept = rows.filter((r) => r.borough === borough);
+    return kept.map((r, i) => ({ ...r, rank: i + 1, total_players: kept.length }));
+}
+
 export const leaderboard = {
     /**
      * Submit a score to the leaderboard.
@@ -29,8 +75,11 @@ export const leaderboard = {
         city: string,
         borough: Borough | null,
         score: number,
-        gameType: GameType
+        gameType: GameType,
+        options: SubmitScoreOptions = {}
     ) {
+        const result: GameResult = options.result ?? 'won';
+        const mistakes = options.mistakes ?? null;
         const today = new Date().toISOString().split('T')[0];
 
         const { data: existingScore } = await supabase
@@ -41,27 +90,28 @@ export const leaderboard = {
             .eq('game_type', gameType)
             .single();
 
-        const payload = { city, borough, score };
+        const legacyPayload = { city, borough, score };
+        const payload = { ...legacyPayload, result, mistakes };
 
-        if (existingScore) {
-            if (score < existingScore.score) {
-                const { error } = await supabase
-                    .from('leaderboard')
-                    .update(payload)
-                    .eq('id', existingScore.id);
+        if (existingScore && !shouldReplaceScore(existingScore, { score, result })) return;
 
-                if (error) throw error;
-            }
-        } else {
-            const { error } = await supabase.from('leaderboard').insert({
-                user_id: userId,
-                ...payload,
-                game_type: gameType,
-                game_date: today,
-            });
+        const write = (body: typeof legacyPayload | typeof payload) =>
+            existingScore
+                ? supabase.from('leaderboard').update(body).eq('id', existingScore.id)
+                : supabase.from('leaderboard').insert({
+                      user_id: userId,
+                      ...body,
+                      game_type: gameType,
+                      game_date: today,
+                  });
 
-            if (error) throw error;
+        let { error } = await write(payload);
+        if (error && isMissingSchemaError(error)) {
+            // Migration not applied yet: losses can't be stored safely (they'd count towards ranks).
+            if (result === 'lost') return;
+            ({ error } = await write(legacyPayload));
         }
+        if (error) throw error;
     },
 
     /**
@@ -75,6 +125,7 @@ export const leaderboard = {
     ) {
         const queryDate = date || new Date().toISOString().split('T')[0];
 
+        const build = (excludeLost: boolean) => {
         let query = supabase
             .from('leaderboard')
             .select(
@@ -97,7 +148,12 @@ export const leaderboard = {
             }
         }
 
-        const { data, error } = await query;
+        if (excludeLost) query = query.or('result.is.null,result.neq.lost');
+        return query;
+        };
+
+        let { data, error } = await build(true);
+        if (error && isMissingSchemaError(error)) ({ data, error } = await build(false));
         if (error) throw error;
 
         return data as (LeaderboardEntry & { profiles: { username: string | null } | null })[];
@@ -125,14 +181,13 @@ export const leaderboard = {
      * Get user's best (lowest) score across all time for a game type.
      */
     async getUserBestScore(userId: string, gameType: GameType): Promise<number | null> {
-        const { data, error } = await supabase
-            .from('leaderboard')
-            .select('score')
-            .eq('user_id', userId)
-            .eq('game_type', gameType)
-            .order('score', { ascending: true })
-            .limit(1)
-            .single();
+        const build = (excludeLost: boolean) => {
+            let q = supabase.from('leaderboard').select('score').eq('user_id', userId).eq('game_type', gameType);
+            if (excludeLost) q = q.or('result.is.null,result.neq.lost');
+            return q.order('score', { ascending: true }).limit(1).maybeSingle();
+        };
+        let { data, error } = await build(true);
+        if (error && isMissingSchemaError(error)) ({ data, error } = await build(false));
 
         if (error || !data) return null;
         return data.score;
@@ -145,27 +200,27 @@ export const leaderboard = {
         gameType: GameType,
         weekStart: string,
         weekEnd: string,
-        city?: string | null
+        city?: string | null,
+        borough?: string | null
     ): Promise<{ entries: WeeklyLeaderboardEntry[]; totalPlayers: number }> {
-        const { data, error } = await supabase.rpc('get_weekly_leaderboard', {
+        const base = {
             p_game_type: gameType,
             p_week_start: weekStart,
             p_week_end: weekEnd,
             p_city: city ?? null,
-        });
+        };
+        let { data, error } = borough
+            ? await supabase.rpc('get_weekly_leaderboard', { ...base, p_borough: borough })
+            : await supabase.rpc('get_weekly_leaderboard', base);
+        if (borough && error && isMissingSchemaError(error)) {
+            // Pre-migration RPC has no p_borough: fetch the city board and filter by borough here.
+            ({ data, error } = await supabase.rpc('get_weekly_leaderboard', base));
+            if (!error) data = filterAndRerank((data ?? []) as WeeklyRow[], borough);
+        }
 
         if (error) throw error;
 
-        const rows = (data ?? []) as {
-            user_id: string;
-            username: string;
-            city: string | null;
-            borough: string | null;
-            total_score: number;
-            games_played: number;
-            rank: number;
-            total_players: number;
-        }[];
+        const rows = (data ?? []) as WeeklyRow[];
 
         const totalPlayers = rows.length > 0 ? rows[0].total_players : 0;
 

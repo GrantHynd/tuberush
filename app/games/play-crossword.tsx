@@ -263,6 +263,7 @@ export default function PlayCrossword() {
                         user.city === 'London' ? user.borough ?? null : null,
                         timeTaken,
                         'crossword',
+                        { result: 'won' },
                     )
                     .catch((err) => console.error('Failed to submit crossword score', err));
             }

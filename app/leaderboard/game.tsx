@@ -26,7 +26,7 @@ const LIST_CAP = 50;
 
 export default function GameLeaderboardScreen() {
   const router = useRouter();
-  const { gameType } = useLocalSearchParams<{ gameType: string }>();
+  const { gameType, filter } = useLocalSearchParams<{ gameType: string; filter?: string }>();
   const { user } = useAuthStore();
 
   const gt = (gameType ?? "connections") as GameType;
@@ -37,13 +37,21 @@ export default function GameLeaderboardScreen() {
   }, [gt]);
 
   const [week, setWeek] = useState(getCurrentWeek);
-  const [activeCity, setActiveCity] = useState<string | null>(null);
+  // TUB-265: "Full board" from My area opens on the user's city tab (borough-scoped in London).
+  const [activeCity, setActiveCity] = useState<string | null>(
+    filter === "area" ? (user?.city ?? null) : null,
+  );
+  const activeBorough =
+    activeCity && activeCity === user?.city && user?.city === "London" && filter === "area"
+      ? (user?.borough ?? null)
+      : null;
 
   const { entries, loading } = useWeeklyLeaderboard(
     gt,
     week.start,
     week.end,
     activeCity,
+    activeBorough,
   );
 
   // Only show Global + user's own city/town

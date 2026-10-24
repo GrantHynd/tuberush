@@ -14,7 +14,8 @@ export function useWeeklyLeaderboard(
     gameType: GameType,
     weekStart: string,
     weekEnd: string,
-    city?: string | null
+    city?: string | null,
+    borough?: string | null
 ): UseWeeklyLeaderboardResult {
     const [entries, setEntries] = useState<WeeklyLeaderboardEntry[]>([]);
     const [totalPlayers, setTotalPlayers] = useState(0);
@@ -29,7 +30,8 @@ export function useWeeklyLeaderboard(
                 gameType,
                 weekStart,
                 weekEnd,
-                city
+                city,
+                borough
             );
             setEntries(result.entries);
             setTotalPlayers(result.totalPlayers);
@@ -38,7 +40,7 @@ export function useWeeklyLeaderboard(
         } finally {
             setLoading(false);
         }
-    }, [gameType, weekStart, weekEnd, city]);
+    }, [gameType, weekStart, weekEnd, city, borough]);
 
     useEffect(() => {
         fetch();
