@@ -62,13 +62,13 @@ describe('HomeScreen', () => {
       user: null,
     });
 
-    const { getByText } = await render(<HomeScreen />);
+    const { getByText, getAllByText } = await render(<HomeScreen />);
 
     // Check for header and games
     expect(getByText('TubeRush')).toBeTruthy();
     expect(getByText('Beat the commute.')).toBeTruthy();
-    expect(getByText('Connections')).toBeTruthy();
-    expect(getByText('Crossword')).toBeTruthy();
+    expect(getAllByText('Connections').length).toBeGreaterThan(0);
+    expect(getAllByText('Crossword').length).toBeGreaterThan(0);
   });
 
   it('renders correctly when logged in', async () => {
@@ -77,13 +77,13 @@ describe('HomeScreen', () => {
       user: { email: 'test@example.com', isPremium: false },
     });
 
-    const { getByText, queryByText } = await render(<HomeScreen />);
+    const { getByText, getAllByText, queryByText } = await render(<HomeScreen />);
 
     // Check for header and games
     expect(getByText('TubeRush')).toBeTruthy();
     expect(getByText('Beat the commute.')).toBeTruthy();
-    expect(getByText('Connections')).toBeTruthy();
-    expect(getByText('Crossword')).toBeTruthy();
+    expect(getAllByText('Connections').length).toBeGreaterThan(0);
+    expect(getAllByText('Crossword').length).toBeGreaterThan(0);
 
     // Check "Sign In / Register" button is NOT present (no welcome section in new design)
     expect(queryByText('Sign In / Register')).toBeNull();
@@ -158,5 +158,15 @@ describe('HomeScreen', () => {
     expect(
       getByText("Play today's puzzle to get ranked in Barking and Dagenham"),
     ).toBeTruthy();
+  });
+});
+
+describe('HomeScreen hero (TUB-251)', () => {
+  it('shows the Today hero with Sign in rows when signed out', async () => {
+    (useAuthStore as unknown as jest.Mock).mockReturnValue({ user: null });
+    const { getByTestId, getByText } = await render(<HomeScreen />);
+    expect(getByTestId('today-hero')).toBeTruthy();
+    expect(getByText("Today's puzzles")).toBeTruthy();
+    expect(getByTestId('today-hero-connections').props.accessibilityLabel).toMatch(/Sign in to play/);
   });
 });
