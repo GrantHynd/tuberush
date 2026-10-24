@@ -1,10 +1,13 @@
 import { GameSummaryCard } from "@/components/leaderboard/GameSummaryCard";
 import { LiveBadge } from "@/components/leaderboard/LiveBadge";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { PersonalSummaryCard } from "@/components/leaderboard/PersonalSummaryCard";
 import { GAMES, GameId } from "@/constants/Games";
 import { Colors, Layout, Spacing, Typography } from "@/constants/theme";
 import { useLeaderboardOverview } from "@/hooks/useLeaderboardOverview";
+import { useTodaysNextGame } from "@/hooks/useTodaysNextGame";
+import { getRankingPrompt } from "@/lib/today-puzzles";
 import { capture } from "@/lib/posthog";
 import { getCurrentWeek, getWeekLabel, isCurrentWeek } from "@/lib/week-utils";
 import { useAuthStore } from "@/stores/auth-store";
@@ -32,6 +35,7 @@ export default function TrophyScreen() {
     capture("leaderboard_overview_viewed");
   }, []);
 
+  const playNext = useTodaysNextGame();
   const gameIds = Object.keys(GAMES) as GameId[];
 
   return (
@@ -62,13 +66,22 @@ export default function TrophyScreen() {
           </View>
         ) : (
           <>
-            {user && (
+            {user && stats.topPercent == null ? (
+              <EmptyState
+                testID="trophy-unranked"
+                icon="emoji-events"
+                title="You're not on the board yet"
+                body={getRankingPrompt(user)}
+                actionLabel="Play today's puzzle"
+                onAction={playNext}
+              />
+            ) : user && stats.topPercent != null ? (
               <PersonalSummaryCard
                 overallRank={stats.overallRank}
                 totalScore={stats.totalScore}
                 topPercent={stats.topPercent}
               />
-            )}
+            ) : null}
 
             <View style={styles.gamesSection}>
               {gameIds.map((gameId) => {
