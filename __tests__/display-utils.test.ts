@@ -1,4 +1,6 @@
 import {
+    EMPTY_VALUE,
+    formatMaybe,
     formatPlayerCount,
     formatScore,
     getAvatarInitial,
@@ -50,5 +52,22 @@ describe('formatPlayerCount', () => {
         expect(formatPlayerCount(1000)).toBe('1k');
         expect(formatPlayerCount(1200)).toBe('1.2k');
         expect(formatPlayerCount(12345)).toBe('12.3k');
+    });
+});
+
+describe('formatMaybe', () => {
+    it('returns the shared empty glyph for missing values', () => {
+        expect(EMPTY_VALUE).toBe('—');
+        expect(formatMaybe(null)).toBe(EMPTY_VALUE);
+        expect(formatMaybe(undefined)).toBe(EMPTY_VALUE);
+        expect(formatMaybe('')).toBe(EMPTY_VALUE);
+        expect(formatMaybe('  ')).toBe(EMPTY_VALUE);
+    });
+
+    it('formats present values, including zero', () => {
+        expect(formatMaybe('1:23')).toBe('1:23');
+        expect(formatMaybe(0)).toBe('0');
+        expect(formatMaybe(3, (r) => `#${r}`)).toBe('#3');
+        expect(formatMaybe(83, formatScore)).toBe('1:23');
     });
 });

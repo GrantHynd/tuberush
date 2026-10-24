@@ -10,6 +10,7 @@ import { useAuthStore } from '@/stores/auth-store';
 import { useLocationRank } from '@/hooks/useLocationRank';
 import { usePuzzleCarousel } from '@/hooks/usePuzzleCarousel';
 import { useUserStats } from '@/hooks/useUserStats';
+import { formatMaybe } from '@/lib/display-utils';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Sentry from '@sentry/react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -169,7 +170,7 @@ export default function HomeScreen() {
                         <StatCard
                             icon="timer"
                             label="Best Time"
-                            value={stats.bestTime ?? '—'}
+                            value={formatMaybe(stats.bestTime)}
                             sublabel={stats.bestTimeGameType ?? undefined}
                         />
                         <View style={styles.statCardSpacer} />

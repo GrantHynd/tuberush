@@ -1,4 +1,5 @@
 import { Layout, Spacing } from '@/constants/theme';
+import { EMPTY_VALUE } from '@/lib/display-utils';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import React from 'react';
 import {
@@ -39,7 +40,7 @@ export function PuzzleCard({
     ) : commuteCount !== undefined ? (
         <Text style={styles.commuteCount}>{commuteCount} commuters played</Text>
     ) : (
-        <Text style={styles.commuteCount}>—</Text>
+        <Text style={styles.commuteCount}>{EMPTY_VALUE}</Text>
     );
 
     const cardStyle = [
