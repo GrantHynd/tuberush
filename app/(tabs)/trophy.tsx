@@ -1,8 +1,9 @@
 import { GameSummaryCard } from "@/components/leaderboard/GameSummaryCard";
 import { LiveBadge } from "@/components/leaderboard/LiveBadge";
+import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { PersonalSummaryCard } from "@/components/leaderboard/PersonalSummaryCard";
 import { GAMES, GameId } from "@/constants/Games";
-import { Colors, Spacing, Typography } from "@/constants/theme";
+import { Colors, Layout, Spacing, Typography } from "@/constants/theme";
 import { useLeaderboardOverview } from "@/hooks/useLeaderboardOverview";
 import { capture } from "@/lib/posthog";
 import { getCurrentWeek, getWeekLabel, isCurrentWeek } from "@/lib/week-utils";
@@ -34,15 +35,15 @@ export default function TrophyScreen() {
   const gameIds = Object.keys(GAMES) as GameId[];
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.heading}>Leaderboard</Text>
-        <Text style={styles.subtitle}>
-          See where you stand across all games.
-        </Text>
+        <ScreenHeader
+          title="Leaderboard"
+          subtitle="See where you stand across all games."
+        />
 
         <View style={styles.weekRow}>
           <Text style={styles.weekLabel}>
@@ -105,16 +106,8 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light.background,
   },
   scroll: {
-    padding: Spacing.md,
+    paddingHorizontal: Layout.screenPadding,
     paddingBottom: Spacing.xxl,
-  },
-  heading: {
-    ...Typography.h1,
-    marginBottom: Spacing.xs,
-  },
-  subtitle: {
-    ...Typography.caption,
-    marginBottom: Spacing.md,
   },
   weekRow: {
     flexDirection: "row",

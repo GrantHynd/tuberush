@@ -1,6 +1,7 @@
 import { Card } from '@/components/ui/Card';
 import { LegalSection } from '@/components/LegalSection';
 import { SyncStatusRow } from '@/components/ui/SyncStatusRow';
+import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { SearchSelect } from '@/components/ui/SearchSelect';
 import { useAuthStore } from '@/stores/auth-store';
 import { useGameStore } from '@/stores/game-store';
@@ -155,7 +156,9 @@ export default function ProfileScreen() {
     if (!user) {
         return (
             <SafeAreaView style={styles.container} edges={['top']}>
-                <Text style={styles.screenTitle} accessibilityRole="header">Profile</Text>
+                <View style={styles.headerGutter}>
+                    <ScreenHeader title="Profile" />
+                </View>
                 <View style={styles.emptyState}>
                     <View style={styles.iconCircle}>
                         <IconSymbol name="person.fill" size={40} color={Colors.light.tint} />
@@ -185,7 +188,9 @@ export default function ProfileScreen() {
     return (
         <SafeAreaView style={styles.container} edges={['top']}>
         <ScrollView style={styles.scrollContainer}>
-            <Text style={styles.screenTitle} accessibilityRole="header">Profile</Text>
+            <View style={styles.headerGutter}>
+                <ScreenHeader title="Profile" />
+            </View>
             <View style={styles.header}>
                 <View style={styles.avatarContainer}>
                     <Text style={styles.avatarText}>{getAvatarInitial(getOwnDisplayName(user))}</Text>
@@ -356,10 +361,8 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-    screenTitle: {
-        ...Typography.h1,
-        paddingHorizontal: Spacing.md,
-        paddingTop: Spacing.md,
+    headerGutter: {
+        paddingHorizontal: Layout.screenPadding,
     },
     container: {
         flex: 1,
