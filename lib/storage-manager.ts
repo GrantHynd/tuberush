@@ -1,11 +1,33 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import type { SyncOperation } from '@/types/game';
 
 const STORAGE_KEYS = {
     GAME_STATE: 'game_state_',
     SYNC_QUEUE: 'sync_queue',
     USER_PREFERENCES: 'user_preferences',
     LAST_SYNC: 'last_sync_timestamp',
+    DEAD_LETTER: 'sync_dead_letter',
 } as const;
+
+/** A queued op that the server rejected permanently (4xx / RLS). Kept for inspection, never retried. */
+export interface DeadLetterEntry {
+    operation: SyncOperation;
+    error: { code?: string; message?: string; status?: number };
+    failedAt: string;
+}
+
+let queueChain: Promise<unknown> = Promise.resolve();
+/** Serialise every read-modify-write of the sync queue and dead-letter list (audit risk 5). */
+export function withQueueLock<T>(fn: () => Promise<T>): Promise<T> {
+    const run = queueChain.then(fn, fn);
+    queueChain = run.catch(() => undefined);
+    return run;
+}
+
+/** Test-only. */
+export function __resetQueueLockForTests(): void {
+    queueChain = Promise.resolve();
+}
 
 export class StorageManager {
     /**
@@ -91,45 +113,62 @@ export class StorageManager {
         }
     }
 
-    /**
-     * Add operation to sync queue
-     */
-    /** Appends an operation to the sync queue and returns the new queue length. */
-    static async addToSyncQueue(operation: any): Promise<number> {
-        try {
-            const queue = await this.getSyncQueue();
-            queue.push(operation);
-            await AsyncStorage.setItem(STORAGE_KEYS.SYNC_QUEUE, JSON.stringify(queue));
-            return queue.length;
-        } catch (error) {
-            console.error('Error adding to sync queue:', error);
-            throw error;
-        }
-    }
-
-    /**
-     * Get sync queue
-     */
-    static async getSyncQueue(): Promise<any[]> {
+    private static async readQueue(): Promise<SyncOperation[]> {
         try {
             const data = await AsyncStorage.getItem(STORAGE_KEYS.SYNC_QUEUE);
-            return data ? JSON.parse(data) : [];
+            const parsed = data ? JSON.parse(data) : [];
+            return Array.isArray(parsed) ? parsed : [];
         } catch (error) {
             console.error('Error getting sync queue:', error);
             return [];
         }
     }
 
+    private static async writeQueue(queue: SyncOperation[]): Promise<void> {
+        await AsyncStorage.setItem(STORAGE_KEYS.SYNC_QUEUE, JSON.stringify(queue));
+    }
+
+    /**
+     * Queue a game snapshot. There is at most one op per game: a newer snapshot replaces the
+     * queued one (it already contains the earlier progress) and resets its retry schedule.
+     * Returns the new queue length.
+     */
+    static addToSyncQueue(operation: SyncOperation): Promise<number> {
+        return withQueueLock(async () => {
+            try {
+                const queue = await this.readQueue();
+                const gameId = operation.data?.id;
+                const idx = gameId ? queue.findIndex(op => op.data?.id === gameId) : -1;
+                if (idx >= 0) queue[idx] = operation;
+                else queue.push(operation);
+                await this.writeQueue(queue);
+                return queue.length;
+            } catch (error) {
+                console.error('Error adding to sync queue:', error);
+                throw error;
+            }
+        });
+    }
+
+    /**
+     * Get sync queue
+     */
+    static getSyncQueue(): Promise<SyncOperation[]> {
+        return withQueueLock(() => this.readQueue());
+    }
+
     /**
      * Clear sync queue
      */
-    static async clearSyncQueue(): Promise<void> {
-        try {
-            await AsyncStorage.setItem(STORAGE_KEYS.SYNC_QUEUE, JSON.stringify([]));
-        } catch (error) {
-            console.error('Error clearing sync queue:', error);
-            throw error;
-        }
+    static clearSyncQueue(): Promise<void> {
+        return withQueueLock(async () => {
+            try {
+                await this.writeQueue([]);
+            } catch (error) {
+                console.error('Error clearing sync queue:', error);
+                throw error;
+            }
+        });
     }
 
     /**
@@ -140,18 +179,65 @@ export class StorageManager {
     }
 
     /**
-     * Remove multiple operations from sync queue in a single batch
+     * Remove ops by id. If `onlyIfTimestamp` is given, an op is kept when it was replaced by a
+     * newer snapshot (different timestamp) after it was read, so progress made mid-sync isn't lost.
      */
-    static async removeFromSyncQueueBatch(operationIds: string[]): Promise<void> {
+    static removeFromSyncQueueBatch(operationIds: string[], onlyIfTimestamp?: Record<string, string>): Promise<void> {
+        return withQueueLock(async () => {
+            try {
+                const queue = await this.readQueue();
+                const idSet = new Set(operationIds);
+                const filtered = queue.filter(op => {
+                    if (!idSet.has(op.id)) return true;
+                    const ts = onlyIfTimestamp?.[op.id];
+                    return ts !== undefined && ts !== op.timestamp;
+                });
+                await this.writeQueue(filtered);
+            } catch (error) {
+                console.error('Error removing from sync queue batch:', error);
+                throw error;
+            }
+        });
+    }
+
+    /** Persist retry bookkeeping for an op, unless it has since been replaced by a newer snapshot. */
+    static updateSyncOperation(
+        operationId: string,
+        expectedTimestamp: string,
+        patch: Pick<SyncOperation, 'retryCount' | 'nextAttemptAt' | 'lastError'>,
+    ): Promise<void> {
+        return withQueueLock(async () => {
+            const queue = await this.readQueue();
+            const idx = queue.findIndex(op => op.id === operationId && op.timestamp === expectedTimestamp);
+            if (idx < 0) return;
+            queue[idx] = { ...queue[idx], ...patch };
+            await this.writeQueue(queue);
+        });
+    }
+
+    /** Move an op to the dead-letter list and out of the queue (atomically). */
+    static moveToDeadLetter(operation: SyncOperation, error: DeadLetterEntry['error']): Promise<void> {
+        return withQueueLock(async () => {
+            const queue = await this.readQueue();
+            await this.writeQueue(queue.filter(op => !(op.id === operation.id && op.timestamp === operation.timestamp)));
+            const dead = await this.readDeadLetter();
+            dead.push({ operation, error, failedAt: new Date().toISOString() });
+            await AsyncStorage.setItem(STORAGE_KEYS.DEAD_LETTER, JSON.stringify(dead.slice(-50)));
+        });
+    }
+
+    private static async readDeadLetter(): Promise<DeadLetterEntry[]> {
         try {
-            const queue = await this.getSyncQueue();
-            const idSet = new Set(operationIds);
-            const filtered = queue.filter(op => !idSet.has(op.id));
-            await AsyncStorage.setItem(STORAGE_KEYS.SYNC_QUEUE, JSON.stringify(filtered));
-        } catch (error) {
-            console.error('Error removing from sync queue batch:', error);
-            throw error;
+            const raw = await AsyncStorage.getItem(STORAGE_KEYS.DEAD_LETTER);
+            const parsed = raw ? JSON.parse(raw) : [];
+            return Array.isArray(parsed) ? parsed : [];
+        } catch {
+            return [];
         }
+    }
+
+    static getDeadLetter(): Promise<DeadLetterEntry[]> {
+        return withQueueLock(() => this.readDeadLetter());
     }
 
     /**
@@ -199,7 +285,7 @@ export class StorageManager {
         try {
             const keys = await AsyncStorage.getAllKeys();
             const gameKeys = keys.filter((key) => key.startsWith(STORAGE_KEYS.GAME_STATE));
-            const toRemove = [...gameKeys, STORAGE_KEYS.SYNC_QUEUE, STORAGE_KEYS.LAST_SYNC];
+            const toRemove = [...gameKeys, STORAGE_KEYS.SYNC_QUEUE, STORAGE_KEYS.LAST_SYNC, STORAGE_KEYS.DEAD_LETTER];
             if (toRemove.length > 0) {
                 await AsyncStorage.multiRemove(toRemove);
             }
