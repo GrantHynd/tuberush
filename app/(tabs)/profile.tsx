@@ -25,6 +25,7 @@ import { BOROUGHS, Borough } from '@/constants/Boroughs';
 import { UK_CITIES, isLondon } from '@/constants/UKCities';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { formatSettingsLocation } from '@/lib/profile';
+import * as Sentry from '@sentry/react-native';
 import Constants from 'expo-constants';
 
 const APPLE_SUBSCRIPTIONS_URL = 'https://apps.apple.com/account/subscriptions';
@@ -193,6 +194,18 @@ export default function ProfileScreen() {
                     <Text style={styles.membershipBadgeText}>{getMembershipTier()}</Text>
                 </View>
             </View>
+
+            {/* Temporary. Remove before App Store submission. */}
+            <TouchableOpacity
+                style={styles.sentryTestButton}
+                onPress={() => {
+                    Sentry.captureException(new Error('First error'));
+                }}
+                accessibilityRole="button"
+                accessibilityLabel="Try! Send a test error to Sentry"
+            >
+                <Text style={styles.sentryTestButtonText}>Try! Send test error</Text>
+            </TouchableOpacity>
 
             <View style={styles.section}>
                 <Text style={styles.sectionTitle}>PREFERENCES</Text>
@@ -445,6 +458,19 @@ const styles = StyleSheet.create({
     syncButton: {
         marginLeft: 4,
         flexShrink: 0,
+    },
+    sentryTestButton: {
+        marginHorizontal: Spacing.md,
+        marginBottom: Spacing.md,
+        backgroundColor: TFL.blue,
+        borderRadius: Layout.borderRadius.md,
+        paddingVertical: Spacing.md,
+        alignItems: 'center',
+    },
+    sentryTestButtonText: {
+        color: TFL.white,
+        fontWeight: '700',
+        fontSize: 16,
     },
     signOutButton: {
         marginTop: Spacing.xl,

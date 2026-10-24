@@ -15,7 +15,6 @@ import * as Sentry from '@sentry/react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback } from 'react';
 import {
-    Button,
     FlatList,
     ScrollView,
     StyleSheet,
@@ -97,12 +96,16 @@ export default function HomeScreen() {
                 </View>
 
                 {/* Temporary. Remove before App Store submission. */}
-                <Button
-                    title="Try!"
+                <TouchableOpacity
+                    style={styles.sentryTestButton}
                     onPress={() => {
                         Sentry.captureException(new Error('First error'));
                     }}
-                />
+                    accessibilityRole="button"
+                    accessibilityLabel="Try! Send a test error to Sentry"
+                >
+                    <Text style={styles.sentryTestButtonText}>Try! Send test error</Text>
+                </TouchableOpacity>
 
                 {/* Connections section */}
                 <View style={styles.section}>
@@ -220,6 +223,18 @@ const styles = StyleSheet.create({
     scrollContent: {
         paddingHorizontal: HORIZONTAL_PADDING,
         paddingBottom: Spacing.xl,
+    },
+    sentryTestButton: {
+        backgroundColor: TFL.blue,
+        borderRadius: Layout.borderRadius.md,
+        paddingVertical: Spacing.md,
+        alignItems: 'center',
+        marginBottom: Spacing.md,
+    },
+    sentryTestButtonText: {
+        color: TFL.white,
+        fontWeight: '700',
+        fontSize: 16,
     },
     header: {
         flexDirection: 'row',
