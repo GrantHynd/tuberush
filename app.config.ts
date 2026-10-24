@@ -88,6 +88,8 @@ export default {
       favicon: './assets/images/favicon.png',
     },
     plugins: [
+      'posthog-react-native/expo',
+      'expo-sqlite',
       'expo-router',
       [
         'expo-splash-screen',
