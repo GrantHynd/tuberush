@@ -1,4 +1,4 @@
-import { TFL, Spacing, Typography } from '@/constants/theme';
+import { GameColors, TFL, Spacing, Typography } from '@/constants/theme';
 import { GameType } from '@/types/game';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -10,7 +10,7 @@ export interface GameTypeBadgeProps {
 export function GameTypeBadge({ gameType }: GameTypeBadgeProps) {
     const isConnections = gameType === 'connections';
     const label = isConnections ? 'CON' : 'CRO';
-    const backgroundColor = isConnections ? TFL.blue : TFL.red;
+    const backgroundColor = isConnections ? GameColors.connections : GameColors.crossword;
 
     return (
         <View style={[styles.badge, { backgroundColor }]}>

@@ -1,6 +1,6 @@
 import type MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
-import { TFL } from './theme';
+import { GameColors } from './theme';
 
 type MaterialIconName = keyof typeof MaterialIcons.glyphMap;
 
@@ -15,7 +15,7 @@ export const GAMES = {
         isPremium: false,
         /** MaterialIcons glyph, shared by Home section headers and leaderboards. */
         icon: 'hub' as MaterialIconName,
-        color: TFL.red, // Central Line
+        color: GameColors.connections,
     },
     crossword: {
         id: 'crossword',
@@ -23,7 +23,7 @@ export const GAMES = {
         description: 'Daily premium crossword',
         isPremium: true,
         icon: 'grid-on' as MaterialIconName,
-        color: TFL.blue, // Piccadilly Line
+        color: GameColors.crossword,
     },
 } as const;
 

@@ -17,6 +17,16 @@ export const TFL = {
   },
 };
 
+/**
+ * Per-game identity colours. Kept separate from TFL.red / Colors.error,
+ * which are reserved for errors and destructive actions.
+ */
+export const GameColors = {
+  /** Muted crossword red — white text 7.75:1. */
+  crossword: '#A4161A',
+  connections: TFL.blue,
+};
+
 export const Fonts = {
   rounded: 'System',
   mono: 'System',
