@@ -36,8 +36,11 @@ export const Colors = {
     background: '#FFFFFF',
     tint: TFL.blue,
     icon: '#6B7280',
-    tabIconDefault: '#9CA3AF',
+    /** Inactive tab icon/label: #4B5563 = 7.56:1 on white (WCAG AA). */
+    tabIconDefault: TFL.grey.dark,
     tabIconSelected: TFL.blue,
+    /** Explicit so contrast holds regardless of device appearance. */
+    tabBarBackground: '#FFFFFF',
     card: TFL.grey.light,
     border: '#E5E7EB',
     error: TFL.red,
@@ -54,8 +57,11 @@ export const Colors = {
     background: '#FFFFFF',
     tint: TFL.blue,
     icon: '#6B7280',
-    tabIconDefault: '#9CA3AF',
+    /** Inactive tab icon/label: #4B5563 = 7.56:1 on white (WCAG AA). */
+    tabIconDefault: TFL.grey.dark,
     tabIconSelected: TFL.blue,
+    /** Explicit so contrast holds regardless of device appearance. */
+    tabBarBackground: '#FFFFFF',
     card: TFL.grey.light,
     border: '#E5E7EB',
     error: TFL.red,
