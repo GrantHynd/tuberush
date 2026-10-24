@@ -8,7 +8,7 @@ import type {
     CrosswordCarouselItem,
 } from '@/hooks/usePuzzleCarousel';
 import { GAMES } from '@/constants/Games';
-import { Colors, Layout, Spacing, TFL, Typography } from '@/constants/theme';
+import { Colors, GameColors, Layout, Spacing, TFL, Typography } from '@/constants/theme';
 import { useAuthStore } from '@/stores/auth-store';
 import { useLocationRank } from '@/hooks/useLocationRank';
 import { usePuzzleCarousel } from '@/hooks/usePuzzleCarousel';
@@ -128,7 +128,7 @@ export default function HomeScreen() {
                                 isNew={item.isNew}
                                 isCompleted={item.isCompleted}
                                 commuteCount={item.commuteCount}
-                                backgroundColor={TFL.blue}
+                                backgroundColor={GameColors.connections}
                                 onPress={() => handleConnectionsCardPress(item.date)}
                             />
                         )}
@@ -156,7 +156,7 @@ export default function HomeScreen() {
                                 isNew={item.isNew}
                                 isCompleted={item.isCompleted}
                                 commuteCount={item.commuteCount}
-                                backgroundColor={TFL.red}
+                                backgroundColor={GameColors.crossword}
                                 onPress={() => handleCrosswordCardPress(item.puzzleId)}
                             />
                         )}

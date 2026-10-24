@@ -3,7 +3,7 @@ import { GameHistoryListScreen } from '@/components/games/GameHistoryListScreen'
 import { crosswordGameHistoryConfig } from '@/config/gameHistoryConfigs';
 import { useGameHistoryList } from '@/hooks/useGameHistoryList';
 import { useAuthStore } from '@/stores/auth-store';
-import { TFL } from '@/constants/theme';
+import { GameColors, TFL } from '@/constants/theme';
 import type { GameHistoryListItem } from '@/types/game-history';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback } from 'react';
@@ -50,7 +50,7 @@ export default function CrosswordListScreen() {
         <GameHistoryListScreen
             title="Crossword"
             icon="grid-on"
-            accentColor={TFL.red}
+            accentColor={GameColors.crossword}
             hasWinLoss={false}
             completedBadgeColor={TFL.blue}
             sections={sections}
