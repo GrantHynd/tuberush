@@ -1,3 +1,4 @@
+import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { Card } from '@/components/ui/Card';
 import { GameTypeBadge } from '@/components/ui/GameTypeBadge';
 import { Colors, Layout, Spacing, TFL, Typography } from '@/constants/theme';
@@ -22,7 +23,7 @@ export default function StatsScreen() {
     return (
         <SafeAreaView style={styles.container} edges={['top']}>
             <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-                <Text style={styles.title}>Stats</Text>
+                <ScreenHeader title="Stats" />
 
                 {loading ? (
                     <View style={styles.loadingContainer}>
@@ -116,11 +117,8 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     scrollContent: {
-        padding: Spacing.md,
-    },
-    title: {
-        ...Typography.h1,
-        marginBottom: Spacing.lg,
+        paddingHorizontal: Layout.screenPadding,
+        paddingBottom: Spacing.md,
     },
     loadingContainer: {
         paddingVertical: Spacing.xxl,

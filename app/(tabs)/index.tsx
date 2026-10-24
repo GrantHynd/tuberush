@@ -1,4 +1,5 @@
 import { Card } from '@/components/ui/Card';
+import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { PuzzleCard } from '@/components/home/PuzzleCard';
 import { SectionHeader } from '@/components/home/SectionHeader';
 import { StatCard } from '@/components/home/StatCard';
@@ -74,31 +75,26 @@ export default function HomeScreen() {
                 contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomInset }]}
                 showsVerticalScrollIndicator={false}
             >
-                {/* Header */}
-                <View style={styles.header}>
-                    <View style={styles.brandRow}>
-                        <View style={styles.roundel}>
-                            <View style={styles.roundelInner} />
-                            <View style={styles.roundelBar} />
-                        </View>
-                        <View>
-                            <Text style={styles.title}>TubeRush</Text>
-                            <Text style={styles.tagline}>Beat the commute.</Text>
-                        </View>
-                    </View>
-                    <TouchableOpacity
-                        onPress={() => router.push(user ? '/profile' : '/auth')}
-                        style={styles.avatarButton}
-                        accessibilityRole="button"
-                        accessibilityLabel={user ? 'Profile' : 'Sign in'}
-                    >
-                        <View style={styles.avatar}>
-                            <Text style={styles.avatarText}>
-                                {user ? getAvatarInitial(getOwnDisplayName(user)) : '?'}
-                            </Text>
-                        </View>
-                    </TouchableOpacity>
-                </View>
+                <ScreenHeader
+                    variant="brand"
+                    title="TubeRush"
+                    subtitle="Beat the commute."
+                    trailing={
+                        <TouchableOpacity
+                            onPress={() => router.push(user ? '/profile' : '/auth')}
+                            style={styles.avatarButton}
+                            activeOpacity={0.7}
+                            accessibilityRole="button"
+                            accessibilityLabel={user ? 'Profile' : 'Sign in'}
+                        >
+                            <View style={styles.avatar}>
+                                <Text style={styles.avatarText}>
+                                    {user ? getAvatarInitial(getOwnDisplayName(user)) : '?'}
+                                </Text>
+                            </View>
+                        </TouchableOpacity>
+                    }
+                />
 
                 {/* Temporary. Remove before App Store submission. */}
                 <TouchableOpacity
@@ -240,51 +236,11 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         fontSize: 16,
     },
-    header: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingVertical: Spacing.lg,
-    },
-    brandRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    roundel: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: TFL.red,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginRight: Spacing.sm,
-        position: 'relative',
-    },
-    roundelInner: {
-        width: 26,
-        height: 26,
-        borderRadius: 13,
-        backgroundColor: 'white',
-    },
-    roundelBar: {
-        position: 'absolute',
-        width: 40,
-        height: 6,
-        backgroundColor: TFL.blue,
-    },
-    title: {
-        ...Typography.h2,
-        fontSize: 24,
-        color: Colors.light.text,
-        letterSpacing: -0.5,
-    },
-    tagline: {
-        fontSize: 14,
-        color: TFL.grey.dark,
-        marginTop: 2,
-    },
     avatarButton: {
-        padding: 4,
+        width: 44,
+        height: 44,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     avatar: {
         width: 40,
