@@ -19,7 +19,7 @@ A daily word game app for British commuters, built with React Native/Expo, offli
 ✅ **Automated Daily Games**
 - Daily puzzles generated nightly by two AWS Lambdas (`lambda/generate-connections`, `lambda/generate-crossword`)
 - Crossword grids are filled by a seeded solver from a word bank + common British word list; Claude writes the clues
-- A Supabase edge function (`schedule-daily-games`) remains for manual/edge-triggered generation
+- The Lambdas are the only generation path (see `docs/adr/0001-puzzle-generation.md`)
 
 ✅ **Premium Membership**
 - RevenueCat subscriptions (Monthly & Yearly)
@@ -84,7 +84,7 @@ tuberush-v2/
 ├── lambda/generate-crossword/    # AWS Lambda (SAM): nightly crossword (grid solver + Claude clues)
 └── supabase/                 # Backend
     ├── migrations/          # 12 migrations
-    ├── functions/           # schedule-daily-games
+    ├── functions/           # delete-account, legal
     ├── schema.sql / seed.sql
     └── README.md            # Setup guide
 ```
@@ -131,7 +131,7 @@ How the main product areas fit together:
    - `EXPO_PUBLIC_REVENUECAT_API_KEY` (from RevenueCat dashboard)
    - `EXPO_PUBLIC_POSTHOG_API_KEY` (from PostHog project settings)
 
-   The `schedule-daily-games` edge function/Lambda also needs its own secrets (`ANTHROPIC_API_KEY`, `ANTHROPIC_DAILY_PUZZLE_SKILL_ID`, etc.) — see `.env.example` for the full list.
+   The puzzle-generation Lambdas read their API keys (`ANTHROPIC_API_KEY`, `ANTHROPIC_DAILY_PUZZLE_SKILL_ID`, etc.) from the AWS Secrets Manager secret `tuberush/daily-games` (see `template.yaml`).
 
 4. **Start the development server**
    ```bash
@@ -199,7 +199,7 @@ if (game.isPremium && !user?.isPremium) {
 ### Daily Puzzle Generation
 - `lambda/generate-connections` and `lambda/generate-crossword` (AWS Lambda, SAM-deployed via `template.yaml`) run nightly at 02:00 / 02:30 UTC
 - Crossword: a solver fills the day's template so every crossing is valid, then Claude writes the title and clues (see `lambda/generate-crossword/WORD_LIST.md`)
-- `supabase/functions/schedule-daily-games` provides the same generation logic as an edge function
+- This is the only generation path; the former `schedule-daily-games` edge function was retired (`docs/adr/0001-puzzle-generation.md`)
 
 ### Subscriptions
 - RevenueCat-powered subscriptions (Monthly & Yearly)
@@ -231,7 +231,7 @@ See `supabase/README.md` for detailed setup instructions.
 2. Add game config to `constants/Games.ts` (id, name, description, `isPremium`, icon, colour)
 3. Create list + play screens in `app/games/`
 4. Update type definitions in `types/game.ts`
-5. If it should support daily generation, extend `lib/daily-games.ts` and the `schedule-daily-games` function/Lambda
+5. If it should support daily generation, extend `lib/daily-games.ts` and add a Lambda under `lambda/` (plus its schedule in `template.yaml`)
 
 ### Modifying Sync Logic
 
