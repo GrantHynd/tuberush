@@ -10,7 +10,8 @@ const linkedDataType = (type: string, purposes: string[]) => ({
 });
 
 // Everything is linked because Sentry.setUser, PostHog identify, and RevenueCat
-// logIn all receive the Supabase user ID (Sentry and PostHog also get the email).
+// logIn all receive the Supabase user ID. Sentry also gets the email and username.
+// PostHog also gets the email.
 // See docs/ios-privacy-manifest.md before adding an SDK or changing these.
 const privacyManifests = {
   NSPrivacyTracking: false,

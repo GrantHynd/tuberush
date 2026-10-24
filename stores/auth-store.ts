@@ -146,7 +146,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             }
 
             identify(data.user.id, { email: data.user.email });
-            syncSentryUser({ id: data.user.id, email: data.user.email });
             capture('sign_in', { method: 'email' });
 
             // Fetch profile
@@ -157,14 +156,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 .single();
 
             const isPremium = await resolvePremiumStatus();
+            const signedInUser = userFromProfile({
+                id: data.user.id,
+                email: data.user.email!,
+                isPremium,
+                profile: profile as ProfileRow | null,
+            });
 
+            syncSentryUser(signedInUser);
             set({
-                user: userFromProfile({
-                    id: data.user.id,
-                    email: data.user.email!,
-                    isPremium,
-                    profile: profile as ProfileRow | null,
-                }),
+                user: signedInUser,
                 session: data.session,
             });
         }
@@ -232,7 +233,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             }
 
             identify(session.user.id, { email: session.user.email });
-            syncSentryUser({ id: session.user.id, email: session.user.email });
 
             // Fetch profile
             const { data: profile } = await supabase
@@ -242,14 +242,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 .single();
 
             const isPremium = await resolvePremiumStatus();
+            const restoredUser = userFromProfile({
+                id: session.user.id,
+                email: session.user.email!,
+                isPremium,
+                profile: profile as ProfileRow | null,
+            });
 
+            syncSentryUser(restoredUser);
             set({
-                user: userFromProfile({
-                    id: session.user.id,
-                    email: session.user.email!,
-                    isPremium,
-                    profile: profile as ProfileRow | null,
-                }),
+                user: restoredUser,
                 session,
                 loading: false,
             });

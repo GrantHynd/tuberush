@@ -9,15 +9,17 @@ The app does not track users (`NSPrivacyTracking` is false, no tracking domains)
 | Data type | Collected by | Purpose |
 | --- | --- | --- |
 | Email address | Supabase auth, Sentry user context, PostHog `identify` | App functionality, analytics |
-| User ID | Supabase auth, RevenueCat, Sentry user context, PostHog `identify` | App functionality, analytics |
-| Crash data | Sentry | App functionality |
-| Performance data | Sentry (session tracking) | App functionality |
-| Other diagnostic data | Sentry (device context, breadcrumbs) | App functionality |
+| User ID | Supabase auth, RevenueCat, Sentry user context (account id and username), PostHog `identify` | App functionality, analytics |
+| Crash data | Sentry (`@sentry/react-native` 8.28, Sentry Cocoa 9.29.0) | App functionality |
+| Performance data | Sentry session tracking | App functionality |
+| Other diagnostic data | Sentry device context and breadcrumbs | App functionality |
 | Product interaction | PostHog | Analytics |
 | Other usage data | PostHog | Analytics |
 | Purchase history | RevenueCat | App functionality |
 
-Every type is marked as linked to the user. After sign-in, `stores/auth-store.ts` passes the Supabase user ID to Sentry, PostHog and RevenueCat, and the email to Sentry and PostHog. The SDKs' own manifests say "not linked" because they can't know that. If we stop sending identity to an SDK, its rows can become unlinked.
+Every type is marked as linked to the user. After sign-in, `stores/auth-store.ts` passes the Supabase user ID to Sentry, PostHog and RevenueCat, the email to Sentry and PostHog, and the username to Sentry. The SDKs' own manifests say "not linked" because they can't know that. If we stop sending identity to an SDK, its rows can become unlinked.
+
+Sentry is installed and the Expo plugin is pinned to organization `grant-hynd` and project `tuberush`. Its Cocoa SDK ships the same crash, performance, and diagnostic types, marked not linked. The app manifest marks them linked because we attach the signed-in user. The temporary **Try! Send test error** buttons send that same crash data. They do not add a new data type.
 
 Required-reason APIs are the union of what the bundled native SDKs declare:
 

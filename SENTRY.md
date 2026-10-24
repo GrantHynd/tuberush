@@ -32,15 +32,11 @@ The Expo plugin in `app.config.ts` is fixed to organization `grant-hynd` and pro
 
 ## Verify a release build
 
-Sentry does not send events from `expo start`. Install a preview or production build, then call `triggerTestError()` from a temporary debug control:
+Sentry does not send events from `expo start` or a debug simulator build. The SDK is disabled when `__DEV__` is true.
 
-```typescript
-import { triggerTestError } from '@/lib/sentry';
+A blue **Try! Send test error** button is on the Games tab, under the TubeRush title, and on Profile, under the email. It calls `Sentry.captureException(new Error('First error'))`. Keep both buttons for the pre-launch test on `main`. Remove them before the App Store submission.
 
-triggerTestError();
-```
-
-That sends a captured exception and does not crash the app. Remove the control before shipping. Confirm the event in Sentry has a readable stack trace.
+Confirm the event in the `tuberush` project has a readable stack trace. That requires a preview or production build with `EXPO_PUBLIC_SENTRY_DSN` set.
 
 ## Manual capture
 
