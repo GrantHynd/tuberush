@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { Colors, Typography, Spacing, Layout } from '@/constants/theme';
-import { formatScore } from '@/lib/display-utils';
+import { formatScore, getDisplayName } from '@/lib/display-utils';
 import { leaderboard, getLocationDisplay, LeaderboardFilter } from '@/lib/leaderboard';
 import { useAuthStore } from '@/stores/auth-store';
 
@@ -107,7 +107,7 @@ export function Leaderboard({ gameType, date, onClose }: LeaderboardProps) {
                             </View>
                             <View style={styles.info}>
                                 <Text style={styles.email}>
-                                    {item.profiles?.email?.split('@')[0] || 'Anonymous'}
+                                    {getDisplayName(item.profiles?.username, item.user_id)}
                                 </Text>
                                 <Text style={styles.location}>
                                     {getLocationDisplay(item)}

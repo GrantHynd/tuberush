@@ -139,12 +139,25 @@ describe('Leaderboard Security (TUB-230)', () => {
             );
         });
 
-        it('falls back to a name derived from email only when username is missing', () => {
-            expect(getDisplayName('', 'jane.doe@example.com')).toBe('Jane Doe');
+        it('never derives a name from email when username is missing (TUB-268)', () => {
+            expect(getDisplayName('', 'jane.doe@example.com')).not.toMatch(/jane|doe/i);
+            expect(getDisplayName('', 'user-1')).toMatch(/^Commuter \d{4}$/);
+        });
+    });
+
+    describe('TUB-268 migration', () => {
+        const sql = readFileSync(
+            join(__dirname, '../supabase/migrations/20261024000001_stop_email_derived_usernames.sql'),
+            'utf8',
+        );
+
+        it('no longer falls back to the email local part in handle_new_user', () => {
+            const fn = sql.slice(sql.indexOf('CREATE OR REPLACE FUNCTION public.handle_new_user'), sql.indexOf('$$;'));
+            expect(fn).not.toMatch(/SPLIT_PART\(NEW\.email/i);
         });
 
-        it('returns Anonymous when neither username nor email is available', () => {
-            expect(getDisplayName('')).toBe('Anonymous');
+        it('clears backfilled email-derived usernames', () => {
+            expect(sql).toMatch(/SET username = NULL/);
         });
     });
 

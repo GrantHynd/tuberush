@@ -1,24 +1,37 @@
-/** 
- * Get display name for a user.
- * @param username - The user's username
- * @param email - Optional fallback email (for backwards compatibility)
+/** Shown on public surfaces when a player has no display name. Never derived from email. */
+export const FALLBACK_NAME_PREFIX = 'Commuter';
+
+/** Stable 4-digit suffix (1000–9999) from a seed such as the user id (FNV-1a hash). */
+export function getFallbackSuffix(seed: string): string {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < seed.length; i++) {
+    h ^= seed.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return String(1000 + (h % 9000));
+}
+
+/**
+ * Public display name for a player (TUB-268).
+ * Uses the trimmed username; otherwise "Commuter 4821" with a suffix that is
+ * stable for the given seed (normally the user id). Never derives a name from
+ * an email address.
  */
-export function getDisplayName(username: string, email?: string): string {
-  // If username is provided and not empty, use it
-  if (username && username.trim()) {
-    return username.trim();
-  }
-  
-  // Fallback to email extraction for backwards compatibility
-  if (email) {
-    const local = email.split('@')[0] || '';
-    return local
-      .replace(/[._]/g, ' ')
-      .replace(/\b\w/g, (c) => c.toUpperCase())
-      .trim() || 'Anonymous';
-  }
-  
-  return 'Anonymous';
+export function getDisplayName(username: string | null | undefined, seed?: string | null): string {
+  const trimmed = username?.trim();
+  if (trimmed) return trimmed;
+  return seed ? `${FALLBACK_NAME_PREFIX} ${getFallbackSuffix(seed)}` : FALLBACK_NAME_PREFIX;
+}
+
+/**
+ * Display name for the signed-in user. Treats a username equal to the email
+ * local part as unset, because the DB trigger historically backfilled it that way.
+ */
+export function getOwnDisplayName(user: { id: string; username?: string | null; email?: string | null }): string {
+  const local = user.email?.split('@')[0]?.trim().toLowerCase();
+  const name = user.username?.trim();
+  const leaked = !!name && !!local && name.toLowerCase() === local;
+  return getDisplayName(leaked ? null : name, user.id);
 }
 
 /** First letter of display name, uppercased. Handles emoji / empty edge cases. */

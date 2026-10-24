@@ -161,6 +161,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 email: data.user.email!,
                 isPremium,
                 profile: profile as ProfileRow | null,
+                metadataUsername: data.user.user_metadata?.username,
             });
 
             syncSentryUser(signedInUser);
@@ -247,6 +248,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 email: session.user.email!,
                 isPremium,
                 profile: profile as ProfileRow | null,
+                metadataUsername: session.user.user_metadata?.username,
             });
 
             syncSentryUser(restoredUser);
@@ -280,6 +282,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                     email: user.email,
                     isPremium,
                     profile: profile as ProfileRow,
+                    metadataUsername: user.username,
                 })
                 : { ...user, isPremium },
         });
@@ -303,9 +306,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         if (!user) return;
 
         // Map camelCase to snake_case if needed
-        const dbUpdates: { city?: string | null; borough?: string | null } = {};
+        const dbUpdates: { city?: string | null; borough?: string | null; username?: string | null } = {};
         if (updates.city !== undefined) dbUpdates.city = updates.city;
         if (updates.borough !== undefined) dbUpdates.borough = updates.borough;
+        if (updates.username !== undefined) {
+            const trimmed = updates.username?.trim() || null;
+            dbUpdates.username = trimmed;
+            updates = { ...updates, username: trimmed ?? undefined };
+        }
 
         if (Object.keys(dbUpdates).length === 0) return;
 
@@ -315,6 +323,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             .eq('id', user.id);
 
         if (error) throw error;
+
+        if (dbUpdates.username !== undefined) {
+            // Keep auth metadata in step so a later sign-in can't resurrect an old name.
+            await supabase.auth.updateUser({ data: { username: dbUpdates.username } });
+        }
 
         if (updates.city) {
             capture('location_updated', {

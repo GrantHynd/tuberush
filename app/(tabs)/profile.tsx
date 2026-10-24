@@ -24,6 +24,7 @@ import { Colors, TFL, Typography, Spacing, Layout } from '@/constants/theme';
 import { BOROUGHS, Borough } from '@/constants/Boroughs';
 import { UK_CITIES, isLondon } from '@/constants/UKCities';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { getAvatarInitial, getOwnDisplayName } from '@/lib/display-utils';
 import { formatSettingsLocation } from '@/lib/profile';
 import * as Sentry from '@sentry/react-native';
 import Constants from 'expo-constants';
@@ -186,9 +187,9 @@ export default function ProfileScreen() {
             <Text style={styles.screenTitle} accessibilityRole="header">Profile</Text>
             <View style={styles.header}>
                 <View style={styles.avatarContainer}>
-                    <Text style={styles.avatarText}>{user.email[0].toUpperCase()}</Text>
+                    <Text style={styles.avatarText}>{getAvatarInitial(getOwnDisplayName(user))}</Text>
                 </View>
-                <Text style={styles.headerTitle}>{user.email}</Text>
+                <Text style={styles.headerTitle} accessibilityRole="header">{getOwnDisplayName(user)}</Text>
                 <View style={styles.membershipBadge}>
                     <IconSymbol name="ticket.fill" size={14} color={TFL.black} />
                     <Text style={styles.membershipBadgeText}>{getMembershipTier()}</Text>
@@ -237,6 +238,19 @@ export default function ProfileScreen() {
                 <Text style={styles.sectionTitle}>ACCOUNT</Text>
 
                 <View style={styles.card}>
+                    <View
+                        style={styles.cardRow}
+                        accessible
+                        accessibilityLabel={`Email, ${user.email}, not editable`}
+                    >
+                        <Text style={styles.rowLabel}>Email</Text>
+                        <Text style={styles.rowValueTruncatable} numberOfLines={1} ellipsizeMode="middle">
+                            {user.email}
+                        </Text>
+                    </View>
+
+                    <View style={styles.cardDivider} />
+
                     <View style={styles.cardRow}>
                         <Text style={styles.rowLabel}>Membership</Text>
                         <Text style={styles.rowValueTruncatable} numberOfLines={1} ellipsizeMode="tail">

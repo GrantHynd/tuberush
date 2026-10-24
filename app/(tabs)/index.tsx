@@ -11,7 +11,7 @@ import { useAuthStore } from '@/stores/auth-store';
 import { useLocationRank } from '@/hooks/useLocationRank';
 import { usePuzzleCarousel } from '@/hooks/usePuzzleCarousel';
 import { useUserStats } from '@/hooks/useUserStats';
-import { formatMaybe } from '@/lib/display-utils';
+import { formatMaybe, getAvatarInitial, getOwnDisplayName } from '@/lib/display-utils';
 import { useTabBarBottomInset } from '@/hooks/useTabBarBottomInset';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Sentry from '@sentry/react-native';
@@ -93,7 +93,7 @@ export default function HomeScreen() {
                     >
                         <View style={styles.avatar}>
                             <Text style={styles.avatarText}>
-                                {user?.email?.[0]?.toUpperCase() ?? '?'}
+                                {user ? getAvatarInitial(getOwnDisplayName(user)) : '?'}
                             </Text>
                         </View>
                     </TouchableOpacity>

@@ -5,19 +5,38 @@ import {
     formatScore,
     getAvatarInitial,
     getDisplayName,
+    getFallbackSuffix,
+    getOwnDisplayName,
 } from '@/lib/display-utils';
 
 describe('getDisplayName', () => {
     it('prefers a trimmed username', () => {
-        expect(getDisplayName('  commuter  ', 'ada@example.com')).toBe('commuter');
+        expect(getDisplayName('  commuter  ', 'user-1')).toBe('commuter');
     });
 
-    it('turns an email local-part into a name when username is empty', () => {
-        expect(getDisplayName('', 'ada.lovelace@example.com')).toBe('Ada Lovelace');
+    it('never derives a name from an email', () => {
+        const name = getDisplayName('', 'ada.lovelace@example.com');
+        expect(name).not.toMatch(/ada|lovelace/i);
+        expect(name).toMatch(/^Commuter \d{4}$/);
     });
 
-    it('falls back to Anonymous', () => {
-        expect(getDisplayName('   ')).toBe('Anonymous');
+    it('uses a stable "Commuter NNNN" fallback per seed', () => {
+        const a = getDisplayName(null, 'user-abc');
+        expect(a).toMatch(/^Commuter \d{4}$/);
+        expect(getDisplayName(undefined, 'user-abc')).toBe(a);
+        expect(getFallbackSuffix('user-abc')).toBe(a.split(' ')[1]);
+        expect(getDisplayName('   ')).toBe('Commuter');
+    });
+});
+
+describe('getOwnDisplayName', () => {
+    it('treats an email-local-part username as unset', () => {
+        const name = getOwnDisplayName({ id: 'u1', username: 'grant.hynd', email: 'grant.hynd@gmail.com' });
+        expect(name).toBe(getDisplayName(null, 'u1'));
+    });
+
+    it('keeps a real username', () => {
+        expect(getOwnDisplayName({ id: 'u1', username: 'TubeRunner', email: 'g@x.com' })).toBe('TubeRunner');
     });
 });
 
