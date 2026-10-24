@@ -1,0 +1,60 @@
+appId: com.tuberush.v2
+---
+# =============================================================================
+# LOCAL ONLY — offline play + sync (offline-sync audit, TUB-275..280)
+# `setAirplaneMode` is Android-only in Maestro, so this is NOT run in CI (iOS).
+# Needs a real Supabase backend and an existing test account with a city set:
+#   maestro test -e TEST_EMAIL=... -e TEST_PASSWORD=... .maestro/offline_airplane_flow.yaml
+# =============================================================================
+
+- setAirplaneMode: disabled
+- launchApp:
+    clearState: true
+
+# Sign in online so the session and the puzzle cache (past 7 + next 7 days) are populated.
+- tapOn: "Sign In / Register"
+- tapOn:
+    id: "auth-email-input"
+- inputText: ${TEST_EMAIL}
+- tapOn:
+    id: "auth-password-input"
+- inputText: ${TEST_PASSWORD}
+- tapOn:
+    id: "auth-submit-button"
+- extendedWaitUntil:
+    visible: "Daily Challenges"
+    timeout: 20000
+
+# Go offline and cold-start: today's puzzle must come from the cache.
+- setAirplaneMode: enabled
+- stopApp
+- launchApp
+- scrollUntilVisible:
+    element:
+      id: "game-card-connections"
+    direction: DOWN
+- tapOn:
+    id: "game-card-connections"
+- assertNotVisible: "Puzzle unavailable"
+
+# Play a guess offline (tiles have no testIDs yet, so tap by position; adjust locally if layout changes).
+- tapOn:
+    point: 20%, 40%
+- tapOn:
+    point: 45%, 40%
+- tapOn:
+    point: 70%, 40%
+- tapOn:
+    point: 90%, 40%
+- tapOn:
+    text: "Submit"
+    optional: true
+
+# Back online: the queue and the score outbox drain on reconnect/foreground.
+- setAirplaneMode: disabled
+- stopApp
+- launchApp
+- tapOn: "Profile"
+- extendedWaitUntil:
+    visible: "Synced"
+    timeout: 30000

@@ -107,6 +107,9 @@ export interface SyncOperation {
     data: any;
     timestamp: string;
     retryCount: number;
+    /** Epoch ms before which this op must not be retried (exponential backoff). */
+    nextAttemptAt?: number;
+    lastError?: string;
 }
 
 export interface LeaderboardEntry {

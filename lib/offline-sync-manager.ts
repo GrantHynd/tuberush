@@ -1,13 +1,45 @@
 import type { GameState, SyncOperation } from '@/types/game';
 import NetInfo from '@react-native-community/netinfo';
+import { AppState, type AppStateStatus } from 'react-native';
+import { mergeGameStates } from './game-merge';
 import { StorageManager } from './storage-manager';
 import { supabase } from './supabase-client';
+
+/** Backoff: 2s, 4s, 8s ... capped at 5 min. */
+export const BACKOFF_BASE_MS = 2000;
+export const BACKOFF_MAX_MS = 5 * 60 * 1000;
+export function backoffDelay(retryCount: number): number {
+    return Math.min(BACKOFF_MAX_MS, BACKOFF_BASE_MS * 2 ** Math.max(0, retryCount - 1));
+}
+
+/** Errors the server will keep returning (RLS, constraint, bad request): dead-letter, don't retry. */
+export function isPermanentSyncError(error: unknown): boolean {
+    const e = error as { code?: string; status?: number } | null;
+    if (!e) return false;
+    if (typeof e.status === 'number' && e.status >= 400 && e.status < 500 && e.status !== 408 && e.status !== 429) return true;
+    const code = e.code ?? '';
+    return code === '42501' || /^2[23]\d{3}$/.test(code) || code === 'PGRST301';
+}
+
+function rowToGameState(row: any): GameState {
+    return {
+        id: row.id,
+        userId: row.user_id,
+        gameType: row.game_type,
+        state: row.state,
+        lastUpdated: row.last_updated,
+        syncStatus: 'synced',
+        version: row.version,
+    };
+}
 
 class OfflineSyncManager {
     private isOnline: boolean = false;
     private isSyncing: boolean = false;
-    private syncListeners: Array<(status: SyncStatus) => void> = [];
+    private syncListeners: ((status: SyncStatus) => void)[] = [];
     private unsubscribeNetworkListener: (() => void) | null = null;
+    private appStateSub: { remove: () => void } | null = null;
+    private retryTimer: ReturnType<typeof setTimeout> | null = null;
 
     constructor() {
         this.initializeNetworkListener();
@@ -19,6 +51,10 @@ class OfflineSyncManager {
     destroy() {
         this.unsubscribeNetworkListener?.();
         this.unsubscribeNetworkListener = null;
+        this.appStateSub?.remove();
+        this.appStateSub = null;
+        if (this.retryTimer) clearTimeout(this.retryTimer);
+        this.retryTimer = null;
     }
 
     /**
@@ -36,6 +72,9 @@ class OfflineSyncManager {
             } else if (!this.isOnline) {
                 this.notifyListeners({ status: 'offline', message: 'Offline mode' });
             }
+        });
+        this.appStateSub = AppState.addEventListener('change', (s: AppStateStatus) => {
+            if (s === 'active' && this.isOnline) this.syncPendingOperations();
         });
     }
 
@@ -107,14 +146,15 @@ class OfflineSyncManager {
     }
 
     /**
-     * Queue a sync operation for later
+     * Queue a sync operation for later. One op per game (id = game id); a newer snapshot replaces
+     * the queued one.
      */
     private async queueSyncOperation(gameState: GameState): Promise<void> {
         const operation: SyncOperation = {
-            id: `${gameState.id}_${Date.now()}`,
+            id: gameState.id,
             type: 'update',
             entity: 'game_state',
-            data: gameState,
+            data: { ...gameState, syncStatus: 'pending' },
             timestamp: new Date().toISOString(),
             retryCount: 0,
         };
@@ -131,8 +171,22 @@ class OfflineSyncManager {
         });
     }
 
+    private scheduleRetry(queue: SyncOperation[]) {
+        if (this.retryTimer) clearTimeout(this.retryTimer);
+        this.retryTimer = null;
+        const next = queue.map(op => op.nextAttemptAt ?? 0).filter(t => t > Date.now());
+        if (next.length === 0) return;
+        const delay = Math.max(0, Math.min(...next) - Date.now());
+        this.retryTimer = setTimeout(() => {
+            this.retryTimer = null;
+            this.syncPendingOperations();
+        }, delay);
+    }
+
     /**
-     * Sync all pending operations
+     * Sync all due operations. Loops until nothing due is left, so ops queued mid-sync are
+     * picked up. Failed ops get a persisted retry count and exponential backoff; ops the
+     * server rejects permanently go to the dead-letter list.
      */
     async syncPendingOperations(): Promise<void> {
         if (this.isSyncing || !this.isOnline) {
@@ -140,133 +194,111 @@ class OfflineSyncManager {
         }
 
         this.isSyncing = true;
-        const queue = await StorageManager.getSyncQueue();
-
-        if (queue.length === 0) {
-            this.isSyncing = false;
-            this.notifyListeners({ status: 'synced', message: 'All changes synced' });
-            return;
-        }
-
-        this.notifyListeners({ status: 'syncing', message: `Syncing ${queue.length} changes...` });
-
-        const operationsToRemove: string[] = [];
         let failedCount = 0;
+        let deadCount = 0;
+        const attempted = new Set<string>();
+        try {
+            for (;;) {
+                const queue = await StorageManager.getSyncQueue();
+                const now = Date.now();
+                const due = queue.filter(op => (op.nextAttemptAt ?? 0) <= now && !attempted.has(`${op.id}@${op.timestamp}`));
+                if (due.length === 0) {
+                    this.scheduleRetry(queue);
+                    break;
+                }
+                this.notifyListeners({ status: 'syncing', message: `Syncing ${queue.length} changes...` });
 
-        for (const operation of queue) {
-            try {
-                await this.processSyncOperation(operation);
-                operationsToRemove.push(operation.id);
-            } catch (error) {
-                console.error('Failed to process sync operation:', error);
-                // Increment retry count
-                operation.retryCount += 1;
-
-                // If too many retries, drop the operation and track as failed
-                if (operation.retryCount > 3) {
-                    console.error('Operation failed after 3 retries, removing from queue:', operation);
-                    operationsToRemove.push(operation.id);
-                    failedCount += 1;
+                for (const operation of due) {
+                    attempted.add(`${operation.id}@${operation.timestamp}`);
+                    try {
+                        await this.processSyncOperation(operation);
+                        await StorageManager.removeFromSyncQueueBatch([operation.id], { [operation.id]: operation.timestamp });
+                    } catch (error) {
+                        console.error('Failed to process sync operation:', error);
+                        if (isPermanentSyncError(error)) {
+                            const e = error as { code?: string; message?: string; status?: number };
+                            await StorageManager.moveToDeadLetter(operation, { code: e.code, message: e.message, status: e.status });
+                            deadCount += 1;
+                        } else {
+                            const retryCount = operation.retryCount + 1;
+                            await StorageManager.updateSyncOperation(operation.id, operation.timestamp, {
+                                retryCount,
+                                nextAttemptAt: Date.now() + backoffDelay(retryCount),
+                                lastError: (error as Error)?.message ?? String(error),
+                            });
+                            failedCount += 1;
+                        }
+                    }
                 }
             }
+            await StorageManager.updateLastSyncTimestamp();
+        } finally {
+            this.isSyncing = false;
         }
 
-        if (operationsToRemove.length > 0) {
-            await StorageManager.removeFromSyncQueueBatch(operationsToRemove);
-        }
-
-        await StorageManager.updateLastSyncTimestamp();
-        this.isSyncing = false;
-
-        if (failedCount > 0) {
+        if (deadCount > 0) {
             this.notifyListeners({
                 status: 'error',
-                message: `${failedCount} change${failedCount > 1 ? 's' : ''} could not be synced`,
+                message: `${deadCount} change${deadCount > 1 ? 's' : ''} could not be synced`,
             });
+        } else if (failedCount > 0) {
+            const pending = (await StorageManager.getSyncQueue()).length;
+            this.notifyListeners({ status: 'pending', message: `${pending} change${pending !== 1 ? 's' : ''} pending, retrying` });
         } else {
             this.notifyListeners({ status: 'synced', message: 'All changes synced' });
         }
     }
 
     /**
-     * Process a single sync operation
+     * Process a single sync operation: merge the queued snapshot with the server copy by game
+     * rules, write the merge to the server, then merge it into the *current* local state
+     * (never write the queued snapshot back over newer local progress).
      */
     private async processSyncOperation(operation: SyncOperation): Promise<void> {
-        const gameState = operation.data as GameState;
+        const queued = operation.data as GameState;
 
-        // Fetch current server version
         const { data: serverData, error: fetchError } = await supabase
             .from('game_states')
             .select('*')
-            .eq('id', gameState.id)
+            .eq('id', queued.id)
             .single();
 
         if (fetchError && fetchError.code !== 'PGRST116') {
             throw fetchError;
         }
 
-        // Check for conflicts
-        if (serverData && serverData.version > gameState.version) {
-            // Server has newer version - conflict!
-            await this.handleConflict(gameState, serverData);
-            return;
-        }
+        const merged = serverData ? mergeGameStates(queued, rowToGameState(serverData)) : { ...queued };
+        const nextVersion = Math.max(queued.version ?? 0, serverData?.version ?? 0) + 1;
 
-        // No conflict, proceed with upsert
         const { error } = await supabase
             .from('game_states')
             .upsert({
-                id: gameState.id,
-                user_id: gameState.userId,
-                game_type: gameState.gameType,
-                state: gameState.state,
-                last_updated: new Date().toISOString(),
-                version: gameState.version + 1,
+                id: queued.id,
+                user_id: queued.userId,
+                game_type: queued.gameType,
+                state: merged.state,
+                last_updated: merged.lastUpdated,
+                version: nextVersion,
             });
 
         if (error) {
             throw error;
         }
 
-        // Update local version
-        gameState.version += 1;
-        gameState.syncStatus = 'synced';
-        await StorageManager.saveGameState(gameState.id, gameState);
-    }
-
-    /**
-     * Handle sync conflicts (last-write-wins strategy)
-     */
-    private async handleConflict(localState: GameState, serverState: any): Promise<void> {
-        const localTimestamp = new Date(localState.lastUpdated).getTime();
-        const serverTimestamp = new Date(serverState.last_updated).getTime();
-
-        if (localTimestamp > serverTimestamp) {
-            // Local is newer, force update server
-            const { error } = await supabase
-                .from('game_states')
-                .update({
-                    state: localState.state,
-                    last_updated: localState.lastUpdated,
-                    version: serverState.version + 1,
-                })
-                .eq('id', localState.id);
-
-            if (error) {
-                throw error;
-            }
-
-            localState.version = serverState.version + 1;
-            localState.syncStatus = 'synced';
-        } else {
-            // Server is newer, update local
-            localState.state = serverState.state;
-            localState.version = serverState.version;
-            localState.lastUpdated = serverState.last_updated;
-            localState.syncStatus = 'synced';
+        const current = (await StorageManager.getGameState(queued.id)) as GameState | null;
+        const synced: GameState = { ...merged, version: nextVersion, syncStatus: 'synced' };
+        if (!current) {
+            await StorageManager.saveGameState(queued.id, synced);
+            return;
         }
-
-        await StorageManager.saveGameState(localState.id, localState);
+        const local = mergeGameStates(current, synced);
+        // If local moved on since this snapshot was queued, its own queued op will sync it.
+        const unchanged = current.lastUpdated === queued.lastUpdated;
+        await StorageManager.saveGameState(queued.id, {
+            ...local,
+            version: nextVersion,
+            syncStatus: unchanged ? 'synced' : current.syncStatus,
+        });
     }
 
     /**
@@ -287,15 +319,7 @@ class OfflineSyncManager {
                     .single();
 
                 if (data && !error) {
-                    gameState = {
-                        id: data.id,
-                        userId: data.user_id,
-                        gameType: data.game_type,
-                        state: data.state,
-                        lastUpdated: data.last_updated,
-                        syncStatus: 'synced',
-                        version: data.version,
-                    };
+                    gameState = rowToGameState(data);
 
                     // Cache locally
                     await StorageManager.saveGameState(gameId, gameState);
@@ -311,6 +335,10 @@ class OfflineSyncManager {
     /**
      * Get count of pending operations
      */
+    async getDeadLetterCount(): Promise<number> {
+        return (await StorageManager.getDeadLetter()).length;
+    }
+
     async getPendingOperationsCount(): Promise<number> {
         const queue = await StorageManager.getSyncQueue();
         return queue.length;
