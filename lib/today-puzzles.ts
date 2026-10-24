@@ -83,3 +83,28 @@ export function buildTodayRows(args: {
         rowFor('crossword', user, findToday(args.crossword, now), args.onCrossword, args.onSignIn, args.onUnlock),
     ];
 }
+
+/**
+ * Shared CTA rule (TUB-255/259/261): today's first unplayed game.
+ * Connections first; Crossword only for premium. In-progress counts as unplayed (resume).
+ * Signed out → /auth. Returns null when everything available today is done (hide the button).
+ */
+export function getTodaysNextGame(
+    user: UserLike,
+    items: { connections: PuzzleCarouselItem[]; crossword: PuzzleCarouselItem[] },
+    now: Date = new Date(),
+): { route: string; gameType: TodayGameType | null } | null {
+    if (!user) return { route: '/auth', gameType: null };
+    const today = toLocalDateString(now);
+    const conn = findToday(items.connections, now);
+    if (!conn || conn.status !== 'completed') {
+        return { route: `/games/play-connections?date=${conn?.date ?? today}`, gameType: 'connections' };
+    }
+    if (user.isPremium) {
+        const cw = findToday(items.crossword, now);
+        if (cw && cw.status !== 'completed') {
+            return { route: `/games/play-crossword?puzzleId=${cw.puzzleId}`, gameType: 'crossword' };
+        }
+    }
+    return null;
+}
