@@ -112,6 +112,9 @@ export default {
       reactCompiler: true,
     },
     extra: {
+      eas: {
+        projectId: 'eff6b681-aaf5-4a18-9058-ec904b4a2a5e',
+      },
       supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL ?? '',
       supabasePublishableKey: process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? '',
       posthogApiKey: process.env.EXPO_PUBLIC_POSTHOG_API_KEY ?? '',
