@@ -16,7 +16,6 @@ import { useUserStats } from '@/hooks/useUserStats';
 import { formatMaybe, getAvatarInitial, getOwnDisplayName } from '@/lib/display-utils';
 import { useTabBarBottomInset } from '@/hooks/useTabBarBottomInset';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import * as Sentry from '@sentry/react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback } from 'react';
 import {
@@ -95,18 +94,6 @@ export default function HomeScreen() {
                         </TouchableOpacity>
                     }
                 />
-
-                {/* Temporary. Remove before App Store submission. */}
-                <TouchableOpacity
-                    style={styles.sentryTestButton}
-                    onPress={() => {
-                        Sentry.captureException(new Error('First error'));
-                    }}
-                    accessibilityRole="button"
-                    accessibilityLabel="Try! Send a test error to Sentry"
-                >
-                    <Text style={styles.sentryTestButtonText}>Try! Send test error</Text>
-                </TouchableOpacity>
 
                 {/* Connections section */}
                 <View style={styles.section}>
@@ -223,18 +210,6 @@ const styles = StyleSheet.create({
     },
     scrollContent: {
         paddingHorizontal: HORIZONTAL_PADDING,
-    },
-    sentryTestButton: {
-        backgroundColor: TFL.blue,
-        borderRadius: Layout.borderRadius.md,
-        paddingVertical: Spacing.md,
-        alignItems: 'center',
-        marginBottom: Spacing.md,
-    },
-    sentryTestButtonText: {
-        color: TFL.white,
-        fontWeight: '700',
-        fontSize: 16,
     },
     avatarButton: {
         width: 44,
