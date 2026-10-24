@@ -1,14 +1,5 @@
 import 'dotenv/config';
 
-const sentryOrg = process.env.SENTRY_ORG;
-const sentryProject = process.env.SENTRY_PROJECT;
-
-if (!sentryOrg || !sentryProject) {
-  console.warn(
-    '[Sentry] SENTRY_ORG or SENTRY_PROJECT is unset. Native crash reporting and source map upload are skipped for this build.',
-  );
-}
-
 const linkedDataType = (type: string, purposes: string[]) => ({
   NSPrivacyCollectedDataType: `NSPrivacyCollectedDataType${type}`,
   NSPrivacyCollectedDataTypeLinked: true,
@@ -106,18 +97,14 @@ export default {
           },
         },
       ],
-      ...(sentryOrg && sentryProject
-        ? [
-            [
-              '@sentry/react-native/expo',
-              {
-                organization: sentryOrg,
-                project: sentryProject,
-                url: 'https://sentry.io/',
-              },
-            ],
-          ]
-        : []),
+      [
+        '@sentry/react-native/expo',
+        {
+          url: 'https://sentry.io/',
+          project: 'tuberush',
+          organization: 'grant-hynd',
+        },
+      ],
     ],
     experiments: {
       typedRoutes: true,

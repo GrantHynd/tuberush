@@ -10,9 +10,6 @@ Sentry captures unhandled JavaScript errors and native crashes. Performance trac
 # Public client DSN. Inlined into the app.
 EXPO_PUBLIC_SENTRY_DSN=https://YOUR_KEY@YOUR_ORG.ingest.sentry.io/YOUR_PROJECT_ID
 
-# Build-time source map upload
-SENTRY_ORG=your-org-slug
-SENTRY_PROJECT=your-project-slug
 ```
 
 Put the auth token in `.env.local`, which is gitignored:
@@ -23,13 +20,13 @@ SENTRY_AUTH_TOKEN=your-auth-token
 
 Create the token in Sentry under Settings → Auth Tokens, with permission to create releases and upload source maps.
 
-For EAS builds, set `EXPO_PUBLIC_SENTRY_DSN`, `SENTRY_ORG`, `SENTRY_PROJECT`, and `SENTRY_AUTH_TOKEN` as EAS environment variables on the build profile. `SENTRY_AUTH_TOKEN` must be sensitive. The native plugin is added only when `SENTRY_ORG` and `SENTRY_PROJECT` are set, so a build without them skips native crash reporting and source map upload.
+The Expo plugin in `app.config.ts` is fixed to organization `grant-hynd` and project `tuberush`. For EAS builds, set `EXPO_PUBLIC_SENTRY_DSN` and `SENTRY_AUTH_TOKEN` as EAS environment variables on the build profile. `SENTRY_AUTH_TOKEN` must be sensitive. Without that token the native plugin is still applied, but source map upload is skipped.
 
 ## Where it is configured
 
 - `lib/sentry.ts` initializes the SDK. Events are silenced when `__DEV__` is true.
 - `app/_layout.tsx` calls `initSentry()` at startup and exports `Sentry.wrap(RootLayout)`.
-- `app.config.ts` adds `@sentry/react-native/expo` when org and project are set. Release and dist are left for that plugin to set, so uploaded source maps match events.
+- `app.config.ts` adds `@sentry/react-native/expo` for organization `grant-hynd` and project `tuberush`. Release and dist are left for that plugin to set, so uploaded source maps match events.
 - `metro.config.js` uses `getSentryExpoConfig` so the bundle and source map share a Debug ID.
 - `stores/auth-store.ts` sets the Sentry user on sign-up, sign-in, and session restore, and clears it on sign-out.
 
