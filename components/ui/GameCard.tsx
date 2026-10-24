@@ -1,7 +1,8 @@
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { Colors, TFL, Typography, Layout, Spacing } from '@/constants/theme';
+import { StyleSheet, Text, View } from 'react-native';
+import { Card } from '@/components/ui/Card';
+import { Colors, Layout, Radius, Spacing, TFL, Typography } from '@/constants/theme';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 
 interface GameCardProps {
@@ -45,12 +46,12 @@ export function GameCard({
     const a11yHint = isLocked ? 'Double tap to subscribe' : 'Double tap to play';
 
     return (
-        <TouchableOpacity
+        <Card
+            variant="outlined"
+            padding="none"
             testID={`game-card-${id}`}
             style={[styles.card, isLocked && styles.cardLocked]}
             onPress={handlePress}
-            activeOpacity={0.7}
-            accessibilityRole="button"
             accessibilityLabel={a11yLabel}
             accessibilityHint={a11yHint}
         >
@@ -78,20 +79,15 @@ export function GameCard({
             <View style={styles.iconContainer}>
                  <Text style={styles.emoji}>{icon}</Text>
             </View>
-        </TouchableOpacity>
+        </Card>
     );
 }
 
 const styles = StyleSheet.create({
     card: {
         flexDirection: 'row',
-        backgroundColor: Colors.light.background,
-        borderRadius: Layout.borderRadius.md,
-        marginBottom: Spacing.md,
+        marginBottom: Layout.cardGap,
         overflow: 'hidden',
-        borderWidth: 1,
-        borderColor: Colors.light.border,
-        ...Layout.shadow.sm,
         minHeight: 100,
     },
     cardLocked: {
@@ -133,7 +129,7 @@ const styles = StyleSheet.create({
         backgroundColor: Colors.light.background,
         borderWidth: 1,
         borderColor: Colors.light.border,
-        borderRadius: 4,
+        borderRadius: Radius.sm,
     },
     premiumText: {
         fontSize: 10,

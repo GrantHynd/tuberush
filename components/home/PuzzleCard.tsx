@@ -1,4 +1,5 @@
-import { Layout, Spacing } from '@/constants/theme';
+import { Card } from '@/components/ui/Card';
+import { Layout, Radius, Spacing } from '@/constants/theme';
 import { EMPTY_VALUE } from '@/lib/display-utils';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import React from 'react';
@@ -6,14 +7,11 @@ import {
     Dimensions,
     StyleSheet,
     Text,
-    TouchableOpacity,
     View,
 } from 'react-native';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const CARD_GAP = 12;
-const HORIZONTAL_PADDING = 20;
-const CARD_WIDTH = (SCREEN_WIDTH - HORIZONTAL_PADDING * 2 - CARD_GAP) * 0.45;
+const CARD_WIDTH = (SCREEN_WIDTH - Layout.screenPadding * 2 - Layout.cardGap) * 0.45;
 
 export interface PuzzleCardProps {
     label: string;
@@ -43,18 +41,12 @@ export function PuzzleCard({
         <Text style={styles.commuteCount}>{EMPTY_VALUE}</Text>
     );
 
-    const cardStyle = [
-        styles.card,
-        { backgroundColor },
-        variant === 'list' && styles.cardList,
-    ];
-
     return (
-        <TouchableOpacity
-            style={cardStyle}
+        <Card
+            variant="filled"
+            color={backgroundColor}
+            style={[styles.card, variant === 'list' && styles.cardList]}
             onPress={onPress}
-            activeOpacity={0.85}
-            accessibilityRole="button"
             accessibilityLabel={`${label}${isCompleted ? ', completed' : ''}`}
         >
             <View style={styles.header}>
@@ -66,15 +58,13 @@ export function PuzzleCard({
                 )}
             </View>
             <View style={styles.status}>{statusContent}</View>
-        </TouchableOpacity>
+        </Card>
     );
 }
 
 const styles = StyleSheet.create({
     card: {
         width: CARD_WIDTH,
-        borderRadius: Layout.borderRadius.lg,
-        padding: Spacing.md,
         minHeight: 100,
         justifyContent: 'space-between',
     },
@@ -91,7 +81,7 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(255,255,255,0.25)',
         paddingHorizontal: 6,
         paddingVertical: 2,
-        borderRadius: 4,
+        borderRadius: Radius.sm,
     },
     newBadgeText: {
         fontSize: 10,

@@ -1,3 +1,4 @@
+import { Card } from '@/components/ui/Card';
 import { LegalSection } from '@/components/LegalSection';
 import { SyncStatusRow } from '@/components/ui/SyncStatusRow';
 import { SearchSelect } from '@/components/ui/SearchSelect';
@@ -20,7 +21,7 @@ import {
     FlatList,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Colors, TFL, Typography, Spacing, Layout } from '@/constants/theme';
+import { Colors, Layout, Radius, Spacing, TFL, Typography } from '@/constants/theme';
 import { BOROUGHS, Borough } from '@/constants/Boroughs';
 import { UK_CITIES, isLondon } from '@/constants/UKCities';
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -211,7 +212,7 @@ export default function ProfileScreen() {
             <View style={styles.section}>
                 <Text style={styles.sectionTitle}>SETTINGS</Text>
 
-                <View style={styles.card}>
+                <Card variant="grouped">
                     <TouchableOpacity
                         style={styles.cardRow}
                         onPress={openLocationModal}
@@ -231,13 +232,13 @@ export default function ProfileScreen() {
                             <IconSymbol name="chevron.right" size={20} color={Colors.light.icon} />
                         </View>
                     </TouchableOpacity>
-                </View>
+                </Card>
             </View>
 
             <View style={styles.section}>
                 <Text style={styles.sectionTitle}>ACCOUNT</Text>
 
-                <View style={styles.card}>
+                <Card variant="grouped">
                     <View
                         style={styles.cardRow}
                         accessible
@@ -261,7 +262,7 @@ export default function ProfileScreen() {
                     <View style={styles.cardDivider} />
                     
                     <SyncStatusRow syncStatus={syncStatus} onRetry={handleSync} />
-                </View>
+                </Card>
             </View>
 
             <LegalSection />
@@ -398,7 +399,7 @@ const styles = StyleSheet.create({
         backgroundColor: TFL.yellow,
         paddingHorizontal: Spacing.md,
         paddingVertical: Spacing.xs,
-        borderRadius: 16,
+        borderRadius: Radius.pill,
         gap: 6,
     },
     membershipBadgeText: {
@@ -418,13 +419,6 @@ const styles = StyleSheet.create({
         color: TFL.grey.dark,
         marginBottom: Spacing.sm,
         marginLeft: Spacing.xs,
-    },
-    card: {
-        backgroundColor: Colors.light.card,
-        borderRadius: Layout.borderRadius.lg,
-        borderWidth: 1,
-        borderColor: Colors.light.border,
-        overflow: 'hidden',
     },
     cardRow: {
         flexDirection: 'row',

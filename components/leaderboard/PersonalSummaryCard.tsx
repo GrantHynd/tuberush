@@ -1,6 +1,7 @@
 import React from 'react';
+import { Card } from '@/components/ui/Card';
 import { View, Text, StyleSheet } from 'react-native';
-import { Colors, TFL, Spacing, Layout } from '@/constants/theme';
+import { Colors, TFL } from '@/constants/theme';
 import { formatMaybe, formatScore } from '@/lib/display-utils';
 
 interface PersonalSummaryCardProps {
@@ -15,7 +16,7 @@ export function PersonalSummaryCard({
     topPercent,
 }: PersonalSummaryCardProps) {
     return (
-        <View style={styles.card}>
+        <Card variant="tinted" style={styles.card}>
             <View style={styles.column}>
                 <Text style={styles.label}>Overall</Text>
                 <Text style={styles.value}>
@@ -40,7 +41,7 @@ export function PersonalSummaryCard({
                     {formatMaybe(topPercent, (t) => `${t}%`)}
                 </Text>
             </View>
-        </View>
+        </Card>
     );
 }
 
@@ -48,10 +49,6 @@ const styles = StyleSheet.create({
     card: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: Colors.light.card,
-        borderRadius: Layout.borderRadius.lg,
-        paddingVertical: Spacing.md,
-        paddingHorizontal: Spacing.sm,
     },
     column: {
         flex: 1,

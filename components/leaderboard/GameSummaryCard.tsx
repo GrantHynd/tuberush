@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { Colors, TFL, Spacing, Layout } from '@/constants/theme';
+import { Card } from '@/components/ui/Card';
+import { Colors, Radius, TFL, Spacing } from '@/constants/theme';
 import { GAMES, GameId } from '@/constants/Games';
 import { GameOverviewData } from '@/types/game';
 import { EMPTY_VALUE, formatPlayerCount } from '@/lib/display-utils';
@@ -23,7 +24,7 @@ export function GameSummaryCard({
     const game = GAMES[data.gameType as GameId];
 
     return (
-        <View style={[styles.card, isLocked && styles.cardLocked]}>
+        <Card variant="outlined" style={isLocked && styles.cardLocked}>
             <View style={styles.header}>
                 <View style={styles.headerLeft}>
                     <MaterialIcons
@@ -92,18 +93,11 @@ export function GameSummaryCard({
                     )}
                 </>
             )}
-        </View>
+        </Card>
     );
 }
 
 const styles = StyleSheet.create({
-    card: {
-        backgroundColor: Colors.light.background,
-        borderRadius: Layout.borderRadius.lg,
-        borderWidth: 1,
-        borderColor: Colors.light.border,
-        padding: Spacing.md,
-    },
     cardLocked: {
         opacity: 0.7,
     },
@@ -127,7 +121,7 @@ const styles = StyleSheet.create({
         backgroundColor: TFL.yellow,
         paddingHorizontal: 8,
         paddingVertical: 2,
-        borderRadius: 10,
+        borderRadius: Radius.pill,
     },
     premiumText: {
         fontSize: 10,

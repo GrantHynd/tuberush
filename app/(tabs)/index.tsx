@@ -1,3 +1,4 @@
+import { Card } from '@/components/ui/Card';
 import { PuzzleCard } from '@/components/home/PuzzleCard';
 import { SectionHeader } from '@/components/home/SectionHeader';
 import { StatCard } from '@/components/home/StatCard';
@@ -27,8 +28,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const HORIZONTAL_PADDING = 20;
-const CARD_GAP = 12;
+const HORIZONTAL_PADDING = Layout.screenPadding;
+const CARD_GAP = Layout.cardGap;
 
 export default function HomeScreen() {
     const router = useRouter();
@@ -187,10 +188,10 @@ export default function HomeScreen() {
 
                 {/* Your Area section */}
                 {rank && (
-                    <TouchableOpacity
+                    <Card
+                        variant="tinted"
                         style={styles.boroughRow}
                         onPress={() => router.push('/(tabs)/trophy' as never)}
-                        accessibilityRole="button"
                         accessibilityLabel={`${rank.location}, Rank #${rank.rank}`}
                     >
                         <MaterialIcons
@@ -212,7 +213,7 @@ export default function HomeScreen() {
                             size={24}
                             color={TFL.grey.dark}
                         />
-                    </TouchableOpacity>
+                    </Card>
                 )}
             </ScrollView>
         </SafeAreaView>
@@ -318,9 +319,6 @@ const styles = StyleSheet.create({
     boroughRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: Colors.light.card,
-        borderRadius: Layout.borderRadius.lg,
-        padding: Spacing.md,
         marginTop: Spacing.lg,
     },
     boroughIcon: {
