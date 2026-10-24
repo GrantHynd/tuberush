@@ -1,4 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import NetInfo from '@react-native-community/netinfo';
+import { AppState, type AppStateStatus } from 'react-native';
 import type { ConnectionsPuzzle } from '@/constants/ConnectionsData';
 import type { CrosswordPuzzle } from '@/types/game';
 import { supabase } from './supabase-client';
@@ -43,13 +45,54 @@ async function readCache(gameType: GameType): Promise<CacheEntry | null> {
   }
 }
 
-async function writeCache(gameType: GameType, games: DailyGameRow[]): Promise<void> {
-  try {
-    const entry: CacheEntry = { games, fetchedAt: Date.now() };
-    await AsyncStorage.setItem(cacheKey(gameType), JSON.stringify(entry));
-  } catch {
-    // Silently fail — cache is best-effort
-  }
+/** Days of puzzles kept either side of today (offline-sync audit risk 3). */
+export const CACHE_PAST_DAYS = 7;
+export const CACHE_FUTURE_DAYS = 7;
+
+function offsetDate(days: number, now: Date = new Date()): string {
+  const d = new Date(now);
+  d.setDate(d.getDate() + days);
+  return toLocalDateString(d);
+}
+
+/**
+ * Union cached and fresh rows by game_date (fresh wins), then keep only
+ * today-CACHE_PAST_DAYS..today+CACHE_FUTURE_DAYS. Never drops a still-in-window
+ * puzzle just because the latest fetch covered a different range.
+ */
+export function mergeCacheRows(
+  existing: DailyGameRow[],
+  incoming: DailyGameRow[],
+  now: Date = new Date(),
+): DailyGameRow[] {
+  const from = offsetDate(-CACHE_PAST_DAYS, now);
+  const to = offsetDate(CACHE_FUTURE_DAYS, now);
+  const byDate = new Map<string, DailyGameRow>();
+  for (const row of existing) byDate.set(row.game_date, row);
+  for (const row of incoming) byDate.set(row.game_date, row);
+  return [...byDate.values()]
+    .filter(g => g.game_date >= from && g.game_date <= to)
+    .sort((a, b) => a.game_date.localeCompare(b.game_date));
+}
+
+const writeChains: Partial<Record<GameType, Promise<void>>> = {};
+
+/** Merge rows into the cache. Writes per game type are serialised so concurrent fetches can't clobber each other. */
+function writeCache(gameType: GameType, games: DailyGameRow[]): Promise<void> {
+  const run = (writeChains[gameType] ?? Promise.resolve()).then(async () => {
+    try {
+      const existing = await readCache(gameType);
+      const entry: CacheEntry = {
+        games: mergeCacheRows(existing?.games ?? [], games),
+        fetchedAt: Date.now(),
+      };
+      await AsyncStorage.setItem(cacheKey(gameType), JSON.stringify(entry));
+    } catch {
+      // Silently fail — cache is best-effort
+    }
+  });
+  writeChains[gameType] = run;
+  return run;
 }
 
 function isCacheValid(entry: CacheEntry): boolean {
@@ -136,16 +179,42 @@ function filterCachedByDateRange(
  */
 export async function prefetchDailyGames(
   gameType: GameType,
-  days: number = 7,
+  days: number = CACHE_FUTURE_DAYS,
+  pastDays: number = CACHE_PAST_DAYS,
 ): Promise<void> {
   try {
-    const games = await fetchFromSupabase(gameType, days);
+    const games = await fetchRecentAndUpcoming(gameType, pastDays, days);
     if (games && games.length > 0) {
       await writeCache(gameType, games);
     }
   } catch {
     // Best-effort prefetch — failures are silent
   }
+}
+
+/**
+ * Prefetch both game types now, whenever the app returns to the foreground,
+ * and whenever the network comes back. Returns an unsubscribe.
+ */
+export function startDailyGamesPrefetch(): () => void {
+  const prefetchAll = () => {
+    prefetchDailyGames('connections').catch(() => {});
+    prefetchDailyGames('crossword').catch(() => {});
+  };
+  let online: boolean | null = null;
+  const unsubNet = NetInfo.addEventListener(state => {
+    const nowOnline = state.isConnected ?? false;
+    if (online === false && nowOnline) prefetchAll();
+    online = nowOnline;
+  });
+  const sub = AppState.addEventListener('change', (s: AppStateStatus) => {
+    if (s === 'active') prefetchAll();
+  });
+  prefetchAll();
+  return () => {
+    unsubNet();
+    sub.remove();
+  };
 }
 
 /**
@@ -266,6 +335,7 @@ export async function getRecentAndUpcomingGames(
 
   const games = await fetchRecentAndUpcoming(gameType, pastDays, futureDays);
   if (games && games.length > 0) {
+    writeCache(gameType, games).catch(() => {});
     return games.map(g => ({ game_date: g.game_date, puzzle_data: g.puzzle_data }));
   }
 

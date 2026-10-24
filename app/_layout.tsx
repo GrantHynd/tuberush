@@ -1,4 +1,4 @@
-import { prefetchDailyGames } from '@/lib/daily-games';
+import { startDailyGamesPrefetch } from '@/lib/daily-games';
 import { initPostHog, capture, flush } from '@/lib/posthog';
 import { configureRevenueCat } from '@/lib/revenuecat';
 import { initSentry } from '@/lib/sentry';
@@ -75,15 +75,15 @@ function RootLayout() {
 
       checkSession();
 
-      // Prefetch daily games in background (fire-and-forget)
-      prefetchDailyGames('connections', 7).catch(() => {});
-      prefetchDailyGames('crossword', 7).catch(() => {});
     };
     init();
   }, [checkSession]);
 
   // Durable leaderboard outbox: drains at launch, on reconnect and on foreground.
   useEffect(() => startScoreOutbox(), []);
+
+  // Puzzle cache: past 7 + next 7 days, refreshed at launch, on foreground and on reconnect.
+  useEffect(() => startDailyGamesPrefetch(), []);
 
   useEffect(() => {
     // Handle auth deep links (email confirmation, password reset)
