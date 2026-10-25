@@ -1,4 +1,6 @@
 appId: com.tuberush.v2
+name: Offline replay (Android only)
+tags: [android-only]
 ---
 # =============================================================================
 # LOCAL ONLY — offline play + sync (offline-sync audit, TUB-275..280)
@@ -12,43 +14,39 @@ appId: com.tuberush.v2
     clearState: true
 
 # Sign in online so the session and the puzzle cache (past 7 + next 7 days) are populated.
-- tapOn: "Sign In / Register"
-- tapOn:
-    id: "auth-email-input"
-- inputText: ${TEST_EMAIL}
-- tapOn:
-    id: "auth-password-input"
-- inputText: ${TEST_PASSWORD}
-- tapOn:
-    id: "auth-submit-button"
+- runFlow:
+    file: subflows/sign_in.yaml
+    env:
+      EMAIL: ${TEST_EMAIL}
+      PASSWORD: ${TEST_PASSWORD}
 - extendedWaitUntil:
-    visible: "Daily Challenges"
+    visible:
+      id: "today-hero"
     timeout: 20000
 
 # Go offline and cold-start: today's puzzle must come from the cache.
 - setAirplaneMode: enabled
 - stopApp
 - launchApp
-- scrollUntilVisible:
-    element:
-      id: "game-card-connections"
-    direction: DOWN
 - tapOn:
-    id: "game-card-connections"
+    id: "today-hero-connections"
+- extendedWaitUntil:
+    visible:
+      id: "connections-grid|connections-finished"
+    timeout: 20000
 - assertNotVisible: "Puzzle unavailable"
 
-# Play a guess offline (tiles have no testIDs yet, so tap by position; adjust locally if layout changes).
-- tapOn:
-    point: 20%, 40%
-- tapOn:
-    point: 45%, 40%
-- tapOn:
-    point: 70%, 40%
-- tapOn:
-    point: 90%, 40%
-- tapOn:
-    text: "Submit"
-    optional: true
+# Play a guess offline (tiles are tile-<word>; match by regex + index).
+- runFlow:
+    when:
+      visible:
+        id: "connections-grid"
+    commands:
+      - tapOn: { id: "tile-.*", index: 0 }
+      - tapOn: { id: "tile-.*", index: 1 }
+      - tapOn: { id: "tile-.*", index: 2 }
+      - tapOn: { id: "tile-.*", index: 3 }
+      - tapOn: { id: "btn-submit" }
 
 # Back online: the queue and the score outbox drain on reconnect/foreground.
 - setAirplaneMode: disabled
@@ -56,5 +54,7 @@ appId: com.tuberush.v2
 - launchApp
 - tapOn: "Profile"
 - extendedWaitUntil:
-    visible: "Synced"
+    visible:
+      id: "sync-status"
+      text: ".*Synced"
     timeout: 30000

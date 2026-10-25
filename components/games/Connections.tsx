@@ -298,7 +298,7 @@ export function Connections({
 
       {gameState.completedGroups.length > 0 && <View style={styles.lines}>{renderLines()}</View>}
 
-      <Animated.View style={[styles.grid, { transform: [{ translateX: nudge }] }]}>
+      <Animated.View style={[styles.grid, { transform: [{ translateX: nudge }] }]} testID="connections-grid">
         {rows.map((row, rowIndex) => (
           <View key={rowIndex} style={styles.gridRow}>
             {row.map((item) => {

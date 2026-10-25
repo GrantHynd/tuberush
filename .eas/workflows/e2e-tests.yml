@@ -1,0 +1,67 @@
+# E2E tests (iOS simulator) with Maestro on EAS Workflows. Replaces the GitHub Actions "E2E Tests (iOS)" job (TUB-305).
+# - Fingerprint the project, then look for an existing `e2e-test` simulator build with that fingerprint.
+# - Match found  -> repack it (JS-only change: new bundle, no native rebuild).
+# - No match     -> full simulator build.
+# - Then run the critical Maestro flows on whichever build we got.
+# Triggers: PRs labelled `e2e-test`, nightly on main, and manually (`npx eas-cli workflow:run .eas/workflows/e2e-tests.yml`).
+# Flows need MAESTRO_TEST_EMAIL/PASSWORD (free account) and MAESTRO_PREMIUM_EMAIL/PASSWORD (premium) in the EAS `preview` environment.
+name: E2E tests (iOS)
+
+on:
+  pull_request_labeled:
+    labels: ['e2e-test']
+  schedule:
+    - cron: '0 3 * * *' # 03:00 GMT nightly, default branch (main) only
+  workflow_dispatch: {}
+
+jobs:
+  fingerprint:
+    name: Fingerprint
+    type: fingerprint
+    environment: preview
+  get_ios_build:
+    name: Check for existing e2e iOS build
+    needs: [fingerprint]
+    type: get-build
+    params:
+      fingerprint_hash: ${{ needs.fingerprint.outputs.ios_fingerprint_hash }}
+      platform: ios
+      profile: e2e-test
+  repack_ios:
+    name: Repack existing iOS build (JS-only change)
+    needs: [get_ios_build]
+    if: ${{ needs.get_ios_build.outputs.build_id }}
+    type: repack
+    params:
+      build_id: ${{ needs.get_ios_build.outputs.build_id }}
+      profile: e2e-test
+  build_ios:
+    name: Build iOS simulator app
+    needs: [get_ios_build]
+    if: ${{ !needs.get_ios_build.outputs.build_id }}
+    type: build
+    params:
+      platform: ios
+      profile: e2e-test
+  maestro_repacked:
+    name: Maestro (repacked build)
+    needs: [repack_ios]
+    type: maestro
+    environment: preview
+    params:
+      build_id: ${{ needs.repack_ios.outputs.build_id }}
+      flow_path: ['.maestro']
+      exclude_tags: ['android-only']
+      retries: 1
+      record_screen: true
+  maestro_fresh:
+    name: Maestro (fresh build)
+    needs: [build_ios]
+    type: maestro
+    environment: preview
+    params:
+      build_id: ${{ needs.build_ios.outputs.build_id }}
+      flow_path: ['.maestro']
+      exclude_tags: ['android-only']
+      retries: 1
+      record_screen: true

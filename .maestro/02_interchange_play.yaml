@@ -1,0 +1,42 @@
+appId: com.tuberush.v2
+name: Play Interchange (Connections)
+tags: [critical]
+---
+# Free account (MAESTRO_TEST_EMAIL / MAESTRO_TEST_PASSWORD, set as EAS env vars).
+- runFlow:
+    file: subflows/sign_in.yaml
+    env:
+      EMAIL: ${MAESTRO_TEST_EMAIL}
+      PASSWORD: ${MAESTRO_TEST_PASSWORD}
+- extendedWaitUntil:
+    visible:
+      id: "today-hero-connections"
+    timeout: 30000
+- tapOn:
+    id: "today-hero-connections"
+# The shared test account may already have finished today's puzzle (nightly runs).
+- extendedWaitUntil:
+    visible:
+      id: "connections-grid|connections-finished"
+    timeout: 30000
+- runFlow:
+    when:
+      visible:
+        id: "connections-grid"
+    commands:
+      - tapOn:
+          id: "tile-.*"
+          index: 0
+      - tapOn:
+          id: "tile-.*"
+          index: 1
+      - tapOn:
+          id: "tile-.*"
+          index: 2
+      - tapOn:
+          id: "tile-.*"
+          index: 3
+      - tapOn:
+          id: "btn-submit"
+      - assertVisible:
+          id: "tries|connections-finished"
