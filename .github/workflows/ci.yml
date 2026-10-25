@@ -198,11 +198,14 @@ jobs:
       # Boot simulator early in parallel with other setup
       - name: Boot Simulator
         run: |
-          # Boot simulator and wait for it to be fully ready
-          xcrun simctl boot "iPhone 16" || echo "Simulator already booted"
+          # Pick the first available iPhone simulator (runner images change which models exist)
+          SIM_UDID=$(xcrun simctl list devices available -j | python3 -c "import json,sys; d=json.load(sys.stdin)['devices']; print(next(x['udid'] for k in sorted(d, reverse=True) if 'iOS' in k for x in d[k] if x['name'].startswith('iPhone')))")
+          echo "Using simulator $SIM_UDID"
+          echo "SIM_UDID=$SIM_UDID" >> "$GITHUB_ENV"
+          xcrun simctl boot "$SIM_UDID" || echo "Simulator already booted"
           
           echo "Waiting for simulator to fully boot..."
-          xcrun simctl bootstatus "iPhone 16"
+          xcrun simctl bootstatus "$SIM_UDID"
           
           # Additional settling time for simulator UI to be ready
           echo "Allowing simulator UI to settle..."
@@ -245,7 +248,7 @@ jobs:
             -scheme "$SCHEME" \
             -configuration Release \
             -sdk iphonesimulator \
-            -destination 'platform=iOS Simulator,name=iPhone 16' \
+            -destination "platform=iOS Simulator,id=$SIM_UDID" \
             -derivedDataPath build \
             -jobs $(sysctl -n hw.ncpu) \
             ONLY_ACTIVE_ARCH=YES \
@@ -276,12 +279,12 @@ jobs:
           fi
 
           echo "Installing App from: $APP_PATH"
-          xcrun simctl install "iPhone 16" "$APP_PATH"
+          xcrun simctl install "$SIM_UDID" "$APP_PATH"
 
       - name: Pre-launch App
         run: |
           echo "Pre-launching app to ensure it's ready..."
-          xcrun simctl launch "iPhone 16" com.tuberush.v2
+          xcrun simctl launch "$SIM_UDID" com.tuberush.v2
           sleep 3
           echo "App launched successfully"
 
