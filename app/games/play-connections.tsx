@@ -422,6 +422,10 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.sm,
   },
   backButton: {
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: "center",
+    justifyContent: "center",
     padding: Spacing.xs,
     marginRight: Spacing.sm,
   },
@@ -469,6 +473,8 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
   },
   gameOverButton: {
+    minHeight: 48,
+    justifyContent: "center",
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 24,

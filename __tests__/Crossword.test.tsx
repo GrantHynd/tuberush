@@ -194,6 +194,19 @@ describe('Crossword Component', () => {
   });
 
   describe('Clue completion', () => {
+    it('does not strike a filled clue before the puzzle is proved right (TUB-295)', async () => {
+      const filled: CrosswordState = {
+        ...baseGameState,
+        userAnswers: { '0-0': 'A', '0-1': 'X' },
+      };
+      const { getByText } = await render(
+        <Crossword puzzle={testPuzzle} gameState={filled} onCellChange={mockOnCellChange} />
+      );
+      const t = getByText('First across clue');
+      const flat = Array.isArray(t.props.style) ? Object.assign({}, ...t.props.style) : t.props.style;
+      expect(flat.textDecorationLine).toBeUndefined();
+    });
+
     it('applies strikethrough style to completed clues', async () => {
       const gameStateWithCompleted: CrosswordState = {
         ...baseGameState,
@@ -201,6 +214,7 @@ describe('Crossword Component', () => {
           '0-0': 'A',
           '0-1': 'B', // completes clue 1 across (AB)
         },
+        completed: true,
       };
 
       const { getByText } = await render(

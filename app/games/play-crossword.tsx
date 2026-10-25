@@ -2,6 +2,8 @@ import { Crossword } from '@/components/games/Crossword';
 import { CrosswordErrorBoundary } from '@/components/games/CrosswordErrorBoundary';
 import { CrosswordUpsell } from '@/components/games/CrosswordUpsell';
 import { GameHeader } from '@/components/game-ui/GameHeader';
+import { FeedbackToast } from '@/components/game-ui/FeedbackToast';
+import { announce } from '@/lib/a11y';
 import { Leaderboard } from '@/components/ui/Leaderboard';
 import { Colors, GameColors, Layout, Spacing, TFL, Typography } from '@/constants/theme';
 import { getCustomPuzzle, saveCustomPuzzleScore } from '@/lib/custom-puzzles';
@@ -54,6 +56,7 @@ export default function PlayCrossword() {
     const gameDate = isCustomPuzzle ? null : dailyGameDate;
     const puzzleLoading = isCustomPuzzle ? customPuzzleLoading : dailyPuzzleLoading;
     const [gameState, setGameState] = useState<GameState | null>(null);
+    const [toast, setToast] = useState<{ id: number; message: string } | null>(null);
     const [loading, setLoading] = useState(true);
     const [showLeaderboard, setShowLeaderboard] = useState(false);
 
@@ -225,6 +228,7 @@ export default function PlayCrossword() {
             await saveGame(updatedGame);
 
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            announce('Crossword solved. Journey complete.');
 
             const completionSecs = newState.startTime
                 ? Math.floor((endTime - newState.startTime - (newState.accumulatedPause ?? 0)) / 1000)
@@ -263,11 +267,11 @@ export default function PlayCrossword() {
             }
         } else {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-            Alert.alert(
-                'Not quite!',
-                "There's a wrong answer somewhere. Keep going!",
-                [{ text: 'OK' }]
-            );
+            // TUB-295: non-blocking toast (announced to VoiceOver) instead of a blocking Alert.
+            setToast((prev) => ({
+                id: (prev?.id ?? 0) + 1,
+                message: "Not quite. There's a wrong answer somewhere. Keep going!",
+            }));
         }
     }, [gameState, saveGame, user, puzzle, isCustomPuzzle, customPuzzleId, gameDate]);
 
@@ -444,6 +448,8 @@ export default function PlayCrossword() {
                                 disabled={!isFullyFilled}
                                 accessibilityRole="button"
                                 accessibilityLabel="Check answers"
+                                accessibilityState={{ disabled: !isFullyFilled }}
+                                accessibilityHint={isFullyFilled ? undefined : 'Fill all squares to check'}
                             >
                                 <Text
                                     style={[
@@ -454,6 +460,9 @@ export default function PlayCrossword() {
                                     Check
                                 </Text>
                             </TouchableOpacity>
+                            {!isFullyFilled && (
+                                <Text style={styles.checkHelper}>Fill all squares to check</Text>
+                            )}
                         </View>
                     )}
 
@@ -513,6 +522,11 @@ export default function PlayCrossword() {
                     />
                 </Modal>
             )}
+            <FeedbackToast
+                message={toast?.message ?? null}
+                id={toast?.id}
+                onHide={() => setToast(null)}
+            />
         </SafeAreaView>
     );
 }
@@ -534,6 +548,10 @@ const styles = StyleSheet.create({
         paddingVertical: Spacing.sm,
     },
     backButton: {
+        minWidth: 44,
+        minHeight: 44,
+        alignItems: 'center',
+        justifyContent: 'center',
         padding: Spacing.xs,
         marginLeft: Spacing.xs,
     },
@@ -585,6 +603,8 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     checkButton: {
+        minHeight: 48,
+        justifyContent: 'center',
         paddingVertical: 12,
         paddingHorizontal: 32,
         borderRadius: 24,
@@ -592,8 +612,13 @@ const styles = StyleSheet.create({
         borderColor: Colors.light.text,
     },
     checkButtonDisabled: {
-        borderColor: TFL.grey.dark,
-        opacity: 0.6,
+        borderColor: '#6B7280',
+        borderStyle: 'dashed',
+    },
+    checkHelper: {
+        marginTop: Spacing.xs,
+        fontSize: 14,
+        color: '#4B5563',
     },
     checkButtonPrimary: {
         backgroundColor: Colors.light.text,
@@ -630,6 +655,8 @@ const styles = StyleSheet.create({
         gap: Spacing.sm,
     },
     gameOverButton: {
+        minHeight: 48,
+        justifyContent: 'center',
         paddingVertical: 12,
         paddingHorizontal: 24,
         borderRadius: 24,
