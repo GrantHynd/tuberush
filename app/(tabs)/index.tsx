@@ -121,7 +121,7 @@ export default function HomeScreen() {
                 <View style={styles.section}>
                     <SectionHeader
                         icon={GAMES.connections.icon}
-                        title="Connections"
+                        title={GAMES.connections.name}
                         onSeeAllPress={() => router.push('/games/connections-list' as never)}
                     />
                     <FlatList
@@ -138,7 +138,7 @@ export default function HomeScreen() {
                                 status={item.status}
                                 commuteCount={item.commuteCount}
                                 {...getCompletionPresentation('connections', item)}
-                                accessibilityGame="Connections"
+                                accessibilityGame={GAMES.connections.name}
                                 backgroundColor={GameColors.connections}
                                 onPress={() => handleConnectionsCardPress(item.date)}
                             />

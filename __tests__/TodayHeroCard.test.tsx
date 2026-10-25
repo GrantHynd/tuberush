@@ -59,7 +59,7 @@ describe('TodayHeroCard', () => {
         );
         expect(getByText('Play')).toBeTruthy();
         expect(getByText('Unlock')).toBeTruthy();
-        expect(getByTestId('today-hero-connections').props.accessibilityLabel).toBe('Connections, today, 312 commuters played, Play');
+        expect(getByTestId('today-hero-connections').props.accessibilityLabel).toBe('Interchange, today, 312 commuters played, Play');
         await fireEvent.press(getByTestId('today-hero-connections'));
         expect(onPress).toHaveBeenCalled();
     });

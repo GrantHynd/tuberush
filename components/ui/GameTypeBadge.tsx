@@ -9,7 +9,7 @@ export interface GameTypeBadgeProps {
 
 export function GameTypeBadge({ gameType }: GameTypeBadgeProps) {
     const isConnections = gameType === 'connections';
-    const label = isConnections ? 'CON' : 'CRO';
+    const label = isConnections ? 'INT' : 'CRO';
     const backgroundColor = isConnections ? GameColors.connections : GameColors.crossword;
 
     return (

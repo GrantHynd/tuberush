@@ -21,10 +21,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 const SEGMENTS: { value: StatsSegment; label: string }[] = [
     { value: 'all', label: 'All' },
-    { value: 'connections', label: 'Connections' },
+    { value: 'connections', label: 'Interchange' },
     { value: 'crossword', label: 'Crossword' },
 ];
-const SEGMENT_NAME: Record<StatsSegment, string> = { all: 'All games', connections: 'Connections', crossword: 'Crossword' };
+const SEGMENT_NAME: Record<StatsSegment, string> = { all: 'All games', connections: 'Interchange', crossword: 'Crossword' };
 const HISTORY_PREVIEW = 10;
 
 function formatDate(dateString: string): string {

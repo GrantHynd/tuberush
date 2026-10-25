@@ -10,7 +10,7 @@ import type { GameType } from '@/types/game';
 import { StatsSection } from './StatsSection';
 
 const ROWS: { game: GameType; name: string }[] = [
-    { game: 'connections', name: 'Connections' },
+    { game: 'connections', name: 'Interchange' },
     { game: 'crossword', name: 'Crossword' },
 ];
 

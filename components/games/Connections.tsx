@@ -1,8 +1,12 @@
 import { ConnectionsPuzzle } from "@/constants/ConnectionsData";
-import { Colors, ConnectionsGroupColors, FontScaleCap, Layout, Size, Spacing, StateColors, TFL } from "@/constants/theme";
+import { FontFamily, FontScaleCap, GameType, LineColors, Size, Spacing, StateColors } from "@/constants/theme";
+import { FeedbackToast } from "@/components/game-ui/FeedbackToast";
+import { LineRail } from "@/components/game-ui/LineRail";
+import { Tile, type TileState } from "@/components/game-ui/Tile";
 import { useReduceMotion } from "@/hooks/useReduceMotion";
 import { announce } from "@/lib/a11y";
 import { ConnectionsState } from "@/types/game";
+import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import * as Haptics from "expo-haptics";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -13,7 +17,6 @@ import {
   StyleSheet,
   Text,
   UIManager,
-  useWindowDimensions,
   View,
 } from "react-native";
 
@@ -28,40 +31,50 @@ interface ConnectionsProps {
   puzzle: ConnectionsPuzzle;
   onSubmitGuess: (items: string[]) => void;
   onRevealComplete?: () => void;
+  /**
+   * Whether a lost game's answers appear at once (reopened from saved state) or one by one.
+   * Defaults to "already lost when this component mounted".
+   */
+  revealImmediately?: boolean;
 }
 
 const GRID_COLUMNS = 4;
 const CARD_GAP = 8;
 const HORIZONTAL_PADDING = 16;
+/** Wrong-guess red outline duration (TUB-296). */
+export const WRONG_OUTLINE_MS = 600;
+/** Delay between revealed lines on a loss (TUB-297). */
+export const REVEAL_STEP_MS = 400;
+const MAX_TRIES = 4;
 
-/** Map difficulty (1–4) to the standard Connections colour */
-const DIFFICULTY_COLORS: Record<number, string> = {
-  1: ConnectionsGroupColors.yellow,
-  2: ConnectionsGroupColors.green,
-  3: ConnectionsGroupColors.blue,
-  4: ConnectionsGroupColors.purple,
-};
+function triesText(n: number) {
+  return `${n} ${n === 1 ? "try" : "tries"} left`;
+}
 
+/**
+ * Interchange (internal game_type "connections") board.
+ * Playing: solved lines as numbered rails, 4x4 station-board tiles, tries carriages, controls.
+ * Finished: only the line rails (✓ FOUND / dashed REVEALED) — the page wraps them in FinishedGameView.
+ */
 export function Connections({
   gameState,
   puzzle,
   onSubmitGuess,
   onRevealComplete,
+  revealImmediately,
 }: ConnectionsProps) {
-  const { width: screenWidth } = useWindowDimensions();
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
+  const [errorItems, setErrorItems] = useState<string[]>([]);
   const [shuffledItems, setShuffledItems] = useState<string[]>([]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [revealedCount, setRevealedCount] = useState(0);
-  const [shakeAnim] = useState(() => new Animated.Value(0));
+  const [toast, setToast] = useState<{ id: number; message: string } | null>(null);
+  const [nudge] = useState(() => new Animated.Value(0));
   const revealTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const errorTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const lastGuessRef = useRef<string[]>([]);
   const reduceMotion = useReduceMotion();
+  const playing = gameState.status === "playing";
 
-  // Calculate responsive card size based on screen width
-  const gridWidth = screenWidth - HORIZONTAL_PADDING * 2;
-  const cardSize = (gridWidth - CARD_GAP * (GRID_COLUMNS - 1)) / GRID_COLUMNS;
-
-  // Derive revealed groups when game is lost
   const revealedGroups = React.useMemo(() => {
     if (gameState.status !== "lost") return [];
     const completedGroupIds = gameState.completedGroups || [];
@@ -70,35 +83,30 @@ export function Connections({
       .sort((a, b) => a.difficulty - b.difficulty);
   }, [gameState.status, gameState.completedGroups, puzzle.groups]);
 
-  // Check if this is a reload of an already-lost game (no animation needed)
-  const isAlreadyLost = useRef(gameState.status === "lost");
+  // Reopening an already-lost game shows every answer immediately (no animation).
+  const [revealAtOnce] = useState(() => revealImmediately ?? gameState.status === "lost");
 
-  // Staggered reveal animation for lost games
   useEffect(() => {
     if (gameState.status !== "lost" || revealedGroups.length === 0) return;
 
-    // If already lost on mount, show all groups immediately
-    if (isAlreadyLost.current) {
-      setRevealedCount(revealedGroups.length);
+    if (revealAtOnce) {
+      // Reopened: every answer is already shown (see shownRevealed); just report completion.
       onRevealComplete?.();
       return;
     }
 
-    // Start reveal animation
     let count = 0;
-
     const revealNext = () => {
       if (count < revealedGroups.length) {
         count++;
         if (!reduceMotion) LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
         setRevealedCount(count);
-        revealTimerRef.current = setTimeout(revealNext, 400);
+        revealTimerRef.current = setTimeout(revealNext, REVEAL_STEP_MS);
       } else {
         onRevealComplete?.();
       }
     };
-
-    revealTimerRef.current = setTimeout(revealNext, 400);
+    revealTimerRef.current = setTimeout(revealNext, REVEAL_STEP_MS);
 
     return () => {
       if (revealTimerRef.current) {
@@ -106,14 +114,18 @@ export function Connections({
         revealTimerRef.current = null;
       }
     };
-  }, [gameState.status, revealedGroups.length, onRevealComplete, reduceMotion]);
+  }, [gameState.status, revealedGroups.length, onRevealComplete, reduceMotion, revealAtOnce]);
 
-  // Keep the board order stable when a solved group drops out, and reshuffle
-  // only when the remaining set actually changes. The update is deferred so it
-  // is not a synchronous setState in the effect, and Math.random stays out of render.
-  const revealedToExclude = revealedGroups
-    .slice(0, revealedCount)
-    .map((g) => g.category);
+  useEffect(
+    () => () => {
+      if (errorTimerRef.current) clearTimeout(errorTimerRef.current);
+    },
+    [],
+  );
+
+  // Board order stays stable when a solved group drops out; reshuffle only when the set changes.
+  const shownRevealed = revealAtOnce ? revealedGroups.length : revealedCount;
+  const revealedToExclude = revealedGroups.slice(0, shownRevealed).map((g) => g.category);
   const excludedGroups = [...(gameState.completedGroups || []), ...revealedToExclude];
   const allActiveItems = puzzle.groups
     .filter((g) => !excludedGroups.includes(g.category))
@@ -123,7 +135,6 @@ export function Connections({
   useEffect(() => {
     const items = activeKey ? activeKey.split("\0") : [];
     let cancelled = false;
-
     void Promise.resolve().then(() => {
       if (cancelled) return;
       setShuffledItems((prev) => {
@@ -134,7 +145,6 @@ export function Connections({
         return remaining;
       });
     });
-
     return () => {
       cancelled = true;
     };
@@ -142,8 +152,8 @@ export function Connections({
 
   const handleSelect = useCallback(
     (item: string) => {
-      if (gameState.status !== "playing" || isSubmitting) return;
-
+      if (!playing) return;
+      if (errorItems.length) setErrorItems([]);
       if (selectedItems.includes(item)) {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         setSelectedItems((prev) => prev.filter((i) => i !== item));
@@ -154,7 +164,7 @@ export function Connections({
         announce(`${selectedItems.length + 1} of 4 selected`);
       }
     },
-    [gameState.status, isSubmitting, selectedItems],
+    [playing, selectedItems, errorItems.length],
   );
 
   const handleShuffle = useCallback(() => {
@@ -165,289 +175,193 @@ export function Connections({
 
   const handleDeselectAll = useCallback(() => {
     setSelectedItems([]);
+    setErrorItems([]);
   }, []);
 
   const handleSubmit = useCallback(() => {
-    if (selectedItems.length !== 4 || isSubmitting || gameState.status !== "playing") return;
-
-    setIsSubmitting(true);
+    if (selectedItems.length !== 4 || !playing) return;
+    lastGuessRef.current = selectedItems;
+    // TUB-296: the selection is kept until we know the outcome; a correct line clears it,
+    // a wrong guess keeps it (with a red outline) so the player sees what they tried.
     onSubmitGuess(selectedItems);
-    setSelectedItems([]);
-    setIsSubmitting(false);
-  }, [selectedItems, isSubmitting, gameState.status, onSubmitGuess]);
+  }, [selectedItems, playing, onSubmitGuess]);
 
-  // Detect wrong guess to trigger shake
+  // Wrong guess: keep selection, red outline 600ms, single 6px nudge, toast + announcement.
   const prevMistakes = useRef(gameState.mistakesRemaining);
   useEffect(() => {
     if (gameState.mistakesRemaining < prevMistakes.current) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      const guess = lastGuessRef.current;
+      const oneAway =
+        guess.length === 4 &&
+        puzzle.groups.some((g) => guess.filter((i) => g.items.includes(i)).length === 3);
       const left = gameState.mistakesRemaining;
-      announce(
-        left > 0
-          ? `Mind the gap: not a line. ${left} ${left === 1 ? "try" : "tries"} left.`
-          : "Mind the gap: not a line. No tries left.",
-      );
-      if (!reduceMotion) Animated.sequence([
-        Animated.timing(shakeAnim, {
-          toValue: 10,
-          duration: 50,
-          useNativeDriver: true,
-        }),
-        Animated.timing(shakeAnim, {
-          toValue: -10,
-          duration: 50,
-          useNativeDriver: true,
-        }),
-        Animated.timing(shakeAnim, {
-          toValue: 10,
-          duration: 50,
-          useNativeDriver: true,
-        }),
-        Animated.timing(shakeAnim, {
-          toValue: 0,
-          duration: 50,
-          useNativeDriver: true,
-        }),
-      ]).start();
+      const message = `${oneAway ? "One away." : "Not a line."} ${left > 0 ? `${triesText(left)}.` : "No tries left."}`;
+      // FeedbackToast announces "Mind the gap. <message>" to VoiceOver.
+      setToast((prev) => ({ id: (prev?.id ?? 0) + 1, message }));
+      setErrorItems(guess);
+      if (errorTimerRef.current) clearTimeout(errorTimerRef.current);
+      errorTimerRef.current = setTimeout(() => setErrorItems([]), WRONG_OUTLINE_MS);
+      if (!reduceMotion && gameState.status === "playing") {
+        Animated.sequence([
+          Animated.timing(nudge, { toValue: 6, duration: 80, useNativeDriver: true }),
+          Animated.timing(nudge, { toValue: 0, duration: 120, useNativeDriver: true }),
+        ]).start();
+      }
     }
     prevMistakes.current = gameState.mistakesRemaining;
-  }, [gameState.mistakesRemaining, shakeAnim, reduceMotion]);
+  }, [gameState.mistakesRemaining, gameState.status, nudge, reduceMotion, puzzle.groups]);
 
-  // Detect correct guess
+  // Correct line: clear the selection, announce.
   const prevCompletedGroups = useRef(gameState.completedGroups.length);
   useEffect(() => {
     if (gameState.completedGroups.length > prevCompletedGroups.current) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       if (!reduceMotion) LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      setSelectedItems([]);
+      setErrorItems([]);
       const latest = gameState.completedGroups[gameState.completedGroups.length - 1];
       if (latest) announce(`Line found: ${latest}`);
     }
     prevCompletedGroups.current = gameState.completedGroups.length;
   }, [gameState.completedGroups, reduceMotion]);
 
-  const renderCompletedGroups = () => {
-    const completedElements = gameState.completedGroups.map((groupId) => {
+  const finishedMarker = gameState.status === "playing" ? "none" : "found";
+
+  const renderLines = () => {
+    const found = gameState.completedGroups.map((groupId) => {
       const group = puzzle.groups.find((g) => g.category === groupId);
       if (!group) return null;
-
-      const bgColor = DIFFICULTY_COLORS[group.difficulty] || group.color;
-      const textColor = Colors.light.text;
-
       return (
-        <View
+        <LineRail
           key={groupId}
-          style={[styles.completedGroup, { backgroundColor: bgColor }]}
-          accessible={true}
-          accessibilityLabel={`Group ${group.difficulty}, ${group.category}, found: ${group.items.join(", ")}`}
-        >
-          <Text style={[styles.completedTitle, { color: textColor }]}>
-            {group.category}
-          </Text>
-          <Text style={[styles.completedItems, { color: textColor }]}>
-            {group.items.join(", ")}
-          </Text>
-        </View>
+          testID={`line-${group.difficulty}`}
+          level={group.difficulty}
+          category={group.category}
+          items={group.items}
+          marker={finishedMarker}
+        />
       );
     });
-
-    // Add revealed groups (only shown on loss)
-    const revealedElements = revealedGroups.slice(0, revealedCount).map((group) => {
-      const bgColor = DIFFICULTY_COLORS[group.difficulty] || group.color;
-      const textColor = Colors.light.text;
-
-      return (
-        <View
-          key={`revealed-${group.category}`}
-          style={[
-            styles.completedGroup,
-            styles.revealedGroup,
-            { backgroundColor: bgColor },
-          ]}
-          accessible={true}
-          accessibilityLabel={`Group ${group.difficulty}, ${group.category}, revealed: ${group.items.join(", ")}`}
-        >
-          <View style={styles.revealedHeader}>
-            <Text style={[styles.completedTitle, { color: textColor }]}>
-              {group.category}
-            </Text>
-            <View style={styles.revealedTag}>
-              <Text style={styles.revealedTagText}>Revealed</Text>
-            </View>
-          </View>
-          <Text style={[styles.completedItems, { color: textColor }]}>
-            {group.items.join(", ")}
-          </Text>
-        </View>
-      );
-    });
-
-    return [...completedElements, ...revealedElements];
+    const revealed = revealedGroups.slice(0, shownRevealed).map((group) => (
+      <LineRail
+        key={`revealed-${group.category}`}
+        testID={`line-${group.difficulty}`}
+        level={group.difficulty}
+        category={group.category}
+        items={group.items}
+        marker="revealed"
+      />
+    ));
+    return [...found, ...revealed];
   };
 
-  const renderMistakes = () => {
+  const renderTries = () => {
+    const left = gameState.mistakesRemaining;
     return (
       <View
-        style={styles.mistakesContainer}
-        accessible={true}
-        accessibilityLabel={`${gameState.mistakesRemaining} ${gameState.mistakesRemaining === 1 ? "try" : "tries"} left`}
+        style={styles.tries}
+        accessible
+        accessibilityLabel={triesText(left)}
+        testID="tries"
       >
-        <Text style={styles.mistakesLabel}>Mistakes Remaining:</Text>
-        <View style={styles.dotsRow}>
-          {[...Array(4)].map((_, i) => (
-            <Animated.View
-              key={i}
-              style={[
-                styles.dot,
-                i < gameState.mistakesRemaining
-                  ? styles.dotActive
-                  : styles.dotUsed,
-              ]}
-            />
+        <Text style={styles.triesLabel} maxFontSizeMultiplier={FontScaleCap.chrome}>
+          Tries left <Text style={styles.triesCount}>{left}</Text>
+        </Text>
+        <View style={styles.carriages}>
+          {Array.from({ length: MAX_TRIES }).map((_, i) => (
+            <View key={i} style={[styles.carriage, i < left ? styles.carriageOn : styles.carriageOff]} />
           ))}
         </View>
       </View>
     );
   };
 
+  // Finished: only the lines (the page wraps them in FinishedGameView; no gameplay controls).
+  if (!playing) {
+    return <View style={styles.lines}>{renderLines()}</View>;
+  }
+
   const rows: string[][] = [];
   for (let i = 0; i < shuffledItems.length; i += GRID_COLUMNS) {
     rows.push(shuffledItems.slice(i, i + GRID_COLUMNS));
   }
 
-  const canSubmit =
-    selectedItems.length === 4 &&
-    !isSubmitting &&
-    gameState.status === "playing";
+  const canSubmit = selectedItems.length === 4;
+  const canClear = selectedItems.length > 0;
 
   return (
     <View style={styles.container}>
-      {/* Completed Groups */}
-      <View style={styles.completedContainer}>{renderCompletedGroups()}</View>
+      <Text style={styles.instruction} maxFontSizeMultiplier={FontScaleCap.chrome}>
+        Find four lines of four stops
+      </Text>
 
-      {/* Game Grid */}
-      <Animated.View
-        style={[styles.grid, { transform: [{ translateX: shakeAnim }] }]}
-      >
+      {gameState.completedGroups.length > 0 && <View style={styles.lines}>{renderLines()}</View>}
+
+      <Animated.View style={[styles.grid, { transform: [{ translateX: nudge }] }]}>
         {rows.map((row, rowIndex) => (
           <View key={rowIndex} style={styles.gridRow}>
             {row.map((item) => {
-              const isSelected = selectedItems.includes(item);
+              const state: TileState = errorItems.includes(item)
+                ? "error"
+                : selectedItems.includes(item)
+                  ? "selected"
+                  : "default";
               return (
-                <Pressable
+                <Tile
                   key={item}
-                  style={({ pressed }) => [
-                    styles.card,
-                    {
-                      width: cardSize,
-                      minHeight: Math.max(64, Math.round(cardSize * 0.7)),
-                    },
-                    isSelected && styles.cardSelected,
-                    gameState.status !== "playing" && styles.cardDisabled,
-                    pressed && { opacity: 0.85, transform: [{ scale: 0.97 }] },
-                  ]}
-                  onPress={() => handleSelect(item)}
-                  disabled={gameState.status !== "playing" || isSubmitting}
-                  accessibilityRole="button"
                   testID={`tile-${item}`}
-                  accessibilityLabel={item}
-                  accessibilityState={{
-                    selected: isSelected,
-                    disabled: gameState.status !== "playing",
-                  }}
+                  label={item}
+                  state={state}
+                  onPress={() => handleSelect(item)}
                   accessibilityHint="Select 4 items"
-                >
-                  {isSelected && <View style={styles.selectedDot} testID={`tile-${item}-dot`} />}
-                  <Text
-                    style={[
-                      styles.cardText,
-                      { fontSize: cardSize < 80 ? 11 : 13 },
-                      isSelected && styles.cardTextSelected,
-                    ]}
-                    maxFontSizeMultiplier={FontScaleCap.tile}
-                  >
-                    {item}
-                  </Text>
-                </Pressable>
+                  style={styles.tile}
+                />
               );
             })}
           </View>
         ))}
       </Animated.View>
 
-      {/* Mistakes Remaining */}
-      {renderMistakes()}
+      {renderTries()}
 
-      {/* Spacer to push controls to bottom */}
+      <FeedbackToast message={toast?.message ?? null} id={toast?.id} onHide={() => setToast(null)} />
+
       <View style={styles.spacer} />
 
-      {/* Controls */}
       <View style={styles.controls}>
         <Pressable
-          style={({ pressed }) => [
-            styles.buttonOutlined,
-            (gameState.status !== "playing" || isSubmitting) &&
-              styles.buttonInactive,
-            pressed && { opacity: 0.7 },
-          ]}
+          style={({ pressed }) => [styles.btn, pressed && styles.pressed]}
           onPress={handleShuffle}
-          disabled={gameState.status !== "playing" || isSubmitting}
           accessibilityRole="button"
           accessibilityLabel="Shuffle items"
-          accessibilityState={{
-            disabled: gameState.status !== "playing",
-          }}
+          accessibilityState={{ disabled: false }}
+          testID="btn-shuffle"
         >
-          <Text
-            style={[
-              styles.buttonTextOutlined,
-              (gameState.status !== "playing" || isSubmitting) &&
-                styles.buttonTextInactive,
-            ]}
-          >
-            Shuffle
-          </Text>
+          <MaterialIcons name="shuffle" size={18} color={StateColors.ink} />
+          <Text style={styles.btnText} maxFontSizeMultiplier={FontScaleCap.chrome}>Shuffle</Text>
         </Pressable>
 
         <Pressable
-          style={({ pressed }) => [
-            styles.buttonOutlined,
-            (gameState.status !== "playing" ||
-              selectedItems.length === 0 ||
-              isSubmitting) &&
-              styles.buttonInactive,
-            pressed && { opacity: 0.7 },
-          ]}
+          style={({ pressed }) => [styles.btn, !canClear && styles.btnInactive, pressed && styles.pressed]}
           onPress={handleDeselectAll}
-          disabled={
-            gameState.status !== "playing" ||
-            selectedItems.length === 0 ||
-            isSubmitting
-          }
+          disabled={!canClear}
           accessibilityRole="button"
           accessibilityLabel="Deselect all items"
-          accessibilityState={{
-            disabled:
-              gameState.status !== "playing" || selectedItems.length === 0,
-          }}
+          accessibilityState={{ disabled: !canClear }}
+          testID="btn-clear"
         >
-          <Text
-            style={[
-              styles.buttonTextOutlined,
-              (gameState.status !== "playing" ||
-                selectedItems.length === 0 ||
-                isSubmitting) &&
-                styles.buttonTextInactive,
-            ]}
-          >
-            Deselect All
+          <Text style={[styles.btnText, !canClear && styles.btnTextInactive]} maxFontSizeMultiplier={FontScaleCap.chrome}>
+            Clear
           </Text>
         </Pressable>
 
         <Pressable
           style={({ pressed }) => [
-            styles.buttonFilled,
-            !canSubmit && styles.buttonFilledDisabled,
-            pressed && canSubmit && { opacity: 0.85 },
+            styles.btn,
+            styles.btnSubmit,
+            canSubmit ? styles.btnPrimary : styles.btnInactive,
+            pressed && canSubmit && styles.pressed,
           ]}
           onPress={handleSubmit}
           disabled={!canSubmit}
@@ -455,15 +369,12 @@ export function Connections({
           accessibilityLabel="Submit guess"
           accessibilityValue={{ text: `${selectedItems.length} of 4 selected` }}
           accessibilityHint={canSubmit ? undefined : "Select 4 items"}
-          accessibilityState={{
-            disabled: !canSubmit,
-          }}
+          accessibilityState={{ disabled: !canSubmit }}
+          testID="btn-submit"
         >
           <Text
-            style={[
-              styles.buttonTextFilled,
-              !canSubmit && styles.buttonTextFilledDisabled,
-            ]}
+            style={[styles.btnText, canSubmit ? styles.btnTextPrimary : styles.btnTextInactive]}
+            maxFontSizeMultiplier={FontScaleCap.chrome}
           >
             {canSubmit ? "Submit" : `Submit ${selectedItems.length}/4`}
           </Text>
@@ -477,174 +388,58 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: HORIZONTAL_PADDING,
-    paddingTop: Spacing.xs,
+    paddingTop: Spacing.md,
   },
-  completedContainer: {
+  instruction: {
+    ...GameType.body,
+    color: StateColors.inactiveText,
+    marginBottom: Spacing.sm,
+  },
+  lines: {
     gap: CARD_GAP,
     marginBottom: CARD_GAP,
   },
-  completedGroup: {
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.md,
-    borderRadius: Layout.borderRadius.lg,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  revealedGroup: {
-    borderWidth: 2,
-    borderStyle: "dashed",
-    borderColor: "#111111",
-  },
-  revealedHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing.xs,
-    marginBottom: 2,
-  },
-  revealedTag: {
-    backgroundColor: "#FFFFFF",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  revealedTagText: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: "#111111",
-    textTransform: "uppercase",
-  },
-  completedTitle: {
-    fontSize: 16,
-    fontWeight: "800",
-    letterSpacing: 1,
-    textTransform: "uppercase",
-    marginBottom: 2,
-    textAlign: "center",
-  },
-  completedItems: {
-    fontSize: 14,
-    fontWeight: "500",
-    textAlign: "center",
-  },
-  grid: {
-    gap: CARD_GAP,
-  },
-  gridRow: {
-    flexDirection: "row",
-    gap: CARD_GAP,
-  },
-  card: {
-    backgroundColor: "#EFEFE6",
-    borderRadius: Layout.borderRadius.lg,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 4,
-  },
-  selectedDot: {
-    position: "absolute",
-    top: 6,
-    right: 6,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: "#FFFFFF",
-  },
-  cardSelected: {
-    backgroundColor: TFL.blue,
-  },
-  cardDisabled: {
-    opacity: 0.5,
-  },
-  cardText: {
-    fontWeight: "700",
-    color: Colors.light.text,
-    textAlign: "center",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  cardTextSelected: {
-    color: Colors.light.background,
-  },
-  mistakesContainer: {
+  grid: { gap: CARD_GAP },
+  gridRow: { flexDirection: "row", gap: CARD_GAP },
+  tile: { flex: 1 },
+  tries: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     marginTop: Spacing.lg,
     gap: Spacing.sm,
   },
-  mistakesLabel: {
-    fontSize: 15,
-    fontWeight: "500",
-    color: Colors.light.text,
-  },
-  dotsRow: {
-    flexDirection: "row",
-    gap: 6,
-  },
-  dot: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-  },
-  dotActive: {
-    backgroundColor: Colors.light.text,
-  },
-  dotUsed: {
-    backgroundColor: "transparent",
-    borderWidth: 2,
-    borderColor: StateColors.inactiveBorder,
-  },
-  spacer: {
-    flex: 1,
-  },
+  triesLabel: { fontFamily: FontFamily.medium, fontSize: 15, color: StateColors.ink },
+  triesCount: { fontFamily: FontFamily.bold, fontWeight: "700" },
+  carriages: { flexDirection: "row", gap: 4 },
+  carriage: { width: 22, height: 12, borderRadius: 3 },
+  carriageOn: { backgroundColor: LineColors.connections },
+  carriageOff: { backgroundColor: "transparent", borderWidth: 2, borderColor: StateColors.inactiveBorder },
+  spacer: { flex: 1 },
   controls: {
     flexDirection: "row",
-    justifyContent: "center",
     gap: Spacing.sm,
     paddingBottom: Spacing.lg,
     paddingTop: Spacing.md,
   },
-  buttonOutlined: {
+  btn: {
+    flex: 1,
     minHeight: Size.primaryButton,
+    borderRadius: Size.radius,
+    borderWidth: 2,
+    borderColor: StateColors.ink,
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: Colors.light.text,
+    flexDirection: "row",
+    gap: 4,
+    paddingHorizontal: 8,
   },
-  buttonTextOutlined: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: Colors.light.text,
-  },
-  buttonInactive: {
-    borderColor: StateColors.inactiveBorder,
-    borderStyle: "dashed",
-  },
-  buttonTextInactive: {
-    color: TFL.grey.dark,
-  },
-  buttonFilled: {
-    minHeight: Size.primaryButton,
-    justifyContent: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 24,
-    backgroundColor: TFL.blue,
-  },
-  buttonFilledDisabled: {
-    backgroundColor: "transparent",
-    borderWidth: 1,
-    borderStyle: "dashed",
-    borderColor: StateColors.inactiveBorder,
-  },
-  buttonTextFilled: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: Colors.light.background,
-  },
-  buttonTextFilledDisabled: {
-    color: StateColors.inactiveText,
-  },
+  btnSubmit: { flex: 1.4 },
+  btnPrimary: { backgroundColor: LineColors.connections, borderColor: LineColors.connections },
+  btnInactive: { borderStyle: "dashed", borderColor: StateColors.inactiveBorder },
+  pressed: { opacity: 0.8 },
+  btnText: { fontFamily: FontFamily.bold, fontSize: 16, fontWeight: "700", color: StateColors.ink },
+  btnTextPrimary: { color: "#FFFFFF" },
+  btnTextInactive: { color: StateColors.inactiveText },
 });

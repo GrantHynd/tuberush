@@ -12,7 +12,7 @@ import { StatsSection, sectionStyles } from './StatsSection';
 const HEIGHT = 160;
 const PAD = { left: 40, right: 8, top: 8, bottom: 20 };
 const SERIES: { game: GameType; color: string; label: string; shape: 'circle' | 'square' }[] = [
-    { game: 'connections', color: GameColors.connections, label: 'Connections', shape: 'circle' },
+    { game: 'connections', color: GameColors.connections, label: 'Interchange', shape: 'circle' },
     { game: 'crossword', color: GameColors.crossword, label: 'Crossword', shape: 'square' },
 ];
 

@@ -505,8 +505,10 @@ describe("PlayConnectionsScreen", () => {
       const { getByText } = await render(<PlayConnectionsScreen />);
 
       await waitFor(() => {
-        expect(getByText("Well done!")).toBeTruthy();
-        expect(getByText(/Solved in \d+s/)).toBeTruthy();
+        expect(getByText("Journey complete")).toBeTruthy();
+        expect(getByText("All four lines found")).toBeTruthy();
+        expect(getByText("Time")).toBeTruthy();
+        expect(getByText("Day streak")).toBeTruthy();
       });
     });
 
@@ -528,7 +530,9 @@ describe("PlayConnectionsScreen", () => {
       const { getByText } = await render(<PlayConnectionsScreen />);
 
       await waitFor(() => {
-        expect(getByText("Better luck next time")).toBeTruthy();
+        expect(getByText("Part suspended")).toBeTruthy();
+        expect(getByText("0 of 4 lines found · answers below")).toBeTruthy();
+        expect(getByText("Lines")).toBeTruthy();
       });
     });
 
@@ -555,16 +559,16 @@ describe("PlayConnectionsScreen", () => {
       const { getByText, getByLabelText } = await render(<PlayConnectionsScreen />);
 
       await waitFor(() => {
-        expect(getByText("Well done!")).toBeTruthy();
+        expect(getByText("Journey complete")).toBeTruthy();
       });
 
-      await fireEvent.press(getByLabelText("View leaderboard"));
+      await fireEvent.press(getByLabelText("Leaderboard"));
 
       // Modal should be visible (we can't test Modal content easily, but we can verify button works)
-      expect(getByLabelText("View leaderboard")).toBeTruthy();
+      expect(getByLabelText("Leaderboard")).toBeTruthy();
     });
 
-    it("navigates home when home button pressed", async () => {
+    it("navigates back from the finished page via the header", async () => {
       const wonGameState: ConnectionsState = {
         ...mockGameState,
         status: "won",
@@ -587,12 +591,13 @@ describe("PlayConnectionsScreen", () => {
       const { getByText, getByLabelText } = await render(<PlayConnectionsScreen />);
 
       await waitFor(() => {
-        expect(getByText("Well done!")).toBeTruthy();
+        expect(getByText("Journey complete")).toBeTruthy();
       });
 
-      await fireEvent.press(getByLabelText("Return home"));
+      // TUB-297: no gameplay/Home buttons on the finished page; the header back leaves.
+      await fireEvent.press(getByLabelText("Go back"));
 
-      expect(mockRouter.back).toHaveBeenCalled();
+      expect(mockRouter.back.mock.calls.length + mockRouter.replace.mock.calls.length).toBeGreaterThan(0);
     });
 
     it("does not show solve time when game is lost", async () => {
@@ -744,7 +749,7 @@ describe("PlayConnectionsScreen", () => {
   });
 
   describe("Loss Reveal Flow", () => {
-    it("delays game over banner until reveal completes", async () => {
+    it("shows the finished page at once on loss and reveals answers 400ms apart", async () => {
       const gameStateOneLifeLeft: ConnectionsState = {
         ...mockGameState,
         mistakesRemaining: 1,
@@ -761,7 +766,7 @@ describe("PlayConnectionsScreen", () => {
       const connections = require("@/components/games/Connections");
       const spy = jest.spyOn(connections, "Connections");
 
-      const { queryByText, rerender } = await render(<PlayConnectionsScreen />);
+      const { queryByText, queryAllByText, rerender } = await render(<PlayConnectionsScreen />);
 
       await waitFor(() => {
         expect(spy).toHaveBeenCalled();
@@ -791,14 +796,15 @@ describe("PlayConnectionsScreen", () => {
       });
       await rerender(<PlayConnectionsScreen />);
 
-      // Game over banner should not be visible until the reveal finishes
-      expect(queryByText("Better luck next time")).toBeNull();
+      // TUB-297: the sign appears immediately; unfound lines reveal one by one.
+      expect(queryByText("Part suspended")).toBeTruthy();
+      expect(queryByText("REVEALED")).toBeNull();
 
       await waitFor(
         () => {
-          expect(queryByText("Better luck next time")).toBeTruthy();
+          expect(queryAllByText("REVEALED").length).toBe(3);
         },
-        { timeout: 2000 },
+        { timeout: 3000 },
       );
 
       spy.mockRestore();
@@ -820,11 +826,13 @@ describe("PlayConnectionsScreen", () => {
         saveGame: mockSaveGame,
       });
 
-      const { getByText } = await render(<PlayConnectionsScreen />);
+      const { getByText, getAllByText } = await render(<PlayConnectionsScreen />);
 
-      // Game over banner should be visible immediately for reload
+      // Reopen: same finished page, all answers at once (no staggered reveal).
       await waitFor(() => {
-        expect(getByText("Better luck next time")).toBeTruthy();
+        expect(getByText("Part suspended")).toBeTruthy();
+        expect(getAllByText("REVEALED").length).toBe(3);
+        expect(getByText("✓ FOUND")).toBeTruthy();
       });
     });
 

@@ -2,7 +2,7 @@
 import { Connections } from '@/components/games/Connections';
 import type { ConnectionsPuzzle } from '@/constants/ConnectionsData';
 import type { ConnectionsState } from '@/types/game';
-import { fireEvent, render } from '@testing-library/react-native';
+import { act, fireEvent, render } from '@testing-library/react-native';
 import React from 'react';
 import { AccessibilityInfo } from 'react-native';
 
@@ -55,7 +55,7 @@ describe('TUB-295 accessibility', () => {
         await r.rerender(
             <Connections puzzle={puzzle} gameState={{ ...base, mistakesRemaining: 3 }} onSubmitGuess={jest.fn()} />,
         );
-        expect(spy).toHaveBeenCalledWith('Mind the gap: not a line. 3 tries left.');
+        expect(spy).toHaveBeenCalledWith('Mind the gap. Not a line. 3 tries left.');
         expect(r.getByLabelText('3 tries left')).toBeTruthy();
     });
 
@@ -65,5 +65,39 @@ describe('TUB-295 accessibility', () => {
             <Connections puzzle={puzzle} gameState={{ ...base, completedGroups: ['A'] }} onSubmitGuess={jest.fn()} />,
         );
         expect(spy).toHaveBeenCalledWith('Line found: A');
+    });
+});
+
+describe('TUB-296 wrong-guess feedback', () => {
+    beforeEach(() => jest.useFakeTimers());
+    afterEach(() => jest.useRealTimers());
+
+    it('keeps the selection, outlines it red for 600ms and shows the Mind the gap toast', async () => {
+        const onSubmit = jest.fn();
+        const r = await render(<Connections puzzle={puzzle} gameState={base} onSubmitGuess={onSubmit} />);
+        await r.findByTestId('tile-A1');
+        for (const t of ['A1', 'A2', 'A3', 'B1']) await fireEvent.press(r.getByTestId(`tile-${t}`));
+        await fireEvent.press(r.getByTestId('btn-submit'));
+        expect(onSubmit).toHaveBeenCalledWith(['A1', 'A2', 'A3', 'B1']);
+        await r.rerender(
+            <Connections puzzle={puzzle} gameState={{ ...base, mistakesRemaining: 3 }} onSubmitGuess={onSubmit} />,
+        );
+        expect(r.getByTestId('tile-A1').props.accessibilityValue).toEqual({ text: 'incorrect' });
+        expect(r.getByText('One away. 3 tries left.')).toBeTruthy();
+        expect(r.getByText('MIND THE GAP')).toBeTruthy();
+        await act(async () => {
+            jest.advanceTimersByTime(700);
+        });
+        // Outline cleared, selection kept.
+        expect(r.getByTestId('tile-A1').props.accessibilityValue?.text).toBeUndefined();
+        expect(r.getByTestId('tile-A1').props.accessibilityState.selected).toBe(true);
+    });
+
+    it('uses numbered line rails, never colour-only', async () => {
+        const r = await render(
+            <Connections puzzle={puzzle} gameState={{ ...base, completedGroups: ['C'] }} onSubmitGuess={jest.fn()} />,
+        );
+        expect(r.getByLabelText(/^Group 3, C: C1/)).toBeTruthy();
+        expect(r.getByText('3')).toBeTruthy();
     });
 });

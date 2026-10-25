@@ -44,7 +44,7 @@ describe('Stats segments (TUB-260/257)', () => {
         expect(getByTestId('breakdown-upsell')).toBeTruthy(); // free user, no crossword history
         expect(getByTestId('stats-calendar')).toBeTruthy();
         expect(queryByText('Mistakes per game')).toBeNull();
-        expect(getAllByText('CON').length).toBe(3);
+        expect(getAllByText('INT').length).toBe(3);
         expect(getByText('Loss')).toBeTruthy(); // real result, not time-based
     });
 
@@ -57,7 +57,7 @@ describe('Stats segments (TUB-260/257)', () => {
         expect(getByTestId('stats-summary')).toHaveTextContent(/1:10/);
         expect(getByText('Mistakes per game')).toBeTruthy();
         expect(queryByTestId('stats-breakdown')).toBeNull();
-        expect(queryByText('CON')).toBeNull();
+        expect(queryByText('INT')).toBeNull();
     });
 
     it('Crossword with no games: upsell for free users', async () => {
