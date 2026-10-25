@@ -1,5 +1,7 @@
 import { ConnectionsPuzzle } from "@/constants/ConnectionsData";
-import { Colors, ConnectionsGroupColors, Layout, Spacing, TFL } from "@/constants/theme";
+import { Colors, ConnectionsGroupColors, FontScaleCap, Layout, Size, Spacing, StateColors, TFL } from "@/constants/theme";
+import { useReduceMotion } from "@/hooks/useReduceMotion";
+import { announce } from "@/lib/a11y";
 import { ConnectionsState } from "@/types/game";
 import * as Haptics from "expo-haptics";
 import React, { useCallback, useEffect, useRef, useState } from "react";
@@ -53,6 +55,7 @@ export function Connections({
   const [revealedCount, setRevealedCount] = useState(0);
   const [shakeAnim] = useState(() => new Animated.Value(0));
   const revealTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const reduceMotion = useReduceMotion();
 
   // Calculate responsive card size based on screen width
   const gridWidth = screenWidth - HORIZONTAL_PADDING * 2;
@@ -87,7 +90,7 @@ export function Connections({
     const revealNext = () => {
       if (count < revealedGroups.length) {
         count++;
-        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+        if (!reduceMotion) LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
         setRevealedCount(count);
         revealTimerRef.current = setTimeout(revealNext, 400);
       } else {
@@ -103,7 +106,7 @@ export function Connections({
         revealTimerRef.current = null;
       }
     };
-  }, [gameState.status, revealedGroups.length, onRevealComplete]);
+  }, [gameState.status, revealedGroups.length, onRevealComplete, reduceMotion]);
 
   // Keep the board order stable when a solved group drops out, and reshuffle
   // only when the remaining set actually changes. The update is deferred so it
@@ -144,18 +147,21 @@ export function Connections({
       if (selectedItems.includes(item)) {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         setSelectedItems((prev) => prev.filter((i) => i !== item));
+        announce(`${selectedItems.length - 1} of 4 selected`);
       } else if (selectedItems.length < 4) {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         setSelectedItems((prev) => [...prev, item]);
+        announce(`${selectedItems.length + 1} of 4 selected`);
       }
     },
     [gameState.status, isSubmitting, selectedItems],
   );
 
   const handleShuffle = useCallback(() => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    if (!reduceMotion) LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setShuffledItems((prev) => [...prev].sort(() => Math.random() - 0.5));
-  }, []);
+    announce("Items shuffled");
+  }, [reduceMotion]);
 
   const handleDeselectAll = useCallback(() => {
     setSelectedItems([]);
@@ -175,7 +181,13 @@ export function Connections({
   useEffect(() => {
     if (gameState.mistakesRemaining < prevMistakes.current) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Animated.sequence([
+      const left = gameState.mistakesRemaining;
+      announce(
+        left > 0
+          ? `Mind the gap: not a line. ${left} ${left === 1 ? "try" : "tries"} left.`
+          : "Mind the gap: not a line. No tries left.",
+      );
+      if (!reduceMotion) Animated.sequence([
         Animated.timing(shakeAnim, {
           toValue: 10,
           duration: 50,
@@ -199,17 +211,19 @@ export function Connections({
       ]).start();
     }
     prevMistakes.current = gameState.mistakesRemaining;
-  }, [gameState.mistakesRemaining, shakeAnim]);
+  }, [gameState.mistakesRemaining, shakeAnim, reduceMotion]);
 
   // Detect correct guess
   const prevCompletedGroups = useRef(gameState.completedGroups.length);
   useEffect(() => {
     if (gameState.completedGroups.length > prevCompletedGroups.current) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      if (!reduceMotion) LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      const latest = gameState.completedGroups[gameState.completedGroups.length - 1];
+      if (latest) announce(`Line found: ${latest}`);
     }
     prevCompletedGroups.current = gameState.completedGroups.length;
-  }, [gameState.completedGroups.length]);
+  }, [gameState.completedGroups, reduceMotion]);
 
   const renderCompletedGroups = () => {
     const completedElements = gameState.completedGroups.map((groupId) => {
@@ -224,7 +238,7 @@ export function Connections({
           key={groupId}
           style={[styles.completedGroup, { backgroundColor: bgColor }]}
           accessible={true}
-          accessibilityLabel={`Completed group: ${group.category}. Items: ${group.items.join(", ")}`}
+          accessibilityLabel={`Group ${group.difficulty}, ${group.category}, found: ${group.items.join(", ")}`}
         >
           <Text style={[styles.completedTitle, { color: textColor }]}>
             {group.category}
@@ -250,7 +264,7 @@ export function Connections({
             { backgroundColor: bgColor },
           ]}
           accessible={true}
-          accessibilityLabel={`Revealed group: ${group.category}. Items: ${group.items.join(", ")}`}
+          accessibilityLabel={`Group ${group.difficulty}, ${group.category}, revealed: ${group.items.join(", ")}`}
         >
           <View style={styles.revealedHeader}>
             <Text style={[styles.completedTitle, { color: textColor }]}>
@@ -275,7 +289,7 @@ export function Connections({
       <View
         style={styles.mistakesContainer}
         accessible={true}
-        accessibilityLabel={`${gameState.mistakesRemaining} mistakes remaining`}
+        accessibilityLabel={`${gameState.mistakesRemaining} ${gameState.mistakesRemaining === 1 ? "try" : "tries"} left`}
       >
         <Text style={styles.mistakesLabel}>Mistakes Remaining:</Text>
         <View style={styles.dotsRow}>
@@ -325,7 +339,7 @@ export function Connections({
                     styles.card,
                     {
                       width: cardSize,
-                      height: cardSize * 0.7,
+                      minHeight: Math.max(64, Math.round(cardSize * 0.7)),
                     },
                     isSelected && styles.cardSelected,
                     gameState.status !== "playing" && styles.cardDisabled,
@@ -334,22 +348,22 @@ export function Connections({
                   onPress={() => handleSelect(item)}
                   disabled={gameState.status !== "playing" || isSubmitting}
                   accessibilityRole="button"
-                  accessibilityLabel={`${item}, ${isSelected ? "selected" : "not selected"}`}
+                  testID={`tile-${item}`}
+                  accessibilityLabel={item}
                   accessibilityState={{
                     selected: isSelected,
                     disabled: gameState.status !== "playing",
                   }}
-                  accessibilityHint="Tap to select or deselect"
+                  accessibilityHint="Select 4 items"
                 >
+                  {isSelected && <View style={styles.selectedDot} testID={`tile-${item}-dot`} />}
                   <Text
                     style={[
                       styles.cardText,
                       { fontSize: cardSize < 80 ? 11 : 13 },
                       isSelected && styles.cardTextSelected,
                     ]}
-                    numberOfLines={2}
-                    adjustsFontSizeToFit
-                    minimumFontScale={0.7}
+                    maxFontSizeMultiplier={FontScaleCap.tile}
                   >
                     {item}
                   </Text>
@@ -439,6 +453,8 @@ export function Connections({
           disabled={!canSubmit}
           accessibilityRole="button"
           accessibilityLabel="Submit guess"
+          accessibilityValue={{ text: `${selectedItems.length} of 4 selected` }}
+          accessibilityHint={canSubmit ? undefined : "Select 4 items"}
           accessibilityState={{
             disabled: !canSubmit,
           }}
@@ -449,7 +465,7 @@ export function Connections({
               !canSubmit && styles.buttonTextFilledDisabled,
             ]}
           >
-            Submit
+            {canSubmit ? "Submit" : `Submit ${selectedItems.length}/4`}
           </Text>
         </Pressable>
       </View>
@@ -475,7 +491,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   revealedGroup: {
-    opacity: 0.6,
+    borderWidth: 2,
+    borderStyle: "dashed",
+    borderColor: "#111111",
   },
   revealedHeader: {
     flexDirection: "row",
@@ -484,15 +502,15 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   revealedTag: {
-    backgroundColor: "rgba(0, 0, 0, 0.2)",
+    backgroundColor: "#FFFFFF",
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
   },
   revealedTagText: {
-    fontSize: 10,
-    fontWeight: "600",
-    color: Colors.light.background,
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#111111",
     textTransform: "uppercase",
   },
   completedTitle: {
@@ -521,6 +539,15 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 4,
+  },
+  selectedDot: {
+    position: "absolute",
+    top: 6,
+    right: 6,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#FFFFFF",
   },
   cardSelected: {
     backgroundColor: TFL.blue,
@@ -563,7 +590,9 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light.text,
   },
   dotUsed: {
-    backgroundColor: Colors.light.border,
+    backgroundColor: "transparent",
+    borderWidth: 2,
+    borderColor: StateColors.inactiveBorder,
   },
   spacer: {
     flex: 1,
@@ -576,6 +605,8 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.md,
   },
   buttonOutlined: {
+    minHeight: Size.primaryButton,
+    justifyContent: "center",
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: 24,
@@ -588,19 +619,25 @@ const styles = StyleSheet.create({
     color: Colors.light.text,
   },
   buttonInactive: {
-    borderColor: Colors.light.border,
+    borderColor: StateColors.inactiveBorder,
+    borderStyle: "dashed",
   },
   buttonTextInactive: {
     color: TFL.grey.dark,
   },
   buttonFilled: {
+    minHeight: Size.primaryButton,
+    justifyContent: "center",
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 24,
     backgroundColor: TFL.blue,
   },
   buttonFilledDisabled: {
-    backgroundColor: TFL.grey.medium,
+    backgroundColor: "transparent",
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderColor: StateColors.inactiveBorder,
   },
   buttonTextFilled: {
     fontSize: 14,
@@ -608,6 +645,6 @@ const styles = StyleSheet.create({
     color: Colors.light.background,
   },
   buttonTextFilledDisabled: {
-    color: Colors.light.background,
+    color: StateColors.inactiveText,
   },
 });

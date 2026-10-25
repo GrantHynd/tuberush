@@ -1,5 +1,5 @@
 import type { CrosswordCell as CrosswordCellType, CrosswordClue, CrosswordPuzzle, CrosswordState } from '@/types/game';
-import { Colors, Layout, Spacing, TFL, Typography } from '@/constants/theme';
+import { Colors, FontScaleCap, Layout, Spacing, StateColors, TFL, Typography } from '@/constants/theme';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     AccessibilityInfo,
@@ -44,6 +44,7 @@ const GridCell = React.memo(function GridCell({
                 cell.isBlack && styles.blackCell,
                 isActiveWord && !isSelected && styles.activeWordCell,
                 isSelected && styles.selectedCell,
+                isSelected && styles.cursorRing,
             ]}
             onPress={() => onPress(rowIndex, colIndex)}
             onLongPress={() => onLongPress(rowIndex, colIndex)}
@@ -51,7 +52,7 @@ const GridCell = React.memo(function GridCell({
             activeOpacity={0.7}
             accessibilityRole="button"
             accessibilityLabel={cell.isBlack ? 'Black cell' : accessibilityLabel}
-            accessibilityHint={cell.isBlack ? undefined : `Entering ${direction}`}
+            accessibilityHint={cell.isBlack ? undefined : `Double tap to type. Tap again to switch to ${direction === 'across' ? 'down' : 'across'}`}
             accessibilityState={{ selected: isSelected, disabled: disabled || cell.isBlack }}
         >
             {cell.number != null && (
@@ -61,6 +62,8 @@ const GridCell = React.memo(function GridCell({
                         { fontSize: Math.max(8, cellSize * 0.2) },
                         isSelected && styles.cellNumberSelected,
                     ]}
+                    maxFontSizeMultiplier={FontScaleCap.gridLetter}
+                    importantForAccessibility="no"
                 >
                     {cell.number}
                 </Text>
@@ -72,6 +75,7 @@ const GridCell = React.memo(function GridCell({
                         { fontSize: Math.max(14, cellSize * 0.45) },
                         isSelected && styles.cellLetterSelected,
                     ]}
+                    maxFontSizeMultiplier={FontScaleCap.gridLetter}
                 >
                     {userAnswer}
                 </Text>
@@ -95,14 +99,15 @@ const ClueItem = React.memo(function ClueItem({
     item, direction, isActive, isFilled, puzzleCompleted, onPress,
 }: ClueItemProps) {
     const dirLabel = direction === 'across' ? 'Across' : 'Down';
-    const showDimmed = isFilled;
+    // TUB-295: only strike once a check proves the answer right (puzzle solved).
+    const showDimmed = isFilled && puzzleCompleted;
     const showCheckmark = isFilled && puzzleCompleted;
     return (
         <TouchableOpacity
             style={[styles.clueRow, isActive && styles.clueRowActive]}
             onPress={() => onPress(item, direction)}
             accessibilityRole="button"
-            accessibilityLabel={`${dirLabel} ${item.number}: ${item.clue}${showCheckmark ? ', completed' : ''}`}
+            accessibilityLabel={`${dirLabel} ${item.number}: ${item.clue}${showCheckmark ? ', completed' : isFilled ? ', filled' : ''}`}
             accessibilityState={{ selected: isActive }}
         >
             <Text style={[styles.clueNumber, showDimmed && styles.clueCompleted]}>
@@ -215,18 +220,18 @@ export function Crossword({ puzzle, gameState, onCellChange, disabled = false }:
         (rowIndex: number, colIndex: number, userAnswer: string) => {
             const key = `${rowIndex}-${colIndex}`;
             const clueInfo = cellToClue[key];
-            let label = `Row ${rowIndex + 1}, Column ${colIndex + 1}`;
-            if (userAnswer) label += `, letter ${userAnswer}`;
-            else label += ', empty';
-            if (clueInfo?.across) {
-                label += `, across ${clueInfo.across.number}: ${clueInfo.across.clue}`;
-            }
-            if (clueInfo?.down) {
-                label += `, down ${clueInfo.down.number}: ${clueInfo.down.clue}`;
-            }
-            return label;
+            // TUB-295: short label — "1 Across, letter 1 of 4, A". The full clue is
+            // announced when the active word changes, not on every cell.
+            const isSel = selectedCell?.row === rowIndex && selectedCell?.col === colIndex;
+            const pref: Direction = isSel ? direction : clueInfo?.across ? 'across' : 'down';
+            const clue = clueInfo?.[pref] ?? clueInfo?.across ?? clueInfo?.down;
+            const dir: Direction = clue && clue === clueInfo?.across ? 'across' : 'down';
+            const value = userAnswer || 'empty';
+            if (!clue) return `Row ${rowIndex + 1}, column ${colIndex + 1}, ${value}`;
+            const pos = dir === 'across' ? colIndex - clue.col + 1 : rowIndex - clue.row + 1;
+            return `${clue.number} ${dir === 'across' ? 'Across' : 'Down'}, letter ${pos} of ${clue.length}, ${value}`;
         },
-        [cellToClue],
+        [cellToClue, selectedCell, direction],
     );
 
     const handleCellPress = (row: number, col: number) => {
@@ -521,9 +526,11 @@ const styles = StyleSheet.create({
         paddingBottom: Spacing.sm,
     },
     gridContainer: {
-        borderWidth: 1,
-        borderColor: '#999',
-        backgroundColor: '#999',
+        borderWidth: 2,
+        borderColor: StateColors.gridLine,
+        backgroundColor: StateColors.gridLine,
+        borderRadius: Layout.borderRadius.lg,
+        overflow: 'hidden',
     },
     row: {
         flexDirection: 'row',
@@ -531,7 +538,7 @@ const styles = StyleSheet.create({
     cell: {
         backgroundColor: '#FFFFFF',
         borderWidth: 0.5,
-        borderColor: '#CCCCCC',
+        borderColor: StateColors.gridLine,
         position: 'relative',
         alignItems: 'center',
         justifyContent: 'center',
@@ -545,12 +552,19 @@ const styles = StyleSheet.create({
     },
     activeWordCell: {
         backgroundColor: ACTIVE_WORD_BG,
+        // TUB-295: tint alone is 1.33:1; add a 2px line-colour outline (11:1).
+        borderWidth: 2,
+        borderColor: NAVY,
+    },
+    cursorRing: {
+        borderWidth: 3,
+        borderColor: StateColors.cursorRing,
     },
     cellNumber: {
         position: 'absolute',
         top: 1,
         left: 2,
-        color: '#555',
+        color: '#4B5563',
         fontWeight: '500',
     },
     cellNumberSelected: {
@@ -597,6 +611,8 @@ const styles = StyleSheet.create({
         borderBottomColor: Colors.light.border,
     },
     tab: {
+        minHeight: 44,
+        justifyContent: 'center',
         paddingBottom: Spacing.sm,
         marginRight: Spacing.lg,
     },
@@ -621,6 +637,8 @@ const styles = StyleSheet.create({
         paddingBottom: Spacing.xl,
     },
     clueRow: {
+        minHeight: 48,
+        alignItems: 'center',
         flexDirection: 'row',
         paddingVertical: Spacing.sm,
     },

@@ -119,9 +119,9 @@ describe("Connections Component", () => {
 
       expect(getByText("TUBE LINES")).toBeTruthy();
       expect(getByText("BAKERLOO, CENTRAL, DISTRICT, NORTHERN")).toBeTruthy();
-      expect(queryByLabelText("BAKERLOO, not selected")).toBeNull();
-      expect(queryByLabelText("BAKERLOO, selected")).toBeNull();
-      expect(queryByLabelText("HYDE, not selected")).toBeTruthy();
+      expect(queryByLabelText("BAKERLOO")).toBeNull();
+      expect(queryByLabelText("BAKERLOO")).toBeNull();
+      expect(queryByLabelText("HYDE")).toBeTruthy();
     });
 
     it("displays correct number of mistakes remaining", async () => {
@@ -138,7 +138,7 @@ describe("Connections Component", () => {
         />,
       );
 
-      expect(getByLabelText("2 mistakes remaining")).toBeTruthy();
+      expect(getByLabelText("2 tries left")).toBeTruthy();
     });
 
     it("renders shuffle and deselect all buttons", async () => {
@@ -166,7 +166,7 @@ describe("Connections Component", () => {
       );
 
       await fireEvent.press(getByText("BAKERLOO"));
-      expect(getByLabelText("BAKERLOO, selected")).toBeTruthy();
+      expect(getByLabelText("BAKERLOO").props.accessibilityState.selected).toBe(true);
     });
 
     it("deselects a card when pressed again", async () => {
@@ -179,9 +179,9 @@ describe("Connections Component", () => {
       );
 
       await fireEvent.press(getByText("BAKERLOO"));
-      expect(getByLabelText("BAKERLOO, selected")).toBeTruthy();
+      expect(getByLabelText("BAKERLOO").props.accessibilityState.selected).toBe(true);
       await fireEvent.press(getByText("BAKERLOO"));
-      expect(getByLabelText("BAKERLOO, not selected")).toBeTruthy();
+      expect(getByLabelText("BAKERLOO").props.accessibilityState.selected).toBe(false);
     });
 
     it("allows selecting up to 4 cards", async () => {
@@ -198,10 +198,10 @@ describe("Connections Component", () => {
       await fireEvent.press(getByText("DISTRICT"));
       await fireEvent.press(getByText("NORTHERN"));
 
-      expect(getByLabelText("BAKERLOO, selected")).toBeTruthy();
-      expect(getByLabelText("CENTRAL, selected")).toBeTruthy();
-      expect(getByLabelText("DISTRICT, selected")).toBeTruthy();
-      expect(getByLabelText("NORTHERN, selected")).toBeTruthy();
+      expect(getByLabelText("BAKERLOO").props.accessibilityState.selected).toBe(true);
+      expect(getByLabelText("CENTRAL").props.accessibilityState.selected).toBe(true);
+      expect(getByLabelText("DISTRICT").props.accessibilityState.selected).toBe(true);
+      expect(getByLabelText("NORTHERN").props.accessibilityState.selected).toBe(true);
     });
 
     it("does not allow selecting more than 4 cards", async () => {
@@ -219,7 +219,7 @@ describe("Connections Component", () => {
       await fireEvent.press(getByText("NORTHERN"));
       await fireEvent.press(getByText("HYDE"));
 
-      expect(getByLabelText("HYDE, not selected")).toBeTruthy();
+      expect(getByLabelText("HYDE").props.accessibilityState.selected).toBe(false);
     });
 
     it("triggers haptic feedback on selection", async () => {
@@ -252,7 +252,7 @@ describe("Connections Component", () => {
       );
 
       await fireEvent.press(getByText("BAKERLOO"));
-      expect(getByLabelText("BAKERLOO, not selected")).toBeTruthy();
+      expect(getByLabelText("BAKERLOO").props.accessibilityState.selected).toBe(false);
     });
   });
 
@@ -275,7 +275,7 @@ describe("Connections Component", () => {
 
       expect(mockOnSubmitGuess).not.toHaveBeenCalled();
 
-      await fireEvent.press(getByText("Submit"));
+      await fireEvent.press(getByText(/^Submit/));
 
       expect(mockOnSubmitGuess).toHaveBeenCalledWith([
         "BAKERLOO",
@@ -301,9 +301,9 @@ describe("Connections Component", () => {
       await fireEvent.press(getByText("DISTRICT"));
       await fireEvent.press(getByText("NORTHERN"));
 
-      await fireEvent.press(getByText("Submit"));
+      await fireEvent.press(getByText(/^Submit/));
 
-      expect(getByLabelText("BAKERLOO, not selected")).toBeTruthy();
+      expect(getByLabelText("BAKERLOO").props.accessibilityState.selected).toBe(false);
     });
 
     it("is disabled when fewer than 4 cards are selected", async () => {
@@ -337,7 +337,7 @@ describe("Connections Component", () => {
         />,
       );
 
-      await fireEvent.press(getByText("Submit"));
+      await fireEvent.press(getByText(/^Submit/));
 
       await waitFor(() => {
         expect(mockOnSubmitGuess).not.toHaveBeenCalled();
@@ -360,9 +360,9 @@ describe("Connections Component", () => {
       await fireEvent.press(getByText("DISTRICT"));
       await fireEvent.press(getByText("Deselect All"));
 
-      expect(getByLabelText("BAKERLOO, not selected")).toBeTruthy();
-      expect(getByLabelText("CENTRAL, not selected")).toBeTruthy();
-      expect(getByLabelText("DISTRICT, not selected")).toBeTruthy();
+      expect(getByLabelText("BAKERLOO").props.accessibilityState.selected).toBe(false);
+      expect(getByLabelText("CENTRAL").props.accessibilityState.selected).toBe(false);
+      expect(getByLabelText("DISTRICT").props.accessibilityState.selected).toBe(false);
     });
 
     it("is disabled when no cards are selected", async () => {
@@ -419,8 +419,7 @@ describe("Connections Component", () => {
 
       const cardsBeforeShuffle = getAllByRole("button").filter(
         (button) =>
-          button.props.accessibilityLabel?.includes("not selected") ||
-          button.props.accessibilityLabel?.includes("selected"),
+          button.props.testID?.startsWith("tile-"),
       );
       const initialOrder = cardsBeforeShuffle.map(
         (card) => card.props.accessibilityLabel,
@@ -432,8 +431,7 @@ describe("Connections Component", () => {
 
       const cardsAfterShuffle = getAllByRole("button").filter(
         (button) =>
-          button.props.accessibilityLabel?.includes("not selected") ||
-          button.props.accessibilityLabel?.includes("selected"),
+          button.props.testID?.startsWith("tile-"),
       );
       expect(cardsAfterShuffle.length).toBe(initialOrder.length);
       mockRandom.mockRestore();
@@ -539,9 +537,9 @@ describe("Connections Component", () => {
         />,
       );
 
-      const card = getByLabelText("BAKERLOO, not selected");
+      const card = getByLabelText("BAKERLOO");
       expect(card.props.accessibilityRole).toBe("button");
-      expect(card.props.accessibilityHint).toBe("Tap to select or deselect");
+      expect(card.props.accessibilityHint).toBe("Select 4 items");
     });
 
     it("has proper accessibility labels on completed groups", async () => {
@@ -560,7 +558,7 @@ describe("Connections Component", () => {
 
       expect(
         getByLabelText(
-          "Completed group: TUBE LINES. Items: BAKERLOO, CENTRAL, DISTRICT, NORTHERN",
+          /TUBE LINES, found: BAKERLOO, CENTRAL, DISTRICT, NORTHERN/,
         ),
       ).toBeTruthy();
     });
@@ -574,7 +572,7 @@ describe("Connections Component", () => {
         />,
       );
 
-      expect(getByLabelText("4 mistakes remaining")).toBeTruthy();
+      expect(getByLabelText("4 tries left")).toBeTruthy();
     });
 
     it("has proper accessibility state on disabled buttons", async () => {
@@ -610,8 +608,7 @@ describe("Connections Component", () => {
 
       const cards = getAllByRole("button").filter(
         (button) =>
-          button.props.accessibilityLabel?.includes("not selected") ||
-          button.props.accessibilityLabel?.includes("selected"),
+          button.props.testID?.startsWith("tile-"),
       );
 
       // With Pressable, cards are rendered and accessible
@@ -637,12 +634,12 @@ describe("Connections Component", () => {
       );
 
       // Completed group should be present
-      expect(getByLabelText(/Completed group: TUBE LINES/)).toBeTruthy();
+      expect(getByLabelText(/TUBE LINES, found/)).toBeTruthy();
 
       // Wait for first revealed group (400ms delay)
       await waitFor(
         () => {
-          expect(getByLabelText(/Revealed group: ROYAL PARKS/)).toBeTruthy();
+          expect(getByLabelText(/ROYAL PARKS, revealed/)).toBeTruthy();
         },
         { timeout: 1000 },
       );
@@ -650,8 +647,8 @@ describe("Connections Component", () => {
       // Wait for all revealed groups
       await waitFor(
         () => {
-          expect(getByLabelText(/Revealed group: LONDON AIRPORTS/)).toBeTruthy();
-          expect(getByLabelText(/Revealed group: MONOPOLY STREETS/)).toBeTruthy();
+          expect(getByLabelText(/LONDON AIRPORTS, revealed/)).toBeTruthy();
+          expect(getByLabelText(/MONOPOLY STREETS, revealed/)).toBeTruthy();
         },
         { timeout: 2000 },
       );
@@ -674,10 +671,10 @@ describe("Connections Component", () => {
       );
 
       // All groups should be visible immediately
-      expect(getByLabelText(/Completed group: TUBE LINES/)).toBeTruthy();
-      expect(getByLabelText(/Completed group: ROYAL PARKS/)).toBeTruthy();
-      expect(getByLabelText(/Revealed group: LONDON AIRPORTS/)).toBeTruthy();
-      expect(getByLabelText(/Revealed group: MONOPOLY STREETS/)).toBeTruthy();
+      expect(getByLabelText(/TUBE LINES, found/)).toBeTruthy();
+      expect(getByLabelText(/ROYAL PARKS, found/)).toBeTruthy();
+      expect(getByLabelText(/LONDON AIRPORTS, revealed/)).toBeTruthy();
+      expect(getByLabelText(/MONOPOLY STREETS, revealed/)).toBeTruthy();
     });
 
     it("reveals groups in difficulty order", async () => {
@@ -699,7 +696,7 @@ describe("Connections Component", () => {
       // Wait for difficulty 1 to appear (TUBE LINES)
       await waitFor(
         () => {
-          expect(getByLabelText(/Revealed group: TUBE LINES/)).toBeTruthy();
+          expect(getByLabelText(/TUBE LINES, revealed/)).toBeTruthy();
         },
         { timeout: 1000 },
       );
@@ -707,7 +704,7 @@ describe("Connections Component", () => {
       // Difficulty 2 (ROYAL PARKS) should appear next
       await waitFor(
         () => {
-          expect(getByLabelText(/Revealed group: ROYAL PARKS/)).toBeTruthy();
+          expect(getByLabelText(/ROYAL PARKS, revealed/)).toBeTruthy();
         },
         { timeout: 1000 },
       );
@@ -715,8 +712,8 @@ describe("Connections Component", () => {
       // Wait for all groups
       await waitFor(
         () => {
-          expect(getByLabelText(/Revealed group: LONDON AIRPORTS/)).toBeTruthy();
-          expect(getByLabelText(/Revealed group: MONOPOLY STREETS/)).toBeTruthy();
+          expect(getByLabelText(/LONDON AIRPORTS, revealed/)).toBeTruthy();
+          expect(getByLabelText(/MONOPOLY STREETS, revealed/)).toBeTruthy();
         },
         { timeout: 2000 },
       );
@@ -769,8 +766,8 @@ describe("Connections Component", () => {
 
       // Items from ROYAL PARKS should be in grid initially
       expect(
-        queryByLabelText("HYDE, not selected") ||
-          queryByLabelText("HYDE, selected"),
+        queryByLabelText("HYDE") ||
+          queryByLabelText("HYDE"),
       ).toBeTruthy();
 
       // Transition to lost state
@@ -791,7 +788,7 @@ describe("Connections Component", () => {
       // Wait for ROYAL PARKS to be revealed
       await waitFor(
         () => {
-          expect(getByLabelText(/Revealed group: ROYAL PARKS/)).toBeTruthy();
+          expect(getByLabelText(/ROYAL PARKS, revealed/)).toBeTruthy();
         },
         { timeout: 1000 },
       );
@@ -799,8 +796,8 @@ describe("Connections Component", () => {
       // After reveal, HYDE should not be in the grid anymore
       await waitFor(
         () => {
-          expect(queryByLabelText("HYDE, not selected")).toBeNull();
-          expect(queryByLabelText("HYDE, selected")).toBeNull();
+          expect(queryByLabelText("HYDE")).toBeNull();
+          expect(queryByLabelText("HYDE")).toBeNull();
         },
         { timeout: 500 },
       );
@@ -825,10 +822,10 @@ describe("Connections Component", () => {
       // Wait for all 4 groups to be revealed
       await waitFor(
         () => {
-          expect(getByLabelText(/Revealed group: TUBE LINES/)).toBeTruthy();
-          expect(getByLabelText(/Revealed group: ROYAL PARKS/)).toBeTruthy();
-          expect(getByLabelText(/Revealed group: LONDON AIRPORTS/)).toBeTruthy();
-          expect(getByLabelText(/Revealed group: MONOPOLY STREETS/)).toBeTruthy();
+          expect(getByLabelText(/TUBE LINES, revealed/)).toBeTruthy();
+          expect(getByLabelText(/ROYAL PARKS, revealed/)).toBeTruthy();
+          expect(getByLabelText(/LONDON AIRPORTS, revealed/)).toBeTruthy();
+          expect(getByLabelText(/MONOPOLY STREETS, revealed/)).toBeTruthy();
         },
         { timeout: 2500 },
       );
