@@ -26,7 +26,12 @@ export default function CrosswordListScreen() {
             router.push('/auth');
             return;
         }
-        // Non-premium users land on the in-game Upsell (TUB-301), not a system alert.
+        // Locked puzzles go straight to the single purchase screen. The in-game
+        // Upsell (TUB-301) stays as the fallback for deep links into play-crossword.
+        if (!user.isPremium) {
+            router.push('/subscribe' as never);
+            return;
+        }
         router.push(`/games/play-crossword?puzzleId=${puzzleId}` as never);
     };
 

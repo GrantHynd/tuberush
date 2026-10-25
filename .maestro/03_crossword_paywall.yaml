@@ -13,19 +13,10 @@ tags: [critical]
     timeout: 30000
 - tapOn:
     id: "today-hero-crossword"
-# Free users either land on the inline paywall or are routed straight to /subscribe.
-- extendedWaitUntil:
-    visible:
-      id: "crossword-paywall|subscribe-button"
-    timeout: 20000
-- runFlow:
-    when:
-      visible:
-        id: "crossword-upsell-cta"
-    commands:
-      - tapOn:
-          id: "crossword-upsell-cta"
+# Free users go straight to the single purchase screen (no intermediate paywall page).
 - extendedWaitUntil:
     visible:
       id: "subscribe-button"
     timeout: 20000
+- assertNotVisible:
+    id: "crossword-upsell-cta"

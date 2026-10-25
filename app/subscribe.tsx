@@ -15,6 +15,13 @@ import {
 } from 'react-native';
 import RevenueCatUI, { PAYWALL_RESULT } from 'react-native-purchases-ui';
 
+/** Benefits shown on the one purchase screen (carried over from the crossword Upsell). */
+const PREMIUM_BENEFITS = [
+    'Daily crosswords: a new London mini every day',
+    'Leaderboards for your borough',
+    'Your full puzzle archive',
+];
+
 export default function SubscribeScreen() {
     const router = useRouter();
     const { user, refreshPremiumStatusFromRevenueCat } = useAuthStore();
@@ -87,25 +94,12 @@ export default function SubscribeScreen() {
                 <Text style={styles.subtitle}>Unlock exclusive features</Text>
 
                 <View style={styles.featuresContainer}>
-                    <View style={styles.feature}>
-                        <Text style={styles.featureIcon}>✓</Text>
-                        <Text style={styles.featureText}>Access to Crossword Puzzles</Text>
-                    </View>
-
-                    <View style={styles.feature}>
-                        <Text style={styles.featureIcon}>✓</Text>
-                        <Text style={styles.featureText}>More games coming soon</Text>
-                    </View>
-
-                    <View style={styles.feature}>
-                        <Text style={styles.featureIcon}>✓</Text>
-                        <Text style={styles.featureText}>Priority support</Text>
-                    </View>
-
-                    <View style={styles.feature}>
-                        <Text style={styles.featureIcon}>✓</Text>
-                        <Text style={styles.featureText}>Ad-free experience</Text>
-                    </View>
+                    {PREMIUM_BENEFITS.map((benefit) => (
+                        <View key={benefit} style={styles.feature}>
+                            <Text style={styles.featureIcon}>✓</Text>
+                            <Text style={styles.featureText}>{benefit}</Text>
+                        </View>
+                    ))}
                 </View>
 
                 <TouchableOpacity
