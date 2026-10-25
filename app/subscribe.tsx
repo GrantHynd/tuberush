@@ -1,3 +1,4 @@
+import { openPaywall } from '@/lib/paywall';
 import { PRIVACY_POLICY_ROUTE, TERMS_OF_USE_ROUTE } from '@/lib/legal';
 import { capture } from '@/lib/posthog';
 import { useAuthStore } from '@/stores/auth-store';
@@ -13,9 +14,9 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-import RevenueCatUI, { PAYWALL_RESULT } from 'react-native-purchases-ui';
+import { PAYWALL_RESULT } from 'react-native-purchases-ui';
 
-/** Benefits shown on the one purchase screen (carried over from the crossword Upsell). */
+/** Benefits shown on the Subscription details page (reached from Profile) (carried over from the crossword Upsell). */
 const PREMIUM_BENEFITS = [
     'Daily crosswords: a new London mini every day',
     'Leaderboards for your borough',
@@ -24,13 +25,13 @@ const PREMIUM_BENEFITS = [
 
 export default function SubscribeScreen() {
     const router = useRouter();
-    const { user, refreshPremiumStatusFromRevenueCat } = useAuthStore();
+    const { user } = useAuthStore();
     const [loading, setLoading] = useState(false);
 
     const isNative = Platform.OS === 'ios' || Platform.OS === 'android';
 
     useEffect(() => {
-        capture('subscribe_screen_viewed');
+        capture('subscription_details_viewed');
     }, []);
 
     const handleSubscribe = async () => {
@@ -52,35 +53,10 @@ export default function SubscribeScreen() {
 
         setLoading(true);
         try {
-            // RevenueCat Paywall - presents native paywall UI
-            capture('paywall_presented');
-            const result = await RevenueCatUI.presentPaywall({
-                displayCloseButton: true,
-            });
-
-            await refreshPremiumStatusFromRevenueCat();
-
-            if (result === PAYWALL_RESULT.PURCHASED) {
-                capture('subscription_purchased');
-                Alert.alert('Success', 'Premium membership activated!', [
-                    { text: 'OK', onPress: () => router.back() },
-                ]);
-            } else if (result === PAYWALL_RESULT.RESTORED) {
-                capture('subscription_restored');
-                Alert.alert('Success', 'Purchases restored!', [
-                    { text: 'OK', onPress: () => router.back() },
-                ]);
-            } else if (result === PAYWALL_RESULT.CANCELLED) {
-                capture('paywall_dismissed');
-            } else if (result === PAYWALL_RESULT.NOT_PRESENTED) {
-                // User already has entitlement - paywall wasn't shown
-                Alert.alert('Info', 'You already have premium access.', [
-                    { text: 'OK', onPress: () => router.back() },
-                ]);
+            const result = await openPaywall('subscription_details');
+            if (result === PAYWALL_RESULT.PURCHASED || result === PAYWALL_RESULT.RESTORED) {
+                router.back();
             }
-        } catch (error: unknown) {
-            const message = error instanceof Error ? error.message : 'Subscription failed';
-            Alert.alert('Error', message);
         } finally {
             setLoading(false);
         }
@@ -90,8 +66,8 @@ export default function SubscribeScreen() {
         <ScrollView style={styles.container} contentContainerStyle={styles.content}>
             <View style={styles.inner}>
                 <Text style={styles.logo}>⭐</Text>
-                <Text style={styles.title}>Go Premium!</Text>
-                <Text style={styles.subtitle}>Unlock exclusive features</Text>
+                <Text style={styles.title}>1st Class</Text>
+                <Text style={styles.subtitle}>Subscription details</Text>
 
                 <View style={styles.featuresContainer}>
                     {PREMIUM_BENEFITS.map((benefit) => (

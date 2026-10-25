@@ -4,6 +4,9 @@ import HomeScreen from '@/app/(tabs)/index';
 import { useAuthStore } from '@/stores/auth-store';
 import { useRouter } from 'expo-router';
 import { useLocationRank } from '@/hooks/useLocationRank';
+import { openPaywall } from '@/lib/paywall';
+jest.mock('@/lib/paywall', () => ({ openPaywall: jest.fn(() => Promise.resolve(null)) }));
+
 
 // Mock dependencies
 jest.mock('@/stores/auth-store', () => ({
@@ -128,7 +131,8 @@ describe('HomeScreen', () => {
     const todayLabels = getAllByText('Today');
     await fireEvent.press(todayLabels[1]);
 
-    expect(mockPush).toHaveBeenCalledWith('/subscribe');
+    expect(openPaywall).toHaveBeenCalledWith('home');
+    expect(mockPush).not.toHaveBeenCalledWith('/subscribe');
   });
 
   it('navigates to crossword game when logged in and premium', async () => {

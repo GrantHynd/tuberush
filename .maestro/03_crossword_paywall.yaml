@@ -13,10 +13,12 @@ tags: [critical]
     timeout: 30000
 - tapOn:
     id: "today-hero-crossword"
-# Free users go straight to the single purchase screen (no intermediate paywall page).
+# Free users go straight to the RevenueCat paywall (TUB-323): no "Go Premium!" page.
+- assertNotVisible:
+    id: "subscribe-button"
 - extendedWaitUntil:
     visible:
-      id: "subscribe-button"
+      text: ".*(Restore|Subscribe|Continue|Terms|Privacy).*"
     timeout: 20000
 - assertNotVisible:
     id: "crossword-upsell-cta"

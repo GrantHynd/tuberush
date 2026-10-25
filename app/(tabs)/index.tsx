@@ -1,3 +1,4 @@
+import { openPaywall } from '@/lib/paywall';
 import { Card } from '@/components/ui/Card';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { getCompletionPresentation, PuzzleCard } from '@/components/home/PuzzleCard';
@@ -65,7 +66,7 @@ export default function HomeScreen() {
             return;
         }
         if (!user.isPremium) {
-            router.push('/subscribe');
+            openPaywall('home');
             return;
         }
         router.push(`/games/play-crossword?puzzleId=${puzzleId}` as never);
@@ -78,7 +79,7 @@ export default function HomeScreen() {
         onConnections: (item) => handleConnectionsCardPress(item.date),
         onCrossword: (item) => handleCrosswordCardPress(item.puzzleId),
         onSignIn: () => router.push('/auth'),
-        onUnlock: () => router.push('/subscribe'),
+        onUnlock: () => openPaywall('home'),
     });
 
     const hasNoStats = !statsLoading && stats.bestTime == null && stats.streak === 0;

@@ -1,3 +1,4 @@
+import { openPaywall } from '@/lib/paywall';
 import { Crossword } from '@/components/games/Crossword';
 import { CrosswordErrorBoundary } from '@/components/games/CrosswordErrorBoundary';
 import { CrosswordUpsell } from '@/components/games/CrosswordUpsell';
@@ -325,7 +326,7 @@ export default function PlayCrossword() {
                     <CrosswordUpsell
                         onSeePremium={() => {
                             capture('premium_upsell_tapped', { source: 'crossword_play' });
-                            router.push('/subscribe' as never);
+                            openPaywall('crossword_play');
                         }}
                         onPlayFree={() => router.replace('/games/play-connections' as never)}
                     />

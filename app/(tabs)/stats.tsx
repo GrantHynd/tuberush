@@ -1,3 +1,4 @@
+import { openPaywall } from '@/lib/paywall';
 import { DistributionChart } from '@/components/stats/DistributionChart';
 import { GameBreakdown } from '@/components/stats/GameBreakdown';
 import { StreakCalendar } from '@/components/stats/StreakCalendar';
@@ -90,7 +91,7 @@ export default function StatsScreen() {
                     testID="stats-crossword-upsell"
                     title="Crossword Puzzle"
                     valueProp="See your Crossword rank and the full weekly board"
-                    onPress={() => router.push('/subscribe')}
+                    onPress={() => openPaywall('stats')}
                 />
             );
         }
@@ -154,7 +155,7 @@ export default function StatsScreen() {
                                         history={history}
                                         isPremium={isPremium}
                                         onSelect={changeSegment}
-                                        onUpgrade={() => router.push('/subscribe')}
+                                        onUpgrade={() => openPaywall('stats')}
                                     />
                                 )}
 
