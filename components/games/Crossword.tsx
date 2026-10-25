@@ -1,507 +1,454 @@
+import { ClueBar } from '@/components/game-ui/ClueBar';
+import { GameKeyboard } from '@/components/game-ui/GameKeyboard';
+import { FontScaleCap, GameColors, StateColors, TFL } from '@/constants/theme';
+import {
+    MIN_TARGET_CELL,
+    MIN_CELL,
+    cellSize as computeCellSize,
+    gridExtent,
+    letterSize,
+    numberSize,
+    rawCellSize,
+} from '@/lib/grid-sizing';
 import type { CrosswordCell as CrosswordCellType, CrosswordClue, CrosswordPuzzle, CrosswordState } from '@/types/game';
-import { Colors, FontScaleCap, Layout, Spacing, StateColors, TFL, Typography } from '@/constants/theme';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
     AccessibilityInfo,
-    ScrollView,
+    type AccessibilityActionEvent,
+    type GestureResponderEvent,
+    type LayoutChangeEvent,
+    Pressable,
     StyleSheet,
     Text,
-    TextInput,
-    type TextInputInstance,
-    TouchableOpacity,
     View,
     useWindowDimensions,
 } from 'react-native';
 
-type Direction = 'across' | 'down';
+export type Direction = 'across' | 'down';
 
-// ─── Memoized grid cell ───────────────────────────────────────────────
+const SIDE_MARGIN = 16;
+const GRID_PAD_V = 16;
+const KEY_DEFAULT = 46;
+const KEY_COMPACT = 40;
+const CLUE_DEFAULT = 64;
+const CLUE_COMPACT = 52;
+
+const keyOf = (r: number, c: number) => `${r}-${c}`;
+
+// ─── Grid cell ────────────────────────────────────────────────────────
 
 interface GridCellProps {
     cell: CrosswordCellType;
     rowIndex: number;
     colIndex: number;
-    cellSize: number;
+    size: number;
     isSelected: boolean;
     isActiveWord: boolean;
+    isError: boolean;
     userAnswer: string;
-    direction: Direction;
     disabled: boolean;
+    /** False when cells are < 44pt: the grid-level Pressable handles touch instead. */
+    pressable: boolean;
     accessibilityLabel: string;
     onPress: (row: number, col: number) => void;
-    onLongPress: (row: number, col: number) => void;
+    onAdjust: (delta: 1 | -1) => void;
 }
 
 const GridCell = React.memo(function GridCell({
-    cell, rowIndex, colIndex, cellSize, isSelected, isActiveWord,
-    userAnswer, direction, disabled, accessibilityLabel, onPress, onLongPress,
+    cell, rowIndex, colIndex, size, isSelected, isActiveWord, isError,
+    userAnswer, disabled, pressable, accessibilityLabel, onPress, onAdjust,
 }: GridCellProps) {
-    return (
-        <TouchableOpacity
-            style={[
-                styles.cell,
-                { width: cellSize, height: cellSize, minWidth: 44, minHeight: 44 },
-                cell.isBlack && styles.blackCell,
-                isActiveWord && !isSelected && styles.activeWordCell,
-                isSelected && styles.selectedCell,
-                isSelected && styles.cursorRing,
-            ]}
-            onPress={() => onPress(rowIndex, colIndex)}
-            onLongPress={() => onLongPress(rowIndex, colIndex)}
-            disabled={disabled || cell.isBlack}
-            activeOpacity={0.7}
-            accessibilityRole="button"
-            accessibilityLabel={cell.isBlack ? 'Black cell' : accessibilityLabel}
-            accessibilityHint={cell.isBlack ? undefined : `Double tap to type. Tap again to switch to ${direction === 'across' ? 'down' : 'across'}`}
-            accessibilityState={{ selected: isSelected, disabled: disabled || cell.isBlack }}
-        >
+    const style = [
+        styles.cell,
+        { width: size, height: size },
+        cell.isBlack && styles.blackCell,
+        isActiveWord && !isSelected && styles.activeWordCell,
+        isSelected && styles.selectedCell,
+        isError && styles.errorCell,
+    ];
+    if (cell.isBlack) {
+        return <View style={style} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />;
+    }
+    const content = (
+        <>
             {cell.number != null && (
                 <Text
-                    style={[
-                        styles.cellNumber,
-                        { fontSize: Math.max(8, cellSize * 0.2) },
-                        isSelected && styles.cellNumberSelected,
-                    ]}
+                    style={[styles.cellNumber, { fontSize: numberSize(size) }, isSelected && styles.onSelected]}
                     maxFontSizeMultiplier={FontScaleCap.gridLetter}
                     importantForAccessibility="no"
                 >
                     {cell.number}
                 </Text>
             )}
-            {!cell.isBlack && (
-                <Text
-                    style={[
-                        styles.cellLetter,
-                        { fontSize: Math.max(14, cellSize * 0.45) },
-                        isSelected && styles.cellLetterSelected,
-                    ]}
-                    maxFontSizeMultiplier={FontScaleCap.gridLetter}
-                >
-                    {userAnswer}
-                </Text>
+            <Text
+                style={[styles.cellLetter, { fontSize: letterSize(size) }, isSelected && styles.onSelected]}
+                maxFontSizeMultiplier={FontScaleCap.gridLetter}
+            >
+                {userAnswer}
+            </Text>
+            {isError && (
+                <View style={styles.errIcon} accessibilityElementsHidden importantForAccessibility="no">
+                    <MaterialIcons name="close" size={10} color="#FFFFFF" />
+                </View>
             )}
-        </TouchableOpacity>
+        </>
     );
-});
-
-// ─── Memoized clue row ────────────────────────────────────────────────
-
-interface ClueItemProps {
-    item: CrosswordClue;
-    direction: Direction;
-    isActive: boolean;
-    isFilled: boolean;
-    puzzleCompleted: boolean;
-    onPress: (clue: CrosswordClue, dir: Direction) => void;
-}
-
-const ClueItem = React.memo(function ClueItem({
-    item, direction, isActive, isFilled, puzzleCompleted, onPress,
-}: ClueItemProps) {
-    const dirLabel = direction === 'across' ? 'Across' : 'Down';
-    // TUB-295: only strike once a check proves the answer right (puzzle solved).
-    const showDimmed = isFilled && puzzleCompleted;
-    const showCheckmark = isFilled && puzzleCompleted;
+    const a11y = {
+        accessible: true,
+        accessibilityRole: isSelected ? ('adjustable' as const) : ('button' as const),
+        accessibilityLabel,
+        accessibilityValue: isError ? { text: 'incorrect' } : undefined,
+        accessibilityState: { selected: isSelected, disabled },
+        accessibilityActions: [{ name: 'activate' }, { name: 'increment' }, { name: 'decrement' }],
+        onAccessibilityAction: (e: AccessibilityActionEvent) => {
+            if (e.nativeEvent.actionName === 'activate') onPress(rowIndex, colIndex);
+            else if (e.nativeEvent.actionName === 'increment') onAdjust(1);
+            else if (e.nativeEvent.actionName === 'decrement') onAdjust(-1);
+        },
+    };
+    if (!pressable) {
+        return (
+            <View style={style} testID={`cell-${rowIndex}-${colIndex}`} {...a11y}>
+                {content}
+            </View>
+        );
+    }
     return (
-        <TouchableOpacity
-            style={[styles.clueRow, isActive && styles.clueRowActive]}
-            onPress={() => onPress(item, direction)}
-            accessibilityRole="button"
-            accessibilityLabel={`${dirLabel} ${item.number}: ${item.clue}${showCheckmark ? ', completed' : isFilled ? ', filled' : ''}`}
-            accessibilityState={{ selected: isActive }}
+        <Pressable
+            style={style}
+            testID={`cell-${rowIndex}-${colIndex}`}
+            onPress={() => onPress(rowIndex, colIndex)}
+            disabled={disabled}
+            {...a11y}
         >
-            <Text style={[styles.clueNumber, showDimmed && styles.clueCompleted]}>
-                {item.number}
-            </Text>
-            <Text style={[styles.clueText, showDimmed && styles.clueCompleted]}>
-                {item.clue}
-            </Text>
-            {showCheckmark && (
-                <Text style={styles.clueCheckmark} accessibilityElementsHidden>✓</Text>
-            )}
-        </TouchableOpacity>
+            {content}
+        </Pressable>
     );
 });
+
+// ─── Crossword ────────────────────────────────────────────────────────
 
 interface CrosswordProps {
     puzzle: CrosswordPuzzle;
     gameState: CrosswordState;
     onCellChange: (row: number, col: number, value: string) => void;
     disabled?: boolean;
+    /** Keyboard Check key (TUB-298: lives on row 3 of the in-app keyboard). */
+    onCheck?: () => void;
+    checkDisabled?: boolean;
+    /** Cells marked wrong by the last Check (TUB-299). */
+    errorCells?: ReadonlySet<string>;
+    bottomInset?: number;
 }
 
-export function Crossword({ puzzle, gameState, onCellChange, disabled = false }: CrosswordProps) {
-    const { width: screenWidth } = useWindowDimensions();
-    const [selectedCell, setSelectedCell] = useState<{ row: number; col: number } | null>(null);
-    const [direction, setDirection] = useState<Direction>('across');
-    const inputRef = useRef<TextInputInstance>(null);
+function firstClue(puzzle: CrosswordPuzzle): { cell: { row: number; col: number } | null; dir: Direction } {
+    const a = puzzle.clues.across[0];
+    if (a) return { cell: { row: a.row, col: a.col }, dir: 'across' };
+    const d = puzzle.clues.down[0];
+    if (d) return { cell: { row: d.row, col: d.col }, dir: 'down' };
+    return { cell: null, dir: 'across' };
+}
+
+export function Crossword({
+    puzzle,
+    gameState,
+    onCellChange,
+    disabled = false,
+    onCheck,
+    checkDisabled = false,
+    errorCells,
+    bottomInset = 0,
+}: CrosswordProps) {
+    const { width: screenW, height: screenH } = useWindowDimensions();
+    // TUB-298: select the first clue on load.
+    const [selectedCell, setSelectedCell] = useState(() => (disabled ? null : firstClue(puzzle).cell));
+    const [direction, setDirection] = useState<Direction>(() => firstClue(puzzle).dir);
+    const [area, setArea] = useState<{ w: number; h: number } | null>(null);
+    const [compact, setCompact] = useState(false);
 
     const grid = gameState.grid;
     const rows = grid.length;
     const cols = grid[0]?.length ?? 0;
+    const n = Math.max(rows, cols, 1);
 
-    const gridPadding = Spacing.md * 2;
-    const borderWidth = 1;
-    const totalBorders = cols + 1;
-    const MIN_CELL_SIZE = 44;
-    const naturalCellSize = Math.floor((screenWidth - gridPadding - totalBorders * borderWidth) / cols);
-    const cellSize = Math.max(naturalCellSize, MIN_CELL_SIZE);
-    const gridWidth = cellSize * cols + totalBorders * borderWidth;
-    const needsHorizontalScroll = gridWidth > screenWidth - gridPadding;
+    // Measured grid area (Dynamic Type grows clue bar/keys → area shrinks → grid shrinks).
+    // Before first layout, estimate from the window.
+    const availW = (area?.w ?? screenW) - 2 * SIDE_MARGIN;
+    const availH = area ? area.h - GRID_PAD_V : Math.max(0, screenH - 420);
+    const size = computeCellSize(availW, availH, n);
+    const pressableCells = size >= MIN_TARGET_CELL;
 
-    // Build lookup: for each cell, which across/down clue it belongs to
+    const onGridAreaLayout = useCallback(
+        (e: LayoutChangeEvent) => {
+            const { width, height } = e.nativeEvent.layout;
+            setArea((prev) => (prev && prev.w === width && prev.h === height ? prev : { w: width, h: height }));
+            // If even the default chrome leaves cells under 36pt, shrink keys and clue bar first.
+            if (!compact && rawCellSize(width - 2 * SIDE_MARGIN, height - GRID_PAD_V, n) < MIN_CELL) {
+                setCompact(true);
+            }
+        },
+        [compact, n],
+    );
+
     const cellToClue = useMemo(() => {
         const map: Record<string, { across?: CrosswordClue; down?: CrosswordClue }> = {};
-
         for (const clue of puzzle.clues.across) {
             for (let i = 0; i < clue.length; i++) {
-                const key = `${clue.row}-${clue.col + i}`;
-                if (!map[key]) map[key] = {};
-                map[key].across = clue;
+                const k = keyOf(clue.row, clue.col + i);
+                (map[k] ??= {}).across = clue;
             }
         }
         for (const clue of puzzle.clues.down) {
             for (let i = 0; i < clue.length; i++) {
-                const key = `${clue.row + i}-${clue.col}`;
-                if (!map[key]) map[key] = {};
-                map[key].down = clue;
+                const k = keyOf(clue.row + i, clue.col);
+                (map[k] ??= {}).down = clue;
             }
         }
         return map;
     }, [puzzle]);
 
-    // Get the active clue based on selected cell and direction
-    const activeClue = useMemo(() => {
+    const allClues = useMemo(
+        () => [
+            ...puzzle.clues.across.map((c) => ({ clue: c, dir: 'across' as Direction })),
+            ...puzzle.clues.down.map((c) => ({ clue: c, dir: 'down' as Direction })),
+        ],
+        [puzzle],
+    );
+
+    const active = useMemo(() => {
         if (!selectedCell) return null;
-        const key = `${selectedCell.row}-${selectedCell.col}`;
-        const clues = cellToClue[key];
+        const clues = cellToClue[keyOf(selectedCell.row, selectedCell.col)];
         if (!clues) return null;
-        // Prefer current direction; fall back to the other
-        return clues[direction] ?? clues[direction === 'across' ? 'down' : 'across'] ?? null;
+        if (clues[direction]) return { clue: clues[direction]!, dir: direction };
+        const other: Direction = direction === 'across' ? 'down' : 'across';
+        return clues[other] ? { clue: clues[other]!, dir: other } : null;
     }, [selectedCell, direction, cellToClue]);
 
-    // Cells belonging to the active word
     const activeWordCells = useMemo(() => {
-        if (!activeClue) return new Set<string>();
-        const cells = new Set<string>();
-        const isAcross = puzzle.clues.across.includes(activeClue);
-        for (let i = 0; i < activeClue.length; i++) {
-            const r = isAcross ? activeClue.row : activeClue.row + i;
-            const c = isAcross ? activeClue.col + i : activeClue.col;
-            cells.add(`${r}-${c}`);
+        const set = new Set<string>();
+        if (!active) return set;
+        for (let i = 0; i < active.clue.length; i++) {
+            set.add(active.dir === 'across'
+                ? keyOf(active.clue.row, active.clue.col + i)
+                : keyOf(active.clue.row + i, active.clue.col));
         }
-        return cells;
-    }, [activeClue, puzzle]);
-
-    // Check if a clue is fully completed
-    const isClueCompleted = useCallback(
-        (clue: CrosswordClue, isAcross: boolean) => {
-            for (let i = 0; i < clue.length; i++) {
-                const r = isAcross ? clue.row : clue.row + i;
-                const c = isAcross ? clue.col + i : clue.col;
-                const answer = gameState.userAnswers[`${r}-${c}`];
-                if (!answer) return false;
-            }
-            return true;
-        },
-        [gameState.userAnswers],
-    );
+        return set;
+    }, [active]);
 
     useEffect(() => {
-        if (activeClue) {
-            const dir = puzzle.clues.across.includes(activeClue) ? 'Across' : 'Down';
+        if (active) {
             AccessibilityInfo.announceForAccessibility(
-                `${dir} ${activeClue.number}: ${activeClue.clue}`
+                `${active.clue.number} ${active.dir === 'across' ? 'Across' : 'Down'}: ${active.clue.clue}`,
             );
         }
-    }, [activeClue, puzzle.clues.across]);
+    }, [active]);
 
-    const getCellAccessibilityLabel = useCallback(
-        (rowIndex: number, colIndex: number, userAnswer: string) => {
-            const key = `${rowIndex}-${colIndex}`;
-            const clueInfo = cellToClue[key];
-            // TUB-295: short label — "1 Across, letter 1 of 4, A". The full clue is
-            // announced when the active word changes, not on every cell.
-            const isSel = selectedCell?.row === rowIndex && selectedCell?.col === colIndex;
-            const pref: Direction = isSel ? direction : clueInfo?.across ? 'across' : 'down';
-            const clue = clueInfo?.[pref] ?? clueInfo?.across ?? clueInfo?.down;
-            const dir: Direction = clue && clue === clueInfo?.across ? 'across' : 'down';
-            const value = userAnswer || 'empty';
-            if (!clue) return `Row ${rowIndex + 1}, column ${colIndex + 1}, ${value}`;
-            const pos = dir === 'across' ? colIndex - clue.col + 1 : rowIndex - clue.row + 1;
-            return `${clue.number} ${dir === 'across' ? 'Across' : 'Down'}, letter ${pos} of ${clue.length}, ${value}`;
-        },
-        [cellToClue, selectedCell, direction],
+    const isOpen = useCallback(
+        (r: number, c: number) => r >= 0 && c >= 0 && r < rows && c < cols && !grid[r][c].isBlack,
+        [grid, rows, cols],
     );
 
-    const handleCellPress = (row: number, col: number) => {
-        const cell = grid[row][col];
-        if (cell.isBlack) return;
+    const getCellLabel = useCallback(
+        (r: number, c: number, userAnswer: string) => {
+            // TUB-298: "Row 3, column 5, 9 Across, letter T"
+            const info = cellToClue[keyOf(r, c)];
+            const isSel = selectedCell?.row === r && selectedCell?.col === c;
+            const pref: Direction = isSel && active ? active.dir : info?.across ? 'across' : 'down';
+            const clue = info?.[pref] ?? info?.across ?? info?.down;
+            const dir: Direction = clue && clue === info?.across ? 'across' : 'down';
+            const value = userAnswer ? `letter ${userAnswer}` : 'empty';
+            const where = `Row ${r + 1}, column ${c + 1}`;
+            if (!clue) return `${where}, ${value}`;
+            return `${where}, ${clue.number} ${dir === 'across' ? 'Across' : 'Down'}, ${value}`;
+        },
+        [cellToClue, selectedCell, active],
+    );
 
-        if (selectedCell?.row === row && selectedCell?.col === col) {
-            // Tapping same cell toggles direction
-            const key = `${row}-${col}`;
-            const clues = cellToClue[key];
-            if (clues?.across && clues?.down) {
-                setDirection(prev => (prev === 'across' ? 'down' : 'across'));
+    const selectCell = useCallback(
+        (row: number, col: number) => {
+            if (disabled || !isOpen(row, col)) return;
+            if (selectedCell?.row === row && selectedCell?.col === col) {
+                // Tapping the selected cell toggles direction (when the other direction exists).
+                const info = cellToClue[keyOf(row, col)];
+                const other: Direction = direction === 'across' ? 'down' : 'across';
+                if (info?.[other]) setDirection(other);
+                return;
             }
-        } else {
+            const info = cellToClue[keyOf(row, col)];
+            if (info && !info[direction]) setDirection(direction === 'across' ? 'down' : 'across');
             setSelectedCell({ row, col });
-            // Auto-pick direction based on available clues
-            const key = `${row}-${col}`;
-            const clues = cellToClue[key];
-            if (clues && !clues[direction]) {
-                setDirection(direction === 'across' ? 'down' : 'across');
+        },
+        [disabled, isOpen, selectedCell, cellToClue, direction],
+    );
+
+    /** Grid-level tap for < 44pt cells: snap to the nearest open cell. */
+    const onGridPress = (e: GestureResponderEvent) => {
+        const { locationX, locationY } = e.nativeEvent;
+        const step = size + 1;
+        const tr = Math.min(rows - 1, Math.max(0, Math.floor((locationY - 1) / step)));
+        const tc = Math.min(cols - 1, Math.max(0, Math.floor((locationX - 1) / step)));
+        let best: { r: number; c: number; d: number } | null = null;
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                if (!isOpen(r, c)) continue;
+                const d = Math.abs(r - tr) + Math.abs(c - tc);
+                if (!best || d < best.d) best = { r, c, d };
             }
         }
-        inputRef.current?.focus();
+        if (best) selectCell(best.r, best.c);
     };
 
-    const handleCluePress = (clue: CrosswordClue, dir: Direction) => {
-        const isAcross = dir === 'across';
-        let targetRow = clue.row;
-        let targetCol = clue.col;
-        for (let i = 0; i < clue.length; i++) {
-            const r = isAcross ? clue.row : clue.row + i;
-            const c = isAcross ? clue.col + i : clue.col;
-            if (!gameState.userAnswers[`${r}-${c}`]) {
-                targetRow = r;
-                targetCol = c;
+    const step = (row: number, col: number, delta: 1 | -1, dir: Direction) =>
+        dir === 'across' ? { row, col: col + delta } : { row: row + delta, col };
+
+    const moveWithinWord = useCallback(
+        (delta: 1 | -1) => {
+            if (!selectedCell || !active) return;
+            const next = step(selectedCell.row, selectedCell.col, delta, active.dir);
+            if (activeWordCells.has(keyOf(next.row, next.col))) setSelectedCell(next);
+        },
+        [selectedCell, active, activeWordCells],
+    );
+
+    const advance = (row: number, col: number, dir: Direction) => {
+        // Next empty cell in the word, else the next cell.
+        let cur = step(row, col, 1, dir);
+        while (isOpen(cur.row, cur.col)) {
+            if (!gameState.userAnswers[keyOf(cur.row, cur.col)]) {
+                setSelectedCell(cur);
+                return;
+            }
+            cur = step(cur.row, cur.col, 1, dir);
+        }
+        const nxt = step(row, col, 1, dir);
+        if (isOpen(nxt.row, nxt.col)) setSelectedCell(nxt);
+    };
+
+    const handleKey = (letter: string) => {
+        if (disabled || !selectedCell) return;
+        onCellChange(selectedCell.row, selectedCell.col, letter);
+        advance(selectedCell.row, selectedCell.col, active?.dir ?? direction);
+    };
+
+    /**
+     * TUB-292: Backspace clears the current letter; on an empty cell it moves back one
+     * cell in the word and clears that. (The old hidden TextInput had value="" so the OS
+     * never reported a change for Backspace, which is why letters couldn't be cleared.)
+     */
+    const handleBackspace = () => {
+        if (disabled || !selectedCell) return;
+        const { row, col } = selectedCell;
+        if (gameState.userAnswers[keyOf(row, col)]) {
+            onCellChange(row, col, '');
+            return;
+        }
+        const prev = step(row, col, -1, active?.dir ?? direction);
+        if (isOpen(prev.row, prev.col)) {
+            onCellChange(prev.row, prev.col, '');
+            setSelectedCell(prev);
+        }
+    };
+
+    const goToClue = (offset: 1 | -1) => {
+        if (allClues.length === 0) return;
+        const idx = active ? allClues.findIndex((x) => x.clue === active.clue && x.dir === active.dir) : -1;
+        const next = allClues[(idx + offset + allClues.length) % allClues.length];
+        let target = { row: next.clue.row, col: next.clue.col };
+        for (let i = 0; i < next.clue.length; i++) {
+            const cell = next.dir === 'across'
+                ? { row: next.clue.row, col: next.clue.col + i }
+                : { row: next.clue.row + i, col: next.clue.col };
+            if (!gameState.userAnswers[keyOf(cell.row, cell.col)]) {
+                target = cell;
                 break;
             }
         }
-        setSelectedCell({ row: targetRow, col: targetCol });
-        setDirection(dir);
-        inputRef.current?.focus();
+        setDirection(next.dir);
+        setSelectedCell(target);
     };
 
-    const advanceToNextCell = (row: number, col: number) => {
-        if (direction === 'across') {
-            for (let c = col + 1; c < cols; c++) {
-                if (grid[row][c].isBlack) break;
-                if (!gameState.userAnswers[`${row}-${c}`]) {
-                    setSelectedCell({ row, col: c });
-                    return;
-                }
-            }
-            const nextCol = col + 1;
-            if (nextCol < cols && !grid[row][nextCol].isBlack) {
-                setSelectedCell({ row, col: nextCol });
-            }
-        } else {
-            for (let r = row + 1; r < rows; r++) {
-                if (grid[r][col].isBlack) break;
-                if (!gameState.userAnswers[`${r}-${col}`]) {
-                    setSelectedCell({ row: r, col });
-                    return;
-                }
-            }
-            const nextRow = row + 1;
-            if (nextRow < rows && !grid[nextRow][col].isBlack) {
-                setSelectedCell({ row: nextRow, col });
-            }
-        }
-    };
-
-    const handleKeyInput = (value: string) => {
+    const toggleDirection = () => {
         if (!selectedCell) return;
-
-        if (value === '') {
-            const currentKey = `${selectedCell.row}-${selectedCell.col}`;
-            const currentAnswer = gameState.userAnswers[currentKey];
-            if (currentAnswer) {
-                onCellChange(selectedCell.row, selectedCell.col, '');
-            } else {
-                if (direction === 'across') {
-                    const prevCol = selectedCell.col - 1;
-                    if (prevCol >= 0 && !grid[selectedCell.row][prevCol].isBlack) {
-                        onCellChange(selectedCell.row, prevCol, '');
-                        setSelectedCell({ row: selectedCell.row, col: prevCol });
-                    }
-                } else {
-                    const prevRow = selectedCell.row - 1;
-                    if (prevRow >= 0 && !grid[prevRow][selectedCell.col].isBlack) {
-                        onCellChange(prevRow, selectedCell.col, '');
-                        setSelectedCell({ row: prevRow, col: selectedCell.col });
-                    }
-                }
-            }
-            return;
-        }
-
-        const letter = value.slice(-1).toUpperCase();
-        if (/^[A-Z]$/.test(letter)) {
-            onCellChange(selectedCell.row, selectedCell.col, letter);
-            advanceToNextCell(selectedCell.row, selectedCell.col);
-        }
+        const other: Direction = direction === 'across' ? 'down' : 'across';
+        if (cellToClue[keyOf(selectedCell.row, selectedCell.col)]?.[other]) setDirection(other);
     };
 
-    const cluesForDirection = direction === 'across' ? puzzle.clues.across : puzzle.clues.down;
-
-    const handleCellLongPress = useCallback(
-        (row: number, col: number) => {
-            const cell = grid[row]?.[col];
-            if (!disabled && cell && !cell.isBlack) {
-                onCellChange(row, col, '');
-            }
-        },
-        [disabled, grid, onCellChange],
-    );
-
-    return (
-        <View style={styles.container}>
-            {/* Hidden input for keyboard */}
-            <TextInput
-                ref={inputRef}
-                style={styles.hiddenInput}
-                value=""
-                onChangeText={handleKeyInput}
-                onKeyPress={(e) => {
-                    if (!selectedCell) return;
-                    const { key } = e.nativeEvent;
-                    let nextRow = selectedCell.row;
-                    let nextCol = selectedCell.col;
-                    if (key === 'ArrowUp') nextRow = Math.max(0, nextRow - 1);
-                    else if (key === 'ArrowDown') nextRow = Math.min(rows - 1, nextRow + 1);
-                    else if (key === 'ArrowLeft') nextCol = Math.max(0, nextCol - 1);
-                    else if (key === 'ArrowRight') nextCol = Math.min(cols - 1, nextCol + 1);
-                    else if (key === 'Tab') {
-                        e.preventDefault?.();
-                        setDirection((prev) => (prev === 'across' ? 'down' : 'across'));
-                        return;
-                    } else return;
-
-                    if (!grid[nextRow][nextCol].isBlack) {
-                        setSelectedCell({ row: nextRow, col: nextCol });
-                    }
-                }}
-                autoCapitalize="characters"
-                autoCorrect={false}
-                spellCheck={false}
-                caretHidden
-                contextMenuHidden
-            />
-
-            {/* Grid */}
-            <View style={styles.gridWrapper}>
-              <ScrollView
-                horizontal={needsHorizontalScroll}
-                scrollEnabled={needsHorizontalScroll}
-                showsHorizontalScrollIndicator={needsHorizontalScroll}
-              >
-                <View
-                    style={[
-                        styles.gridContainer,
-                        { width: gridWidth },
-                    ]}
-                    accessible={true}
-                    accessibilityLabel={`Crossword grid, ${rows} rows by ${cols} columns`}
-                >
-                    {grid.map((row, rowIndex) => (
-                        <View key={rowIndex} style={styles.row}>
-                            {row.map((cell, colIndex) => {
-                                const cellKey = `${rowIndex}-${colIndex}`;
-                                const isSelected =
-                                    selectedCell?.row === rowIndex && selectedCell?.col === colIndex;
-                                const isActiveWord = activeWordCells.has(cellKey);
-                                const userAnswer = gameState.userAnswers[cellKey] || '';
-
-                                return (
-                                    <GridCell
-                                        key={colIndex}
-                                        cell={cell}
-                                        rowIndex={rowIndex}
-                                        colIndex={colIndex}
-                                        cellSize={cellSize}
-                                        isSelected={isSelected}
-                                        isActiveWord={isActiveWord}
-                                        userAnswer={userAnswer}
-                                        direction={direction}
-                                        disabled={disabled}
-                                        accessibilityLabel={getCellAccessibilityLabel(rowIndex, colIndex, userAnswer)}
-                                        onPress={handleCellPress}
-                                        onLongPress={handleCellLongPress}
-                                    />
-                                );
-                            })}
-                        </View>
-                    ))}
-                </View>
-              </ScrollView>
-            </View>
-
-            {/* Active clue panel */}
-            {activeClue && (
-                <View style={styles.activeClueCard}>
-                    <View style={styles.activeClueAccent} />
-                    <Text style={styles.activeClueText}>
-                        <Text style={styles.activeClueRef}>
-                            {activeClue.number}
-                            {puzzle.clues.across.includes(activeClue) ? 'A' : 'D'}.{' '}
-                        </Text>
-                        {activeClue.clue}
-                    </Text>
-                </View>
-            )}
-
-            {/* Direction tabs */}
-            <View style={styles.tabContainer} accessibilityRole="tablist">
-                <TouchableOpacity
-                    style={[styles.tab, direction === 'across' && styles.tabActive]}
-                    onPress={() => setDirection('across')}
-                    accessibilityRole="tab"
-                    accessibilityState={{ selected: direction === 'across' }}
-                    accessibilityLabel="Across clues"
-                >
-                    <Text
-                        style={[
-                            styles.tabText,
-                            direction === 'across' && styles.tabTextActive,
-                        ]}
-                    >
-                        Across
-                    </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                    style={[styles.tab, direction === 'down' && styles.tabActive]}
-                    onPress={() => setDirection('down')}
-                    accessibilityRole="tab"
-                    accessibilityState={{ selected: direction === 'down' }}
-                    accessibilityLabel="Down clues"
-                >
-                    <Text
-                        style={[
-                            styles.tabText,
-                            direction === 'down' && styles.tabTextActive,
-                        ]}
-                    >
-                        Down
-                    </Text>
-                </TouchableOpacity>
-            </View>
-
-            {/* Clue list */}
-            <View style={styles.clueList}>
-                <View style={styles.clueListContent}>
-                    {cluesForDirection.map((item) => {
-                        const filled = isClueCompleted(item, direction === 'across');
-                        const isActive = activeClue?.number === item.number &&
-                            ((direction === 'across' && puzzle.clues.across.includes(item)) ||
-                             (direction === 'down' && puzzle.clues.down.includes(item)));
+    const width = gridExtent(size, cols);
+    const gridNode = (
+        <View
+            style={[styles.gridContainer, { width: width + 4 }]}
+            accessibilityLabel={`Crossword grid, ${rows} rows by ${cols} columns`}
+            testID="crossword-grid"
+        >
+            {grid.map((row, r) => (
+                <View key={r} style={styles.row}>
+                    {row.map((cell, c) => {
+                        const k = keyOf(r, c);
+                        const ans = gameState.userAnswers[k] || '';
                         return (
-                            <ClueItem
-                                key={`${direction}-${item.number}`}
-                                item={item}
-                                direction={direction}
-                                isActive={isActive}
-                                isFilled={filled}
-                                puzzleCompleted={gameState.completed}
-                                onPress={handleCluePress}
+                            <GridCell
+                                key={c}
+                                cell={cell}
+                                rowIndex={r}
+                                colIndex={c}
+                                size={size}
+                                isSelected={selectedCell?.row === r && selectedCell?.col === c}
+                                isActiveWord={activeWordCells.has(k)}
+                                isError={!!errorCells?.has(k)}
+                                userAnswer={ans}
+                                disabled={disabled}
+                                pressable={pressableCells}
+                                accessibilityLabel={getCellLabel(r, c, ans)}
+                                onPress={selectCell}
+                                onAdjust={moveWithinWord}
                             />
                         );
                     })}
                 </View>
+            ))}
+        </View>
+    );
+
+    return (
+        <View style={styles.container} testID="crossword">
+            {/* TUB-298: no ScrollView — the grid is sized to fit this area. */}
+            <View style={styles.gridArea} onLayout={onGridAreaLayout} testID="crossword-grid-area">
+                {pressableCells || disabled ? (
+                    gridNode
+                ) : (
+                    <Pressable onPress={onGridPress} testID="crossword-grid-touch" accessible={false}>
+                        {gridNode}
+                    </Pressable>
+                )}
             </View>
+
+            {!disabled && active && (
+                <View style={styles.clueWrap}>
+                    <ClueBar
+                        label={`${active.clue.number} ${active.dir === 'across' ? 'Across' : 'Down'}`}
+                        clue={active.clue.clue}
+                        length={active.clue.length}
+                        lineColor={GameColors.crossword}
+                        onPrev={() => goToClue(-1)}
+                        onNext={() => goToClue(1)}
+                        onToggleDirection={toggleDirection}
+                        minHeight={compact ? CLUE_COMPACT : CLUE_DEFAULT}
+                    />
+                </View>
+            )}
+
+            {!disabled && (
+                <GameKeyboard
+                    onKey={handleKey}
+                    onBackspace={handleBackspace}
+                    onCheck={() => onCheck?.()}
+                    checkDisabled={checkDisabled || !onCheck}
+                    checkLabel="Check"
+                    keyHeight={compact ? KEY_COMPACT : KEY_DEFAULT}
+                    bottomInset={bottomInset}
+                />
+            )}
         </View>
     );
 }
@@ -510,163 +457,48 @@ const NAVY = TFL.blue; // #003688
 const ACTIVE_WORD_BG = '#D6DFFB';
 
 const styles = StyleSheet.create({
-    container: {
+    container: { flex: 1 },
+    gridArea: {
         flex: 1,
-    },
-    hiddenInput: {
-        position: 'absolute',
-        opacity: 0,
-        height: 0,
-        width: 0,
-    },
-    gridWrapper: {
         alignItems: 'center',
-        paddingHorizontal: Spacing.md,
-        paddingTop: Spacing.md,
-        paddingBottom: Spacing.sm,
+        justifyContent: 'center',
+        paddingHorizontal: SIDE_MARGIN,
+        paddingVertical: GRID_PAD_V / 2,
     },
     gridContainer: {
         borderWidth: 2,
         borderColor: StateColors.gridLine,
         backgroundColor: StateColors.gridLine,
-        borderRadius: Layout.borderRadius.lg,
+        borderRadius: 12,
         overflow: 'hidden',
+        padding: 1,
+        gap: 1,
     },
-    row: {
-        flexDirection: 'row',
-    },
+    row: { flexDirection: 'row', gap: 1 },
     cell: {
         backgroundColor: '#FFFFFF',
-        borderWidth: 0.5,
-        borderColor: StateColors.gridLine,
         position: 'relative',
         alignItems: 'center',
         justifyContent: 'center',
     },
-    blackCell: {
-        backgroundColor: '#111111',
-        borderColor: '#111111',
-    },
-    selectedCell: {
-        backgroundColor: NAVY,
-    },
-    activeWordCell: {
-        backgroundColor: ACTIVE_WORD_BG,
-        // TUB-295: tint alone is 1.33:1; add a 2px line-colour outline (11:1).
-        borderWidth: 2,
-        borderColor: NAVY,
-    },
-    cursorRing: {
-        borderWidth: 3,
-        borderColor: StateColors.cursorRing,
-    },
-    cellNumber: {
+    blackCell: { backgroundColor: '#1C1C1F' },
+    // TUB-295/298: tint alone is 1.33:1, so the active word also gets a 2px navy outline (11:1).
+    activeWordCell: { backgroundColor: ACTIVE_WORD_BG, borderWidth: 2, borderColor: NAVY },
+    selectedCell: { backgroundColor: NAVY, borderWidth: 3, borderColor: StateColors.cursorRing },
+    errorCell: { borderWidth: 3, borderColor: StateColors.error },
+    cellNumber: { position: 'absolute', top: 1, left: 3, color: '#374151', fontWeight: '600' },
+    cellLetter: { fontWeight: '700', color: StateColors.ink },
+    onSelected: { color: '#FFFFFF' },
+    errIcon: {
         position: 'absolute',
-        top: 1,
-        left: 2,
-        color: '#4B5563',
-        fontWeight: '500',
-    },
-    cellNumberSelected: {
-        color: '#FFFFFF',
-    },
-    cellLetter: {
-        fontWeight: '700',
-        color: Colors.light.text,
-    },
-    cellLetterSelected: {
-        color: '#FFFFFF',
-    },
-    activeClueCard: {
-        flexDirection: 'row',
-        marginHorizontal: Spacing.md,
-        marginTop: Spacing.sm,
-        paddingVertical: Spacing.md,
-        paddingHorizontal: Spacing.md,
-        backgroundColor: TFL.grey.light,
-        borderRadius: Layout.borderRadius.lg,
+        top: 2,
+        right: 2,
+        width: 14,
+        height: 14,
+        borderRadius: 7,
+        backgroundColor: StateColors.error,
         alignItems: 'center',
-        overflow: 'hidden',
-    },
-    activeClueAccent: {
-        width: 4,
-        alignSelf: 'stretch',
-        backgroundColor: NAVY,
-        borderRadius: 2,
-        marginRight: Spacing.sm,
-    },
-    activeClueRef: {
-        fontWeight: '700',
-        color: Colors.light.text,
-    },
-    activeClueText: {
-        ...Typography.body,
-        flex: 1,
-    },
-    tabContainer: {
-        flexDirection: 'row',
-        marginHorizontal: Spacing.md,
-        marginTop: Spacing.md,
-        borderBottomWidth: 1,
-        borderBottomColor: Colors.light.border,
-    },
-    tab: {
-        minHeight: 44,
         justifyContent: 'center',
-        paddingBottom: Spacing.sm,
-        marginRight: Spacing.lg,
     },
-    tabActive: {
-        borderBottomWidth: 2,
-        borderBottomColor: NAVY,
-    },
-    tabText: {
-        ...Typography.body,
-        color: TFL.grey.dark,
-    },
-    tabTextActive: {
-        fontWeight: '600',
-        color: NAVY,
-    },
-    clueList: {
-        flex: 1,
-    },
-    clueListContent: {
-        paddingHorizontal: Spacing.md,
-        paddingTop: Spacing.sm,
-        paddingBottom: Spacing.xl,
-    },
-    clueRow: {
-        minHeight: 48,
-        alignItems: 'center',
-        flexDirection: 'row',
-        paddingVertical: Spacing.sm,
-    },
-    clueRowActive: {
-        backgroundColor: TFL.grey.light,
-        borderRadius: Layout.borderRadius.sm,
-        marginHorizontal: -Spacing.xs,
-        paddingHorizontal: Spacing.xs,
-    },
-    clueNumber: {
-        ...Typography.body,
-        fontWeight: '700',
-        width: 32,
-        color: Colors.light.text,
-    },
-    clueText: {
-        ...Typography.body,
-        flex: 1,
-        color: Colors.light.text,
-    },
-    clueCompleted: {
-        textDecorationLine: 'line-through',
-        color: TFL.grey.dark,
-    },
-    clueCheckmark: {
-        fontSize: 14,
-        fontWeight: '700',
-        color: TFL.green ?? Colors.light.success,
-        marginLeft: Spacing.xs,
-    },
+    clueWrap: { marginHorizontal: SIDE_MARGIN, marginBottom: 8 },
 });
