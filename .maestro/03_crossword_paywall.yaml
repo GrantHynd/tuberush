@@ -1,0 +1,31 @@
+appId: com.tuberush.v2
+name: Crossword paywall shown for free users
+tags: [critical]
+---
+- runFlow:
+    file: subflows/sign_in.yaml
+    env:
+      EMAIL: ${MAESTRO_TEST_EMAIL}
+      PASSWORD: ${MAESTRO_TEST_PASSWORD}
+- extendedWaitUntil:
+    visible:
+      id: "today-hero-crossword"
+    timeout: 30000
+- tapOn:
+    id: "today-hero-crossword"
+# Free users either land on the inline paywall or are routed straight to /subscribe.
+- extendedWaitUntil:
+    visible:
+      id: "crossword-paywall|subscribe-button"
+    timeout: 20000
+- runFlow:
+    when:
+      visible:
+        id: "crossword-upsell-cta"
+    commands:
+      - tapOn:
+          id: "crossword-upsell-cta"
+- extendedWaitUntil:
+    visible:
+      id: "subscribe-button"
+    timeout: 20000

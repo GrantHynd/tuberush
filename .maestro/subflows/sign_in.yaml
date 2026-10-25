@@ -1,0 +1,28 @@
+appId: com.tuberush.v2
+---
+# Reusable: sign in from a fresh launch. Pass EMAIL and PASSWORD via runFlow env.
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: "today-hero"
+    timeout: 30000
+- tapOn:
+    id: "today-hero-connections"
+- extendedWaitUntil:
+    visible:
+      id: "auth-screen"
+    timeout: 15000
+- tapOn:
+    id: "auth-email-input"
+- inputText: ${EMAIL}
+- tapOn:
+    id: "auth-password-input"
+- inputText: ${PASSWORD}
+- hideKeyboard
+- tapOn:
+    id: "auth-submit-button"
+- extendedWaitUntil:
+    notVisible:
+      id: "auth-screen"
+    timeout: 30000

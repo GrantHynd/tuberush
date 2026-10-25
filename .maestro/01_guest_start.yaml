@@ -1,0 +1,19 @@
+appId: com.tuberush.v2
+name: Guest start
+tags: [critical]
+---
+# Logged-out launch: home renders and the game guard sends guests to sign in.
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: "today-hero"
+    timeout: 30000
+- assertVisible: "TubeRush"
+- tapOn:
+    id: "today-hero-connections"
+- extendedWaitUntil:
+    visible:
+      id: "auth-screen"
+    timeout: 15000
+- assertVisible: "Welcome back!"

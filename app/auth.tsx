@@ -62,6 +62,7 @@ export default function AuthScreen() {
         <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             style={styles.container}
+            testID="auth-screen"
         >
             <View style={styles.content}>
                 {/* Logo */}

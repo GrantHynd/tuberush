@@ -1,0 +1,22 @@
+appId: com.tuberush.v2
+name: Play today's crossword (premium)
+tags: [critical, premium]
+---
+# Premium account (MAESTRO_PREMIUM_EMAIL / MAESTRO_PREMIUM_PASSWORD, set as EAS env vars).
+- runFlow:
+    file: subflows/sign_in.yaml
+    env:
+      EMAIL: ${MAESTRO_PREMIUM_EMAIL}
+      PASSWORD: ${MAESTRO_PREMIUM_PASSWORD}
+- extendedWaitUntil:
+    visible:
+      id: "today-hero-crossword"
+    timeout: 30000
+- tapOn:
+    id: "today-hero-crossword"
+- extendedWaitUntil:
+    visible:
+      id: "crossword-grid|crossword-solved-board"
+    timeout: 30000
+- assertNotVisible:
+    id: "crossword-paywall"

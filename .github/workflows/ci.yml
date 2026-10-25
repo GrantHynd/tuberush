@@ -107,6 +107,8 @@ jobs:
 
   e2e-test:
     name: E2E Tests (iOS)
+    # DEPRECATED (TUB-305): superseded by .eas/workflows/e2e-tests.yml. Remove once the EAS run is green.
+    # Only runs the backend-free guest flow; the other flows need real test accounts (EAS env).
     runs-on: macos-latest
     timeout-minutes: 60
     # Slow (~30+ min native build). Run only on demand or with the e2e-test PR label.
@@ -292,7 +294,7 @@ jobs:
 
       - name: Run Maestro Flows
         run: |
-          maestro test .maestro/flow.yaml .maestro/auth_flow.yaml --format junit --output report.xml
+          maestro test .maestro/01_guest_start.yaml --format junit --output report.xml
 
       - name: Upload Maestro Artifacts
         if: always()

@@ -4,6 +4,18 @@
     "appVersionSource": "remote"
   },
   "build": {
+    "e2e-test": {
+      "withoutCredentials": true,
+      "distribution": "internal",
+      "environment": "preview",
+      "channel": "e2e",
+      "ios": {
+        "simulator": true
+      },
+      "env": {
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
+      }
+    },
     "production": {
       "distribution": "store",
       "environment": "production",

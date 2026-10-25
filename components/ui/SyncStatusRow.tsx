@@ -63,7 +63,7 @@ export function SyncStatusRow({ syncStatus, onRetry }: SyncStatusRowProps) {
         <View>
             <View style={styles.row}>
                 <Text style={styles.label}>Sync Status</Text>
-                <View style={styles.right} accessible accessibilityLabel={`Sync status: ${p.label}`}>
+                <View style={styles.right} accessible testID="sync-status" accessibilityLabel={`Sync status: ${p.label}`}>
                     {p.icon ? (
                         <MaterialIcons name={p.icon} size={18} color={p.color} />
                     ) : (
