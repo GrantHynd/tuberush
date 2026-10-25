@@ -67,8 +67,12 @@ export function FinishedGameView({
         ]).start();
         if (announcement) announce(announcement);
         const t = setTimeout(() => {
-            const node = signRef.current ? findNodeHandle(signRef.current) : null;
-            if (node) AccessibilityInfo.setAccessibilityFocus?.(node);
+            try {
+                const node = signRef.current ? findNodeHandle(signRef.current) : null;
+                if (node) AccessibilityInfo.setAccessibilityFocus?.(node);
+            } catch {
+                // view already unmounted / torn down; focus is best-effort
+            }
         }, 400);
         return () => clearTimeout(t);
         // Run once per mount of a just-finished view.
