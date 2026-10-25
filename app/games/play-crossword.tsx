@@ -1,6 +1,9 @@
 import { Crossword } from '@/components/games/Crossword';
 import { CrosswordErrorBoundary } from '@/components/games/CrosswordErrorBoundary';
 import { CrosswordUpsell } from '@/components/games/CrosswordUpsell';
+import { CrosswordSolvedBoard } from '@/components/games/CrosswordSolvedBoard';
+import { FinishedGameView, type FinishedStat } from '@/components/game-ui/FinishedGameView';
+import { useUserStats } from '@/hooks/useUserStats';
 import { GameHeader } from '@/components/game-ui/GameHeader';
 import { FeedbackToast } from '@/components/game-ui/FeedbackToast';
 import { announce } from '@/lib/a11y';
@@ -61,6 +64,9 @@ export default function PlayCrossword() {
     // TUB-299: cells marked wrong by the last Check; a cell's mark clears when it is edited.
     const [errorCells, setErrorCells] = useState<ReadonlySet<string>>(() => new Set());
     const insets = useSafeAreaInsets();
+    // TUB-300: reopening a solved puzzle renders the finished view with no animation/announcement.
+    const [finishedOnLoad, setFinishedOnLoad] = useState(false);
+    const { stats: userStats } = useUserStats();
 
     // Load custom puzzle from Supabase
     useEffect(() => {
@@ -114,6 +120,7 @@ export default function PlayCrossword() {
                     );
                 }
 
+                setFinishedOnLoad(!!(game.state as CrosswordState).completed);
                 setGameState(game);
                 capture('game_started', {
                     game_type: 'crossword',
@@ -226,6 +233,7 @@ export default function PlayCrossword() {
             const newState: CrosswordState = {
                 ...state,
                 completed: true,
+                wrongChecks: state.wrongChecks ?? 0,
                 startTime: state.startTime ?? endTime,
                 endTime,
                 accumulatedPause: timerRef.current.accumulatedPause,
@@ -281,6 +289,13 @@ export default function PlayCrossword() {
             // TUB-295: non-blocking toast (announced to VoiceOver) instead of a blocking Alert.
             // TUB-299: mark the wrong cells and say how many; play continues.
             setErrorCells(wrongKeys);
+            const counted: GameState = {
+                ...gameState,
+                state: { ...state, wrongChecks: (state.wrongChecks ?? 0) + 1 },
+                lastUpdated: new Date().toISOString(),
+            };
+            setGameState(counted);
+            saveGame(counted);
             setToast((prev) => ({
                 id: (prev?.id ?? 0) + 1,
                 message: wrongLettersMessage(incorrectCells),
@@ -394,6 +409,14 @@ export default function PlayCrossword() {
         ? Math.floor((state.endTime - state.startTime - (state.accumulatedPause ?? 0)) / 1000)
         : null;
 
+    const finalTime = completionTimeSecs != null ? formatScore(completionTimeSecs) : null;
+    const finishedStats: FinishedStat[] = [
+        { label: 'Time', value: finalTime ?? '—' },
+        // Checks that found wrong letters; older saves have no count.
+        { label: 'Mistakes', value: state.wrongChecks != null ? String(state.wrongChecks) : '—' },
+        { label: 'Day streak', value: String(userStats.streak) },
+    ];
+
     const handleShare = async () => {
         if (completionTimeSecs == null) return;
         const timeStr = formatScore(completionTimeSecs);
@@ -416,7 +439,17 @@ export default function PlayCrossword() {
                 lineColor={GameColors.crossword}
                 onBack={goBack}
                 right={
-                    state.startTime && !isCompleted ? (
+                    isCompleted ? (
+                        <TouchableOpacity
+                            onPress={handleShare}
+                            style={styles.backButton}
+                            accessibilityRole="button"
+                            accessibilityLabel="Share result"
+                            testID="header-share"
+                        >
+                            <MaterialIcons name="ios-share" size={22} color={Colors.light.text} />
+                        </TouchableOpacity>
+                    ) : state.startTime ? (
                         <Text style={styles.headerTimer} accessibilityLabel={`Time ${timer.formatted}`}>
                             {timer.formatted}
                         </Text>
@@ -438,40 +471,29 @@ export default function PlayCrossword() {
                 />
             ) : (
                 <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
-                    <Crossword
-                        puzzle={puzzle}
-                        gameState={state}
-                        onCellChange={handleCellChange}
-                        disabled
+                    <FinishedGameView
+                        outcome="win"
+                        lineColor={GameColors.crossword}
+                        title="Journey complete"
+                        detail={`${puzzle.title || 'Crossword'} solved`}
+                        time={finalTime ?? undefined}
+                        board={<CrosswordSolvedBoard puzzle={puzzle} state={state} />}
+                        stats={finishedStats}
+                        onLeaderboard={isCustomPuzzle ? undefined : () => setShowLeaderboard(true)}
+                        onShare={handleShare}
+                        justFinished={!finishedOnLoad}
+                        announcement={`Journey complete.${finalTime ? ` Solved in ${finalTime}.` : ''}`}
                     />
-                    <View style={styles.gameOverContainer}>
-                        <Text style={styles.gameOverTitle}>Well done!</Text>
-                        {completionTimeSecs != null && (
-                            <Text style={styles.gameOverTime}>
-                                Solved in {formatScore(completionTimeSecs)}
-                            </Text>
-                        )}
-                        <View style={styles.gameOverActions}>
-                            {!isCustomPuzzle && (
-                                <TouchableOpacity
-                                    style={styles.gameOverButton}
-                                    onPress={() => setShowLeaderboard(true)}
-                                    accessibilityRole="button"
-                                    accessibilityLabel="View leaderboard"
-                                >
-                                    <Text style={styles.gameOverButtonText}>Leaderboard</Text>
-                                </TouchableOpacity>
-                            )}
-                            <TouchableOpacity
-                                style={styles.gameOverButton}
-                                onPress={handleShare}
-                                accessibilityRole="button"
-                                accessibilityLabel="Share result"
-                            >
-                                <Text style={styles.gameOverButtonText}>Share</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
+                    {isCustomPuzzle && (
+                        <TouchableOpacity
+                            style={[styles.gameOverButton, styles.backToPuzzles]}
+                            onPress={() => router.back()}
+                            accessibilityRole="button"
+                            accessibilityLabel="Return to puzzles"
+                        >
+                            <Text style={styles.gameOverButtonText}>Back to Puzzles</Text>
+                        </TouchableOpacity>
+                    )}
                 </ScrollView>
             )}
             </CrosswordErrorBoundary>
@@ -600,6 +622,7 @@ const styles = StyleSheet.create({
     checkButtonTextPrimary: {
         color: Colors.light.background,
     },
+    backToPuzzles: { alignSelf: 'center', marginTop: Spacing.md },
     gameOverContainer: {
         paddingHorizontal: Spacing.md,
         paddingVertical: Spacing.lg,

@@ -41,6 +41,8 @@ export interface CrosswordState {
     endTime?: number;
     /** Cumulative milliseconds spent paused (backgrounded) — for accurate elapsed time */
     accumulatedPause?: number;
+    /** Checks that found wrong letters (TUB-300 "Mistakes"). Optional: older saves lack it. Stored in the game-state JSON, no DB column. */
+    wrongChecks?: number;
 }
 
 /** A single cell in the crossword grid */

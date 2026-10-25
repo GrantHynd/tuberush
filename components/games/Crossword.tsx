@@ -140,6 +140,8 @@ interface CrosswordProps {
     /** Cells marked wrong by the last Check (TUB-299). */
     errorCells?: ReadonlySet<string>;
     bottomInset?: number;
+    /** Fixed cell size (finished view, inside a ScrollView): skips layout-based sizing. */
+    staticCellSize?: number;
 }
 
 function firstClue(puzzle: CrosswordPuzzle): { cell: { row: number; col: number } | null; dir: Direction } {
@@ -159,6 +161,7 @@ export function Crossword({
     checkDisabled = false,
     errorCells,
     bottomInset = 0,
+    staticCellSize,
 }: CrosswordProps) {
     const { width: screenW, height: screenH } = useWindowDimensions();
     // TUB-298: select the first clue on load.
@@ -176,7 +179,7 @@ export function Crossword({
     // Before first layout, estimate from the window.
     const availW = (area?.w ?? screenW) - 2 * SIDE_MARGIN;
     const availH = area ? area.h - GRID_PAD_V : Math.max(0, screenH - 420);
-    const size = computeCellSize(availW, availH, n);
+    const size = staticCellSize ?? computeCellSize(availW, availH, n);
     const pressableCells = size >= MIN_TARGET_CELL;
 
     const onGridAreaLayout = useCallback(
@@ -413,7 +416,11 @@ export function Crossword({
     return (
         <View style={styles.container} testID="crossword">
             {/* TUB-298: no ScrollView — the grid is sized to fit this area. */}
-            <View style={styles.gridArea} onLayout={onGridAreaLayout} testID="crossword-grid-area">
+            <View
+                style={staticCellSize ? styles.gridAreaStatic : styles.gridArea}
+                onLayout={staticCellSize ? undefined : onGridAreaLayout}
+                testID="crossword-grid-area"
+            >
                 {pressableCells || disabled ? (
                     gridNode
                 ) : (
@@ -465,6 +472,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: SIDE_MARGIN,
         paddingVertical: GRID_PAD_V / 2,
     },
+    gridAreaStatic: { alignItems: 'center', paddingHorizontal: SIDE_MARGIN, paddingTop: 8 },
     gridContainer: {
         borderWidth: 2,
         borderColor: StateColors.gridLine,

@@ -55,6 +55,7 @@ export function mergeCrossword(older: CrosswordState, newer: CrosswordState): Cr
         userAnswers: { ...older.userAnswers, ...newer.userAnswers },
         startTime: minDefined(older.startTime, newer.startTime),
         accumulatedPause: Math.max(older.accumulatedPause ?? 0, newer.accumulatedPause ?? 0) || undefined,
+        wrongChecks: Math.max(older.wrongChecks ?? 0, newer.wrongChecks ?? 0) || undefined,
     };
 }
 
