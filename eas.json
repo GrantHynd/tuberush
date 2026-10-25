@@ -7,10 +7,15 @@
     "production": {
       "distribution": "store",
       "environment": "production",
+      "channel": "production",
       "autoIncrement": true
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "ios": {
+        "ascAppId": "REPLACE_WITH_ASC_APP_ID"
+      }
+    }
   }
 }
