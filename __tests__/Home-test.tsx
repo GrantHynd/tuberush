@@ -68,7 +68,7 @@ describe('HomeScreen', () => {
     // Check for header and games
     expect(getByText('TubeRush')).toBeTruthy();
     expect(getByText('Beat the commute.')).toBeTruthy();
-    expect(getAllByText('Connections').length).toBeGreaterThan(0);
+    expect(getAllByText('Interchange').length).toBeGreaterThan(0);
     expect(getAllByText('Crossword').length).toBeGreaterThan(0);
   });
 
@@ -83,7 +83,7 @@ describe('HomeScreen', () => {
     // Check for header and games
     expect(getByText('TubeRush')).toBeTruthy();
     expect(getByText('Beat the commute.')).toBeTruthy();
-    expect(getAllByText('Connections').length).toBeGreaterThan(0);
+    expect(getAllByText('Interchange').length).toBeGreaterThan(0);
     expect(getAllByText('Crossword').length).toBeGreaterThan(0);
 
     // Check "Sign In / Register" button is NOT present (no welcome section in new design)

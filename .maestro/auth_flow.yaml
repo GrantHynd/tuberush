@@ -160,12 +160,12 @@ appId: com.tuberush.v2
 # Navigate back to home
 - tapOn: "Home"
 
-# Tap on free game (Connections) - should work
+# Tap on free game (Interchange) - should work
 - tapOn:
     id: "game-card-connections"
 
 # Verify we're in the game (not auth modal)
-- assertVisible: "Connections"
+- assertVisible: "Interchange"
 - assertNotVisible: "Welcome back!"
 
 # =============================================================================

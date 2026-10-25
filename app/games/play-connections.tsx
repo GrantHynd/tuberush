@@ -4,7 +4,12 @@ import type { ConnectionsPuzzle } from "@/constants/ConnectionsData";
 import { getCustomPuzzle, saveCustomPuzzleScore } from "@/lib/custom-puzzles";
 import { getDailyGame, getGameByDate } from "@/lib/daily-games";
 import { scoreOutbox } from "@/lib/score-outbox";
-import { Colors, Spacing, TFL, Typography } from "@/constants/theme";
+import { FinishedGameView, type FinishedStat } from "@/components/game-ui/FinishedGameView";
+import { GameHeader } from "@/components/game-ui/GameHeader";
+import { Colors, LineColors, Spacing, Typography } from "@/constants/theme";
+import { GAMES } from "@/constants/Games";
+import { useUserStats } from "@/hooks/useUserStats";
+import { formatScore } from "@/lib/display-utils";
 import { capture } from "@/lib/posthog";
 import { useAuthStore } from "@/stores/auth-store";
 import { useGameStore } from "@/stores/game-store";
@@ -16,9 +21,11 @@ import {
   ActivityIndicator,
   Alert,
   Modal,
+  Pressable,
+  ScrollView,
+  Share,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -51,6 +58,8 @@ function formatDate(dateStr: string): string {
   return `${days[date.getDay()]}, ${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
 }
 
+const GAME_NAME = GAMES.connections.name;
+
 export default function PlayConnectionsScreen() {
   const router = useRouter();
   const { date: dateParam, customPuzzleId } = useLocalSearchParams<{ date?: string; customPuzzleId?: string }>();
@@ -63,6 +72,9 @@ export default function PlayConnectionsScreen() {
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [revealComplete, setRevealComplete] = useState(false);
   const [syncedGameId, setSyncedGameId] = useState<string | undefined>(undefined);
+  const [finishedOnLoad, setFinishedOnLoad] = useState(false);
+  const { stats: userStats } = useUserStats();
+  const streak = userStats.streak;
 
   useEffect(() => {
     if (!user) {
@@ -244,154 +256,155 @@ export default function PlayConnectionsScreen() {
 
   const puzzleDate =
     dateParam || puzzle?.date || new Date().toISOString().split("T")[0];
+  const subtitle = isCustomPuzzle ? "Custom Puzzle" : formatDate(puzzleDate);
 
-  // A reloaded lost game should skip the reveal animation. A loss during this
-  // session keeps the same id, so the submit handler can hold the banner back.
+  // A game that was already finished when loaded renders its finished page with no
+  // animation or announcement. A game that finishes in this session animates/announces.
   const loadedGameId = currentGame?.id;
-  const loadedIsLost =
-    !!currentGame && (currentGame.state as ConnectionsState).status === "lost";
+  const loadedStatus = currentGame
+    ? (currentGame.state as ConnectionsState).status
+    : undefined;
   if (loadedGameId !== syncedGameId) {
     setSyncedGameId(loadedGameId);
-    setRevealComplete(loadedIsLost);
+    setRevealComplete(loadedStatus === "lost");
+    setFinishedOnLoad(loadedStatus === "won" || loadedStatus === "lost");
   }
 
-  if (loadError) {
-    return (
-      <SafeAreaView style={styles.container} edges={["top"]}>
-        <View style={styles.header}>
-          <TouchableOpacity
-            onPress={() => router.back()}
-            style={styles.backButton}
-            accessibilityRole="button"
-            accessibilityLabel="Go back"
-          >
-            <MaterialIcons
-              name="arrow-back"
-              size={24}
-              color={Colors.light.text}
-            />
-          </TouchableOpacity>
-          <View style={styles.headerText}>
-            <Text style={styles.headerTitle}>Connections</Text>
-          </View>
-        </View>
-        <View style={styles.centered}>
-          <Text style={{ color: Colors.light.text, textAlign: "center", paddingHorizontal: 24 }}>
-            Puzzle not available. Go back and try again when you&apos;re online or after new puzzles are published.
-          </Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
+  const goBack = useCallback(() => {
+    if (router.canGoBack?.()) router.back();
+    else router.replace("/");
+  }, [router]);
 
-  if (loading || !puzzle || !currentGame) {
+  if (loadError || loading || !puzzle || !currentGame) {
     return (
       <SafeAreaView style={styles.container} edges={["top"]}>
-        <View style={styles.header}>
-          <TouchableOpacity
-            onPress={() => router.back()}
-            style={styles.backButton}
-            accessibilityRole="button"
-            accessibilityLabel="Go back"
-          >
-            <MaterialIcons
-              name="arrow-back"
-              size={24}
-              color={Colors.light.text}
-            />
-          </TouchableOpacity>
-          <View style={styles.headerText}>
-            <Text style={styles.headerTitle}>Connections</Text>
-          </View>
-        </View>
+        <GameHeader
+          title={GAME_NAME}
+          lineColor={LineColors.connections}
+          onBack={() => router.back()}
+        />
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color={Colors.light.tint} />
+          {loadError ? (
+            <Text style={styles.message}>
+              Puzzle not available. Go back and try again when you&apos;re online or after new puzzles are published.
+            </Text>
+          ) : (
+            <ActivityIndicator size="large" color={LineColors.connections} />
+          )}
         </View>
       </SafeAreaView>
     );
   }
 
   const gameState = currentGame.state as ConnectionsState;
-  const timeTaken = gameState.endTime
-    ? Math.floor((gameState.endTime - gameState.startTime) / 1000)
-    : null;
+  const finished = gameState.status === "won" || gameState.status === "lost";
+  const won = gameState.status === "won";
+  const timeTaken =
+    gameState.endTime && gameState.startTime
+      ? Math.floor((gameState.endTime - gameState.startTime) / 1000)
+      : null;
+  const mistakes = 4 - gameState.mistakesRemaining;
+  const linesFound = gameState.completedGroups.length;
 
-  // Only show game over banner after reveal is complete for lost games
-  const shouldShowGameOver = 
-    gameState.status === "won" || 
-    (gameState.status === "lost" && revealComplete);
+  const handleShare = async () => {
+    capture("game_shared", { game_type: "connections", is_custom: isCustomPuzzle });
+    const rail = puzzle.groups
+      .slice()
+      .sort((a, b) => a.difficulty - b.difficulty)
+      .map((g) => (gameState.completedGroups.includes(g.category) ? `Line ${g.difficulty} ✓` : `Line ${g.difficulty} –`))
+      .join(" · ");
+    const head = isCustomPuzzle ? `TubeRush ${GAME_NAME} (custom)` : `TubeRush ${GAME_NAME} · ${subtitle}`;
+    const result = won
+      ? `Journey complete${timeTaken != null ? ` in ${formatScore(timeTaken)}` : ""} · ${mistakes} ${mistakes === 1 ? "mistake" : "mistakes"}`
+      : `Part suspended · ${linesFound} of 4 lines found`;
+    try {
+      await Share.share({ message: `${head}\n${result}\n${rail}` });
+    } catch {
+      /* user cancelled */
+    }
+  };
+
+  const stats: FinishedStat[] = won
+    ? [
+        {
+          label: "Time",
+          value: timeTaken != null ? formatScore(timeTaken) : "–",
+        },
+        { label: mistakes === 1 ? "Mistake" : "Mistakes", value: String(mistakes) },
+        { label: "Day streak", value: String(streak) },
+      ]
+    : [
+        { label: "Lines", value: `${linesFound}/4`, accessibilityLabel: `Lines, ${linesFound} of 4` },
+        { label: mistakes === 1 ? "Mistake" : "Mistakes", value: String(mistakes) },
+        { label: "Day streak", value: String(streak) },
+      ];
+
+  const board = (
+    <Connections
+      gameState={gameState}
+      puzzle={puzzle}
+      onSubmitGuess={handleSubmitGuess}
+      onRevealComplete={handleRevealComplete}
+      revealImmediately={finishedOnLoad}
+    />
+  );
+
+  const lossDetail = `${linesFound} of 4 lines found · answers below`;
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={styles.backButton}
-          accessibilityRole="button"
-          accessibilityLabel="Go back"
-        >
-          <MaterialIcons
-            name="arrow-back"
-            size={24}
-            color={Colors.light.text}
-          />
-        </TouchableOpacity>
-        <View style={styles.headerText}>
-          <Text style={styles.headerTitle}>Connections</Text>
-          <Text style={styles.headerSubtitle}>{isCustomPuzzle ? 'Custom Puzzle' : formatDate(puzzleDate)}</Text>
-        </View>
-      </View>
-
-      {/* Instruction */}
-      <Text style={styles.instruction}>Create four groups of four!</Text>
-
-      <Connections
-        gameState={gameState}
-        puzzle={puzzle}
-        onSubmitGuess={handleSubmitGuess}
-        onRevealComplete={handleRevealComplete}
+      <GameHeader
+        title={GAME_NAME}
+        subtitle={subtitle}
+        lineColor={LineColors.connections}
+        onBack={goBack}
+        right={
+          finished ? (
+            <Pressable
+              onPress={handleShare}
+              style={styles.headerBtn}
+              accessibilityRole="button"
+              accessibilityLabel="Share result"
+            >
+              <MaterialIcons name="ios-share" size={22} color={Colors.light.text} />
+            </Pressable>
+          ) : undefined
+        }
       />
 
-      {/* Game Over Banner */}
-      {shouldShowGameOver && (
-        <View style={styles.gameOverContainer}>
-          <Text style={styles.gameOverTitle}>
-            {gameState.status === "won"
-              ? "Well done!"
-              : "Better luck next time"}
-          </Text>
-          {timeTaken !== null && gameState.status === "won" && (
-            <Text style={styles.gameOverTime}>Solved in {timeTaken}s</Text>
-          )}
-          <View style={styles.gameOverActions}>
-            {!isCustomPuzzle && (
-              <TouchableOpacity
-                style={styles.gameOverButton}
-                onPress={() => setShowLeaderboard(true)}
-                accessibilityRole="button"
-                accessibilityLabel="View leaderboard"
-              >
-                <Text style={styles.gameOverButtonText}>Leaderboard</Text>
-              </TouchableOpacity>
-            )}
-            <TouchableOpacity
-              style={[styles.gameOverButton, styles.gameOverButtonPrimary]}
+      {finished ? (
+        <ScrollView contentContainerStyle={styles.finishedContent} testID="connections-finished">
+          <FinishedGameView
+            outcome={won ? "win" : "loss"}
+            lineColor={LineColors.connections}
+            title={won ? "Journey complete" : "Part suspended"}
+            detail={won ? "All four lines found" : lossDetail}
+            time={won && timeTaken != null ? formatScore(timeTaken) : undefined}
+            board={board}
+            stats={stats}
+            onLeaderboard={isCustomPuzzle ? undefined : () => setShowLeaderboard(true)}
+            onShare={handleShare}
+            justFinished={!finishedOnLoad}
+            announcement={
+              won
+                ? `Journey complete.${timeTaken != null ? ` ${formatScore(timeTaken)}.` : ""}`
+                : `Part suspended. ${lossDetail.replace(" · ", ". ")}.`
+            }
+          />
+          {isCustomPuzzle && (
+            <Pressable
+              style={styles.secondaryBtn}
               onPress={() => router.back()}
               accessibilityRole="button"
-              accessibilityLabel={isCustomPuzzle ? "Return to puzzles" : "Return home"}
+              accessibilityLabel="Return to puzzles"
             >
-              <Text
-                style={[
-                  styles.gameOverButtonText,
-                  styles.gameOverButtonTextPrimary,
-                ]}
-              >
-                {isCustomPuzzle ? 'Back to Puzzles' : 'Home'}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+              <Text style={styles.secondaryBtnText}>Back to Puzzles</Text>
+            </Pressable>
+          )}
+          {!won && !revealComplete ? <View testID="reveal-in-progress" /> : null}
+        </ScrollView>
+      ) : (
+        board
       )}
 
       {!isCustomPuzzle && (
@@ -415,81 +428,36 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.light.background,
   },
-  header: {
-    flexDirection: "row",
+  centered: {
+    flex: 1,
     alignItems: "center",
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
+    justifyContent: "center",
   },
-  backButton: {
+  message: {
+    color: Colors.light.text,
+    textAlign: "center",
+    paddingHorizontal: 24,
+  },
+  headerBtn: {
     minWidth: 44,
     minHeight: 44,
     alignItems: "center",
     justifyContent: "center",
-    padding: Spacing.xs,
-    marginRight: Spacing.sm,
   },
-  headerText: {
-    flexShrink: 1,
-  },
-  headerTitle: {
-    ...Typography.h1,
-    fontSize: 28,
-  },
-  headerSubtitle: {
-    fontSize: 15,
-    color: TFL.grey.dark,
-    marginTop: 2,
-  },
-  instruction: {
-    fontSize: 16,
-    color: TFL.grey.dark,
-    textAlign: "center",
-    paddingVertical: Spacing.sm,
-  },
-  centered: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  gameOverContainer: {
+  finishedContent: {
     paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.lg,
-    alignItems: "center",
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.xl,
   },
-  gameOverTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: Colors.light.text,
-    marginBottom: 4,
-  },
-  gameOverTime: {
-    fontSize: 15,
-    color: TFL.grey.dark,
-    marginBottom: Spacing.md,
-  },
-  gameOverActions: {
-    flexDirection: "row",
-    gap: Spacing.sm,
-  },
-  gameOverButton: {
+  secondaryBtn: {
+    marginTop: Spacing.sm,
     minHeight: 48,
+    alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: Colors.light.text,
   },
-  gameOverButtonPrimary: {
-    backgroundColor: Colors.light.text,
-  },
-  gameOverButtonText: {
-    fontSize: 14,
+  secondaryBtnText: {
+    ...Typography.body,
     fontWeight: "600",
     color: Colors.light.text,
-  },
-  gameOverButtonTextPrimary: {
-    color: Colors.light.background,
   },
 });

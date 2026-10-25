@@ -31,7 +31,7 @@ export interface CrosswordUpsellProps {
 export function CrosswordUpsell({
     onSeePremium,
     onPlayFree,
-    freeLabel = "Play today's Connections instead",
+    freeLabel = "Play today's Interchange instead",
 }: CrosswordUpsellProps) {
     return (
         <View style={styles.card} testID="crossword-upsell">

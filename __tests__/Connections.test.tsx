@@ -118,7 +118,7 @@ describe("Connections Component", () => {
       );
 
       expect(getByText("TUBE LINES")).toBeTruthy();
-      expect(getByText("BAKERLOO, CENTRAL, DISTRICT, NORTHERN")).toBeTruthy();
+      expect(getByText("BAKERLOO")).toBeTruthy(); // station name on the line rail
       expect(queryByLabelText("BAKERLOO")).toBeNull();
       expect(queryByLabelText("BAKERLOO")).toBeNull();
       expect(queryByLabelText("HYDE")).toBeTruthy();
@@ -151,7 +151,7 @@ describe("Connections Component", () => {
       );
 
       expect(getByText("Shuffle")).toBeTruthy();
-      expect(getByText("Deselect All")).toBeTruthy();
+      expect(getByText("Clear")).toBeTruthy();
     });
   });
 
@@ -243,7 +243,7 @@ describe("Connections Component", () => {
         status: "won",
       };
 
-      const { getByText, getByLabelText } = await render(
+      const { getByText, queryByLabelText } = await render(
         <Connections
           gameState={gameState}
           puzzle={mockPuzzle}
@@ -251,8 +251,10 @@ describe("Connections Component", () => {
         />,
       );
 
-      await fireEvent.press(getByText("BAKERLOO"));
-      expect(getByLabelText("BAKERLOO").props.accessibilityState.selected).toBe(false);
+      // Finished: no tiles or controls are rendered at all (TUB-297).
+      expect(queryByLabelText("BAKERLOO")).toBeNull();
+      expect(queryByLabelText("Submit guess")).toBeNull();
+      void getByText;
     });
   });
 
@@ -285,7 +287,7 @@ describe("Connections Component", () => {
       ]);
     });
 
-    it("clears selection after submit", async () => {
+    it("keeps the selection after submit until the outcome is known (TUB-296)", async () => {
       const { getByText, getByLabelText } = await render(
         <Connections
           gameState={initialGameState}
@@ -303,7 +305,7 @@ describe("Connections Component", () => {
 
       await fireEvent.press(getByText(/^Submit/));
 
-      expect(getByLabelText("BAKERLOO").props.accessibilityState.selected).toBe(false);
+      expect(getByLabelText("BAKERLOO").props.accessibilityState.selected).toBe(true);
     });
 
     it("is disabled when fewer than 4 cards are selected", async () => {
@@ -329,7 +331,7 @@ describe("Connections Component", () => {
         status: "won",
       };
 
-      const { getByText } = await render(
+      const { queryByText } = await render(
         <Connections
           gameState={gameState}
           puzzle={mockPuzzle}
@@ -337,11 +339,8 @@ describe("Connections Component", () => {
         />,
       );
 
-      await fireEvent.press(getByText(/^Submit/));
-
-      await waitFor(() => {
-        expect(mockOnSubmitGuess).not.toHaveBeenCalled();
-      });
+      expect(queryByText(/^Submit/)).toBeNull();
+      expect(mockOnSubmitGuess).not.toHaveBeenCalled();
     });
   });
 
@@ -358,7 +357,7 @@ describe("Connections Component", () => {
       await fireEvent.press(getByText("BAKERLOO"));
       await fireEvent.press(getByText("CENTRAL"));
       await fireEvent.press(getByText("DISTRICT"));
-      await fireEvent.press(getByText("Deselect All"));
+      await fireEvent.press(getByText("Clear"));
 
       expect(getByLabelText("BAKERLOO").props.accessibilityState.selected).toBe(false);
       expect(getByLabelText("CENTRAL").props.accessibilityState.selected).toBe(false);
@@ -443,7 +442,7 @@ describe("Connections Component", () => {
         status: "won",
       };
 
-      const { getByLabelText } = await render(
+      const { queryByLabelText } = await render(
         <Connections
           gameState={gameState}
           puzzle={mockPuzzle}
@@ -451,8 +450,8 @@ describe("Connections Component", () => {
         />,
       );
 
-      const shuffleButton = getByLabelText("Shuffle items");
-      expect(shuffleButton.props.accessibilityState.disabled).toBe(true);
+      // Finished state removes gameplay controls entirely (TUB-297).
+      expect(queryByLabelText("Shuffle items")).toBeNull();
     });
   });
 
@@ -558,7 +557,7 @@ describe("Connections Component", () => {
 
       expect(
         getByLabelText(
-          /TUBE LINES, found: BAKERLOO, CENTRAL, DISTRICT, NORTHERN/,
+          /TUBE LINES: BAKERLOO, CENTRAL, DISTRICT, NORTHERN/,
         ),
       ).toBeTruthy();
     });
@@ -581,7 +580,7 @@ describe("Connections Component", () => {
         status: "won",
       };
 
-      const { getByLabelText } = await render(
+      const { queryByLabelText } = await render(
         <Connections
           gameState={gameState}
           puzzle={mockPuzzle}
@@ -589,8 +588,8 @@ describe("Connections Component", () => {
         />,
       );
 
-      const shuffleButton = getByLabelText("Shuffle items");
-      expect(shuffleButton.props.accessibilityState.disabled).toBe(true);
+      // Finished state removes gameplay controls entirely (TUB-297).
+      expect(queryByLabelText("Shuffle items")).toBeNull();
     });
   });
 

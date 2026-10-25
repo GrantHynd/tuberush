@@ -1,4 +1,5 @@
 import { GameHistoryListScreen } from '@/components/games/GameHistoryListScreen';
+import { GAMES } from '@/constants/Games';
 import { connectionsGameHistoryConfig } from '@/config/gameHistoryConfigs';
 import { useGameHistoryList } from '@/hooks/useGameHistoryList';
 import { useAuthStore } from '@/stores/auth-store';
@@ -29,7 +30,7 @@ export default function ConnectionsListScreen() {
 
     return (
         <GameHistoryListScreen
-            title="Connections"
+            title={GAMES.connections.name}
             icon="hub"
             accentColor={TFL.blue}
             hasWinLoss={true}

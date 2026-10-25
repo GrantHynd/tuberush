@@ -10,8 +10,9 @@ export const APP_SCHEME = 'tuberushv2';
 export const GAMES = {
     connections: {
         id: 'connections',
-        name: 'Connections',
-        description: 'Find groups of 4 related items',
+        // TUB-304: user-facing name is "Interchange"; the id / stored game_type stays 'connections'.
+        name: 'Interchange',
+        description: 'Find four lines of four stops',
         isPremium: false,
         /** MaterialIcons glyph, shared by Home section headers and leaderboards. */
         icon: 'hub' as MaterialIconName,

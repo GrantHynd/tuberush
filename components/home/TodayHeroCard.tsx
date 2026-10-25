@@ -13,7 +13,7 @@ export interface TodayHeroCardProps {
 }
 
 const GAME_META = {
-    connections: { name: 'Connections', icon: 'hub', color: GameColors.connections },
+    connections: { name: 'Interchange', icon: 'hub', color: GameColors.connections },
     crossword: { name: 'Crossword', icon: 'grid-on', color: GameColors.crossword },
 } as const;
 

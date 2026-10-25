@@ -21,7 +21,7 @@ describe('Game icons (TUB-264)', () => {
                 onFullBoard={jest.fn()}
             />,
         );
-        expect(getByText('Connections')).toBeTruthy();
+        expect(getByText('Interchange')).toBeTruthy();
         expect(queryByText('?')).toBeNull();
         expect(queryByText('🔗')).toBeNull();
     });
