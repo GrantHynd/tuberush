@@ -31,6 +31,11 @@ export function isMissingSchemaError(error: { code?: string; message?: string } 
     return ['PGRST204', 'PGRST202', '42703'].includes(error.code ?? '');
 }
 
+/** 42P10: no unique index/constraint matching the ON CONFLICT target (20261025000001 not applied). */
+export function isMissingOnConflictIndexError(error: { code?: string } | null | undefined): boolean {
+    return error?.code === '42P10';
+}
+
 /** A new submission replaces the stored one if it's a win over a loss, or a faster game of the same outcome. */
 export function shouldReplaceScore(
     existing: { score: number; result?: GameResult | null },
@@ -88,41 +93,65 @@ export const leaderboard = {
         const mistakes = options.mistakes ?? null;
         const gameDate = options.gameDate ?? toLocalDateString(new Date());
 
-        // Idempotent: replaying the same submission is a no-op (shouldReplaceScore is strict).
-        // A concurrent insert from another device/retry hits the unique index from
-        // 20261025000001 (23505) once deployed; we then re-read and take the update path.
-        for (let attempt = 0; attempt < 2; attempt++) {
-            const { data: existingScore } = await supabase
-                .from('leaderboard')
-                .select('*')
-                .eq('user_id', userId)
-                .eq('game_date', gameDate)
-                .eq('game_type', gameType)
-                .single();
+        // Pre-read keeps "better result wins": a worse submission never reaches the write.
+        // The write itself is a single upsert on leaderboard_user_game_date_key
+        // (20261025000001). If that index isn't deployed yet (42P10), fall back to the
+        // old read-then-insert/update path, retrying once as an update on a 23505 race.
+        const { data: existingScore } = await supabase
+            .from('leaderboard')
+            .select('*')
+            .eq('user_id', userId)
+            .eq('game_date', gameDate)
+            .eq('game_type', gameType)
+            .single();
 
-            const legacyPayload = { city, borough, score };
-            const payload = { ...legacyPayload, result, mistakes };
+        if (existingScore && !shouldReplaceScore(existingScore, { score, result })) return;
 
-            if (existingScore && !shouldReplaceScore(existingScore, { score, result })) return;
+        const legacyPayload = { city, borough, score };
+        const payload = { ...legacyPayload, result, mistakes };
+        const key = { user_id: userId, game_type: gameType, game_date: gameDate };
 
-            const write = (body: typeof legacyPayload | typeof payload) =>
-                existingScore
-                    ? supabase.from('leaderboard').update(body).eq('id', existingScore.id)
-                    : supabase.from('leaderboard').insert({
-                          user_id: userId,
-                          ...body,
-                          game_type: gameType,
-                          game_date: gameDate,
-                      });
-
-            let { error } = await write(payload);
-            if (error && isMissingSchemaError(error)) {
+        const writeWithSchemaFallback = async (
+            write: (body: typeof legacyPayload | typeof payload) => PromiseLike<{ error: any }>
+        ): Promise<{ error: any } | null> => {
+            let res = await write(payload);
+            if (res.error && isMissingSchemaError(res.error)) {
                 // Migration not applied yet: losses can't be stored safely (they'd count towards ranks).
-                if (result === 'lost') return;
-                ({ error } = await write(legacyPayload));
+                if (result === 'lost') return null;
+                res = await write(legacyPayload);
             }
-            if (error && error.code === '23505' && !existingScore && attempt === 0) continue;
-            if (error) throw error;
+            return res;
+        };
+
+        const upserted = await writeWithSchemaFallback((body) =>
+            supabase.from('leaderboard').upsert({ ...key, ...body }, { onConflict: 'user_id,game_type,game_date' })
+        );
+        if (!upserted) return;
+        if (!upserted.error) return;
+        if (!isMissingOnConflictIndexError(upserted.error)) throw upserted.error;
+
+        // Fallback: unique index missing -> legacy read-then-insert/update.
+        let existing = existingScore;
+        for (let attempt = 0; attempt < 2; attempt++) {
+            if (attempt > 0) {
+                ({ data: existing } = await supabase
+                    .from('leaderboard')
+                    .select('*')
+                    .eq('user_id', userId)
+                    .eq('game_date', gameDate)
+                    .eq('game_type', gameType)
+                    .single());
+                if (existing && !shouldReplaceScore(existing, { score, result })) return;
+            }
+            const row = existing;
+            const res = await writeWithSchemaFallback((body) =>
+                row
+                    ? supabase.from('leaderboard').update(body).eq('id', row.id)
+                    : supabase.from('leaderboard').insert({ ...key, ...body })
+            );
+            if (!res) return;
+            if (res.error && res.error.code === '23505' && !row && attempt === 0) continue;
+            if (res.error) throw res.error;
             return;
         }
     },

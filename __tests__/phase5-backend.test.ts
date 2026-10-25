@@ -1,11 +1,12 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { supabase } from '@/lib/supabase-client';
-import { filterAndRerank, isMissingSchemaError, leaderboard, shouldReplaceScore } from '@/lib/leaderboard';
+import { filterAndRerank, isMissingOnConflictIndexError, isMissingSchemaError, leaderboard, shouldReplaceScore } from '@/lib/leaderboard';
 
 const mockRpc = supabase.rpc as jest.Mock;
 const mockFrom = supabase.from as jest.Mock;
 const MISSING_COL = { code: 'PGRST204', message: "Could not find the 'mistakes' column" };
+const NO_INDEX = { code: '42P10', message: 'there is no unique or exclusion constraint matching the ON CONFLICT specification' };
 const MISSING_FN = { code: 'PGRST202', message: 'Could not find the function' };
 
 const row = (user_id: string, borough: string | null, rank: number) => ({
@@ -26,6 +27,7 @@ function mockLeaderboardTable(existing: object | null, writes: { error: object |
     });
     chain.insert = write('insert');
     chain.update = write('update');
+    chain.upsert = jest.fn((body: object, opts: object) => { calls.push({ op: 'upsert', body, opts } as any); return Promise.resolve(writes.shift() ?? { error: null }); });
     mockFrom.mockReturnValue(chain);
     return calls;
 }
@@ -98,10 +100,58 @@ describe('submitScore puzzle date (offline-sync risk 2)', () => {
         expect(calls[0].body).toMatchObject({ game_date: '2026-10-25' });
         jest.useRealTimers();
     });
-    it('retries as an update after a unique-violation race', async () => {
-        const calls = mockLeaderboardTable(null, [{ error: { code: '23505' } }, { error: null }]);
+    it('retries as an update after a unique-violation race (index-missing fallback)', async () => {
+        const calls = mockLeaderboardTable(null, [{ error: NO_INDEX }, { error: { code: '23505' } }, { error: null }]);
         await leaderboard.submitScore('u', 'London', null, 70, 'connections', { gameDate: '2026-10-20' });
-        expect(calls).toHaveLength(2);
+        expect(calls.map((c) => c.op)).toEqual(['upsert', 'insert', 'insert']);
+    });
+});
+
+describe('submitScore upsert (TUB-275)', () => {
+    it('writes once via upsert on (user_id, game_type, game_date)', async () => {
+        const calls = mockLeaderboardTable(null, [{ error: null }]);
+        await leaderboard.submitScore('u', 'London', 'Camden', 70, 'connections', { result: 'won', mistakes: 1, gameDate: '2026-10-20' });
+        expect(calls).toHaveLength(1);
+        expect(calls[0]).toMatchObject({
+            op: 'upsert',
+            body: { user_id: 'u', game_type: 'connections', game_date: '2026-10-20', score: 70, result: 'won', mistakes: 1 },
+            opts: { onConflict: 'user_id,game_type,game_date' },
+        });
+    });
+    it('upserts over a worse existing row', async () => {
+        const calls = mockLeaderboardTable({ id: 'r', score: 90, result: 'won' }, [{ error: null }]);
+        await leaderboard.submitScore('u', 'London', null, 60, 'connections', { result: 'won' });
+        expect(calls.map((c) => c.op)).toEqual(['upsert']);
+    });
+    it('skips the write when the existing row is better', async () => {
+        const calls = mockLeaderboardTable({ id: 'r', score: 60, result: 'won' }, []);
+        await leaderboard.submitScore('u', 'London', null, 90, 'connections', { result: 'won' });
+        expect(calls).toHaveLength(0);
+    });
+    it('falls back to update when the unique index is missing (42P10)', async () => {
+        const calls = mockLeaderboardTable({ id: 'r', score: 90, result: 'won' }, [{ error: NO_INDEX }, { error: null }]);
+        await leaderboard.submitScore('u', 'London', null, 60, 'connections', { result: 'won' });
+        expect(calls.map((c) => c.op)).toEqual(['upsert', 'update']);
+    });
+    it('falls back to insert when the unique index is missing and no row exists', async () => {
+        const calls = mockLeaderboardTable(null, [{ error: NO_INDEX }, { error: null }]);
+        await leaderboard.submitScore('u', 'London', null, 60, 'connections', { result: 'won' });
+        expect(calls.map((c) => c.op)).toEqual(['upsert', 'insert']);
+        expect(calls[1].body).toMatchObject({ user_id: 'u', score: 60 });
+    });
+    it('uses the legacy payload in the upsert before the result/mistakes migration', async () => {
+        const calls = mockLeaderboardTable(null, [{ error: MISSING_COL }, { error: null }]);
+        await leaderboard.submitScore('u', 'London', null, 70, 'connections', { result: 'won', mistakes: 1 });
+        expect(calls.map((c) => c.op)).toEqual(['upsert', 'upsert']);
+        expect(calls[1].body).not.toHaveProperty('mistakes');
+    });
+    it('throws other write errors', async () => {
+        mockLeaderboardTable(null, [{ error: { code: '42501' } }]);
+        await expect(leaderboard.submitScore('u', 'London', null, 70, 'connections')).rejects.toEqual({ code: '42501' });
+    });
+    it('exports the 42P10 detector', () => {
+        expect(isMissingOnConflictIndexError(NO_INDEX)).toBe(true);
+        expect(isMissingOnConflictIndexError({ code: '23505' })).toBe(false);
     });
 });
 
