@@ -9,6 +9,8 @@ import * as Sentry from '@sentry/react-native';
 import * as Linking from 'expo-linking';
 import { Stack, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { useFonts } from 'expo-font';
+import { gameFonts } from '@/lib/fonts';
 import { useEffect } from 'react';
 import { useColorScheme, Platform } from 'react-native';
 import 'react-native-reanimated';
@@ -54,6 +56,8 @@ async function handleAuthDeepLink(url: string) {
 function RootLayout() {
   const colorScheme = useColorScheme();
   const checkSession = useAuthStore(state => state.checkSession);
+  // Fira Sans (TUB-293). Render once loaded or failed; on failure the system font is used.
+  const [fontsLoaded, fontError] = useFonts(gameFonts);
 
   useEffect(() => {
     const init = async () => {
@@ -98,6 +102,8 @@ function RootLayout() {
 
     return () => subscription.remove();
   }, []);
+
+  if (!fontsLoaded && !fontError) return null;
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
