@@ -42,3 +42,18 @@ describe('SubscribeScreen legal links', () => {
     expect(push).toHaveBeenCalledWith(TERMS_OF_USE_ROUTE);
   });
 });
+
+describe('SubscribeScreen benefits', () => {
+  it('shows the premium benefits carried over from the crossword Upsell', async () => {
+    (useRouter as jest.Mock).mockReturnValue({ push: jest.fn(), replace: jest.fn(), back: jest.fn() });
+    (useAuthStore as unknown as jest.Mock).mockReturnValue({
+      user: { id: 'user1', email: 'test@example.com', isPremium: false },
+      refreshPremiumStatusFromRevenueCat: jest.fn(),
+    });
+    const { getByText, queryByText } = await render(<SubscribeScreen />);
+    expect(getByText(/a new London mini every day/)).toBeTruthy();
+    expect(getByText('Leaderboards for your borough')).toBeTruthy();
+    expect(getByText('Your full puzzle archive')).toBeTruthy();
+    expect(queryByText('Ad-free experience')).toBeNull();
+  });
+});
