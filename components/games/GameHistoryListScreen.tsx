@@ -30,6 +30,8 @@ export interface GameHistoryListScreenProps {
     onPuzzlePress: (navigateKey: string) => void;
     /** Optional per-item accessory renderer (e.g. mini grid preview) */
     renderItemAccessory?: (item: GameHistoryListItem) => React.ReactNode;
+    /** Non-premium: show a lock / 1st Class marker on unplayed puzzles. */
+    isLocked?: boolean;
 }
 
 export function GameHistoryListScreen({
@@ -45,6 +47,7 @@ export function GameHistoryListScreen({
     loadingMore,
     onPuzzlePress,
     renderItemAccessory,
+    isLocked,
 }: GameHistoryListScreenProps) {
 
     const headerIcon = (
@@ -74,6 +77,7 @@ export function GameHistoryListScreen({
             hasWinLoss={hasWinLoss}
             completedBadgeColor={completedBadgeColor}
             renderAccessory={renderItemAccessory?.(item)}
+            isLocked={isLocked}
             onPress={() => onPuzzlePress(item.navigateKey)}
         />
     );

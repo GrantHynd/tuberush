@@ -22,6 +22,8 @@ export interface GamePuzzleListItemProps {
     completedBadgeColor?: string;
     /** Optional accessory rendered after the content, before completion info */
     renderAccessory?: React.ReactNode;
+    /** Premium-only puzzle for a non-premium user: show a lock marker. */
+    isLocked?: boolean;
     onPress: () => void;
 }
 
@@ -39,6 +41,7 @@ export function GamePuzzleListItem({
     hasWinLoss,
     completedBadgeColor,
     renderAccessory,
+    isLocked,
     onPress,
 }: GamePuzzleListItemProps) {
     const badgeColor = isCompleted
@@ -54,7 +57,7 @@ export function GamePuzzleListItem({
             style={styles.container}
             onPress={onPress}
             accessibilityRole="button"
-            accessibilityLabel={`${label}${sublabel ? `, ${sublabel}` : ''}, ${isCompleted ? 'completed' : 'play puzzle'}`}
+            accessibilityLabel={`${label}${sublabel ? `, ${sublabel}` : ''}, ${isCompleted ? 'completed' : isLocked ? 'locked, 1st Class' : 'play puzzle'}`}
         >
             <View style={[styles.dateBadge, { backgroundColor: badgeColor }]}>
                 {isCompleted ? (
@@ -103,6 +106,11 @@ export function GamePuzzleListItem({
                     </Text>
                     {score ? <Text style={styles.score}>{score}</Text> : null}
                 </View>
+            ) : isLocked ? (
+                <View style={styles.lockedBadge} testID="puzzle-locked">
+                    <MaterialIcons name="lock" size={14} color="#111111" />
+                    <Text style={styles.lockedText}>1st Class</Text>
+                </View>
             ) : (
                 <View style={styles.playButton}>
                     <MaterialIcons
@@ -118,6 +126,16 @@ export function GamePuzzleListItem({
 }
 
 const styles = StyleSheet.create({
+    lockedBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        backgroundColor: TFL.yellow,
+        borderRadius: 999,
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+    },
+    lockedText: { fontSize: 12, fontWeight: '700', color: '#111111' },
     container: {
         flexDirection: 'row',
         alignItems: 'center',

@@ -7,7 +7,6 @@ import { GameColors, TFL } from '@/constants/theme';
 import type { GameHistoryListItem } from '@/types/game-history';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback } from 'react';
-import { Alert } from 'react-native';
 
 export default function CrosswordListScreen() {
     const router = useRouter();
@@ -27,17 +26,7 @@ export default function CrosswordListScreen() {
             router.push('/auth');
             return;
         }
-        if (!user.isPremium) {
-            Alert.alert(
-                'Premium Required',
-                'Crossword puzzles are only available for premium members.',
-                [
-                    { text: 'Subscribe', onPress: () => router.push('/subscribe') },
-                    { text: 'Cancel', onPress: () => {} },
-                ]
-            );
-            return;
-        }
+        // Non-premium users land on the in-game Upsell (TUB-301), not a system alert.
         router.push(`/games/play-crossword?puzzleId=${puzzleId}` as never);
     };
 
@@ -60,6 +49,7 @@ export default function CrosswordListScreen() {
             loadingMore={loadingMore}
             onPuzzlePress={handlePuzzlePress}
             renderItemAccessory={renderGridPreview}
+            isLocked={!!user && !user.isPremium}
         />
     );
 }

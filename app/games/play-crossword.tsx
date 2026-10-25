@@ -1,7 +1,9 @@
 import { Crossword } from '@/components/games/Crossword';
 import { CrosswordErrorBoundary } from '@/components/games/CrosswordErrorBoundary';
+import { CrosswordUpsell } from '@/components/games/CrosswordUpsell';
+import { GameHeader } from '@/components/games/GameHeader';
 import { Leaderboard } from '@/components/ui/Leaderboard';
-import { Colors, Layout, Spacing, TFL, Typography } from '@/constants/theme';
+import { Colors, GameColors, Layout, Spacing, TFL, Typography } from '@/constants/theme';
 import { getCustomPuzzle, saveCustomPuzzleScore } from '@/lib/custom-puzzles';
 import { formatScore } from '@/lib/display-utils';
 import { capture } from '@/lib/posthog';
@@ -82,15 +84,8 @@ export default function PlayCrossword() {
         }
 
         if (!user.isPremium) {
+            // TUB-301: the paywall is rendered inline (shared Upsell in the game shell), never an Alert.
             capture('premium_gate_shown', { source: 'crossword_play' });
-            Alert.alert(
-                'Premium Required',
-                'Crossword puzzles are only available for premium members.',
-                [
-                    { text: 'Subscribe', onPress: () => router.push('/subscribe') },
-                    { text: 'Cancel', onPress: () => router.back() },
-                ]
-            );
             return;
         }
 
@@ -286,7 +281,25 @@ export default function PlayCrossword() {
     }, [timer.accumulatedPause]);
 
     if (!user?.isPremium) {
-        return null;
+        return (
+            <SafeAreaView style={styles.container} edges={['top']} testID="crossword-paywall">
+                <GameHeader
+                    title="Crossword"
+                    subtitle="1st Class"
+                    lineColor={GameColors.crossword}
+                    onBack={() => (router.canGoBack?.() ? router.back() : router.replace('/' as never))}
+                />
+                <ScrollView contentContainerStyle={styles.scrollContent}>
+                    <CrosswordUpsell
+                        onSeePremium={() => {
+                            capture('premium_upsell_tapped', { source: 'crossword_play' });
+                            router.push('/subscribe' as never);
+                        }}
+                        onPlayFree={() => router.replace('/games/play-connections' as never)}
+                    />
+                </ScrollView>
+            </SafeAreaView>
+        );
     }
 
     if (puzzleLoading) {
