@@ -1,3 +1,4 @@
+import { openPaywall } from '@/lib/paywall';
 import { Card } from '@/components/ui/Card';
 import { LegalSection } from '@/components/LegalSection';
 import { SyncStatusRow } from '@/components/ui/SyncStatusRow';
@@ -310,8 +311,16 @@ export default function ProfileScreen() {
                             badge={null}
                             valueProp="Crossword leaderboards and more"
                             ctaLabel="See 1st Class"
-                            onPress={() => router.push('/subscribe')}
+                            onPress={() => openPaywall('profile')}
                         />
+                        <TouchableOpacity
+                            testID="profile-subscription-details"
+                            accessibilityRole="link"
+                            onPress={() => router.push('/subscribe')}
+                            style={styles.subscriptionDetails}
+                        >
+                            <Text style={styles.subscriptionDetailsText}>Subscription details & terms</Text>
+                        </TouchableOpacity>
                     </View>
                 ) : null}
             </View>
@@ -418,6 +427,16 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
     upsell: {
         marginTop: Spacing.md,
+    },
+    subscriptionDetails: {
+        alignSelf: 'center',
+        paddingVertical: Spacing.sm,
+        marginTop: Spacing.sm,
+    },
+    subscriptionDetailsText: {
+        color: Colors.light.icon,
+        fontSize: 14,
+        textDecorationLine: 'underline',
     },
     headerGutter: {
         paddingHorizontal: Layout.screenPadding,

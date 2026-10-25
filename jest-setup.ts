@@ -115,6 +115,14 @@ jest.mock("react-native-purchases", () => ({
   },
 }));
 jest.mock("react-native-purchases-ui", () => ({
+  __esModule: true,
+  PAYWALL_RESULT: {
+    NOT_PRESENTED: "NOT_PRESENTED",
+    ERROR: "ERROR",
+    CANCELLED: "CANCELLED",
+    PURCHASED: "PURCHASED",
+    RESTORED: "RESTORED",
+  },
   default: {
     presentPaywall: jest.fn(() => Promise.resolve("CANCELLED")),
     presentPaywallIfNeeded: jest.fn(() => Promise.resolve("NOT_PRESENTED")),

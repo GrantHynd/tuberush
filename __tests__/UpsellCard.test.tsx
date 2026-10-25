@@ -5,6 +5,9 @@ import TrophyScreen from '@/app/(tabs)/trophy';
 import { useAuthStore } from '@/stores/auth-store';
 import { useRouter } from 'expo-router';
 import { useLeaderboardOverview } from '@/hooks/useLeaderboardOverview';
+import { openPaywall } from '@/lib/paywall';
+jest.mock('@/lib/paywall', () => ({ openPaywall: jest.fn(() => Promise.resolve(null)) }));
+
 
 jest.mock('@/stores/auth-store', () => ({ useAuthStore: jest.fn() }));
 jest.mock('@/lib/posthog', () => ({ capture: jest.fn() }));
@@ -57,7 +60,8 @@ describe('Trophy locked Crossword row', () => {
         expect(getByText('See your Crossword rank and the full weekly board')).toBeTruthy();
         expect(getAllByText(/Full board/).length).toBe(1); // Connections only
         await fireEvent.press(getByText('Upgrade to 1st Class'));
-        expect(push).toHaveBeenCalledWith('/subscribe');
+        expect(openPaywall).toHaveBeenCalledWith('trophy');
+    expect(push).not.toHaveBeenCalledWith('/subscribe');
     });
 
     it('premium user sees the normal card', async () => {

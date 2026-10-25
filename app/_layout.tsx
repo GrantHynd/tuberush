@@ -112,7 +112,7 @@ function RootLayout() {
         <Stack.Screen name="auth" options={{ presentation: 'modal', title: 'Sign In' }} />
         <Stack.Screen name="forgot-password" options={{ presentation: 'modal', title: 'Forgot Password' }} />
         <Stack.Screen name="reset-password" options={{ presentation: 'modal', title: 'Reset Password', gestureEnabled: false }} />
-        <Stack.Screen name="subscribe" options={{ presentation: 'modal', title: 'Subscribe' }} />
+        <Stack.Screen name="subscribe" options={{ presentation: 'modal', title: 'Subscription details' }} />
         <Stack.Screen name="privacy" options={{ headerShown: false }} />
         <Stack.Screen name="terms" options={{ headerShown: false }} />
         <Stack.Screen name="games/play-crossword" options={{ headerShown: false }} />

@@ -6,6 +6,9 @@ import { act, fireEvent, render } from '@testing-library/react-native';
 import React from 'react';
 import { Alert, Linking, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
+import { openPaywall } from '@/lib/paywall';
+jest.mock('@/lib/paywall', () => ({ openPaywall: jest.fn(() => Promise.resolve(null)) }));
+
 
 jest.mock('@/stores/auth-store', () => ({
   useAuthStore: jest.fn(),
@@ -414,7 +417,8 @@ describe('ProfileScreen', () => {
       expect(getByText('Crossword leaderboards and more')).toBeTruthy();
       expect(queryByText('Manage subscription')).toBeNull();
       await fireEvent.press(getByText('See 1st Class'));
-      expect(push).toHaveBeenCalledWith('/subscribe');
+      expect(openPaywall).toHaveBeenCalledWith('profile');
+    expect(push).not.toHaveBeenCalledWith('/subscribe');
     });
 
     it('paid user sees Manage subscription row, no upsell', async () => {

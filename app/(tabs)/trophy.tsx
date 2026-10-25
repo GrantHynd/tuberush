@@ -1,3 +1,4 @@
+import { openPaywall } from '@/lib/paywall';
 import { GameSummaryCard } from "@/components/leaderboard/GameSummaryCard";
 import { LiveBadge } from "@/components/leaderboard/LiveBadge";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
@@ -192,7 +193,7 @@ export default function TrophyScreen() {
                       title={game.name}
                       titleIsHeader
                       valueProp={`See your ${game.name.split(" ")[0]} rank and the full weekly board`}
-                      onPress={() => router.push("/subscribe" as never)}
+                      onPress={() => openPaywall('trophy')}
                     />
                   );
                 }

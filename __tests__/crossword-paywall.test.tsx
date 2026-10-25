@@ -6,6 +6,9 @@ import { fireEvent, render } from '@testing-library/react-native';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { Alert } from 'react-native';
+import { openPaywall } from '@/lib/paywall';
+jest.mock('@/lib/paywall', () => ({ openPaywall: jest.fn(() => Promise.resolve(null)) }));
+
 
 jest.mock('@/stores/auth-store', () => ({ useAuthStore: jest.fn() }));
 jest.mock('@/stores/game-store', () => ({ useGameStore: jest.fn() }));
@@ -37,7 +40,8 @@ describe('Crossword paywall (TUB-301)', () => {
         expect(alertSpy).not.toHaveBeenCalled();
 
         await fireEvent.press(getByRole('button', { name: 'See Premium' }));
-        expect(router.push).toHaveBeenCalledWith('/subscribe');
+        expect(openPaywall).toHaveBeenCalledWith('crossword_play');
+    expect(router.push).not.toHaveBeenCalledWith('/subscribe');
 
         await fireEvent.press(getByTestId('crossword-upsell-free'));
         expect(router.replace).toHaveBeenCalledWith('/games/play-connections');

@@ -1,3 +1,4 @@
+import { openPaywall } from '@/lib/paywall';
 import { CrosswordListGridPreview } from '@/components/games/CrosswordListGridPreview';
 import { GameHistoryListScreen } from '@/components/games/GameHistoryListScreen';
 import { crosswordGameHistoryConfig } from '@/config/gameHistoryConfigs';
@@ -29,7 +30,7 @@ export default function CrosswordListScreen() {
         // Locked puzzles go straight to the single purchase screen. The in-game
         // Upsell (TUB-301) stays as the fallback for deep links into play-crossword.
         if (!user.isPremium) {
-            router.push('/subscribe' as never);
+            openPaywall('crossword_list');
             return;
         }
         router.push(`/games/play-crossword?puzzleId=${puzzleId}` as never);
