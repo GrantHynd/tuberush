@@ -1,6 +1,7 @@
 name: CI
 
 on:
+  workflow_dispatch:
   push:
     branches: [main]
     paths-ignore:
@@ -107,8 +108,9 @@ jobs:
   e2e-test:
     name: E2E Tests (iOS)
     runs-on: macos-latest
-    timeout-minutes: 30
-    if: github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'e2e-test')
+    timeout-minutes: 60
+    # Slow (~30+ min native build). Run only on demand or with the e2e-test PR label.
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.labels.*.name, 'e2e-test')
     env:
       EXPO_PUBLIC_SUPABASE_URL: "https://example.supabase.co"
       EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "mock-key"
