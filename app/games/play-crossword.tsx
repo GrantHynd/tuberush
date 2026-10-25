@@ -4,6 +4,7 @@ import { CrosswordUpsell } from '@/components/games/CrosswordUpsell';
 import { GameHeader } from '@/components/game-ui/GameHeader';
 import { FeedbackToast } from '@/components/game-ui/FeedbackToast';
 import { announce } from '@/lib/a11y';
+import { wrongLettersMessage } from '@/lib/crossword-feedback';
 import { Leaderboard } from '@/components/ui/Leaderboard';
 import { Colors, GameColors, Layout, Spacing, TFL, Typography } from '@/constants/theme';
 import { getCustomPuzzle, saveCustomPuzzleScore } from '@/lib/custom-puzzles';
@@ -22,9 +23,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
-    KeyboardAvoidingView,
     Modal,
-    Platform,
     ScrollView,
     Share,
     StyleSheet,
@@ -32,7 +31,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 /** Format a YYYY-MM-DD date string as "15 Mar 2026" */
 function formatPuzzleDate(dateStr: string): string {
@@ -59,6 +58,9 @@ export default function PlayCrossword() {
     const [toast, setToast] = useState<{ id: number; message: string } | null>(null);
     const [loading, setLoading] = useState(true);
     const [showLeaderboard, setShowLeaderboard] = useState(false);
+    // TUB-299: cells marked wrong by the last Check; a cell's mark clears when it is edited.
+    const [errorCells, setErrorCells] = useState<ReadonlySet<string>>(() => new Set());
+    const insets = useSafeAreaInsets();
 
     // Load custom puzzle from Supabase
     useEffect(() => {
@@ -136,6 +138,13 @@ export default function PlayCrossword() {
         if (!gameState) return;
 
         const state = gameState.state as CrosswordState;
+        const editedKey = `${row}-${col}`;
+        setErrorCells((prev) => {
+            if (!prev.has(editedKey)) return prev;
+            const next = new Set(prev);
+            next.delete(editedKey);
+            return next;
+        });
         const newAnswers = {
             ...state.userAnswers,
             [`${row}-${col}`]: value,
@@ -181,6 +190,7 @@ export default function PlayCrossword() {
         const grid = state.grid;
         let allCorrect = true;
         let incorrectCells = 0;
+        const wrongKeys = new Set<string>();
         for (let r = 0; r < grid.length; r++) {
             for (let c = 0; c < grid[r].length; c++) {
                 const cell = grid[r][c];
@@ -191,6 +201,7 @@ export default function PlayCrossword() {
                     if (userAns !== correct) {
                         allCorrect = false;
                         incorrectCells += 1;
+                        wrongKeys.add(key);
                     }
                 }
             }
@@ -268,9 +279,11 @@ export default function PlayCrossword() {
         } else {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
             // TUB-295: non-blocking toast (announced to VoiceOver) instead of a blocking Alert.
+            // TUB-299: mark the wrong cells and say how many; play continues.
+            setErrorCells(wrongKeys);
             setToast((prev) => ({
                 id: (prev?.id ?? 0) + 1,
-                message: "Not quite. There's a wrong answer somewhere. Keep going!",
+                message: wrongLettersMessage(incorrectCells),
             }));
         }
     }, [gameState, saveGame, user, puzzle, isCustomPuzzle, customPuzzleId, gameDate]);
@@ -393,121 +406,74 @@ export default function PlayCrossword() {
         } catch { /* user cancelled */ }
     };
 
+    const goBack = () => (router.canGoBack?.() ? router.back() : router.replace('/' as never));
+
     return (
         <SafeAreaView style={styles.container} edges={['top']}>
-            {/* Header */}
-            <View style={styles.header}>
-                <TouchableOpacity
-                    onPress={() => router.back()}
-                    style={styles.backButton}
-                    accessibilityRole="button"
-                    accessibilityLabel="Go back"
-                >
-                    <MaterialIcons name="arrow-back" size={24} color={Colors.light.text} />
-                </TouchableOpacity>
-
-                <View style={styles.headerCenter}>
-                    <Text style={styles.headerTitle}>Crossword</Text>
-                    <View style={styles.badge}>
-                        <Text style={styles.badgeText}>{isCustomPuzzle ? 'Custom' : '1st Class'}</Text>
-                    </View>
-                </View>
-
-                <View style={styles.headerRight}>
-                    {state.startTime && !isCompleted && (
-                        <Text style={styles.headerTimer}>{timer.formatted}</Text>
-                    )}
-                    <Text style={styles.headerDate}>
-                        {isCustomPuzzle ? 'Custom Puzzle' : formatPuzzleDate(gameDate ?? puzzle.date)}
-                    </Text>
-                </View>
-            </View>
+            <GameHeader
+                title="Crossword"
+                subtitle={`${isCustomPuzzle ? 'Custom' : '1st Class'} · ${isCustomPuzzle ? 'Custom Puzzle' : formatPuzzleDate(gameDate ?? puzzle.date)}`}
+                lineColor={GameColors.crossword}
+                onBack={goBack}
+                right={
+                    state.startTime && !isCompleted ? (
+                        <Text style={styles.headerTimer} accessibilityLabel={`Time ${timer.formatted}`}>
+                            {timer.formatted}
+                        </Text>
+                    ) : undefined
+                }
+            />
 
             <CrosswordErrorBoundary onReset={() => router.back()}>
-            <KeyboardAvoidingView
-                style={styles.scroll}
-                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-                keyboardVerticalOffset={0}
-            >
+            {!isCompleted ? (
+                // TUB-298: no ScrollView / system keyboard — grid, clue bar and in-app keyboard fill the screen.
+                <Crossword
+                    puzzle={puzzle}
+                    gameState={state}
+                    onCellChange={handleCellChange}
+                    onCheck={checkAnswers}
+                    checkDisabled={!isFullyFilled}
+                    errorCells={errorCells}
+                    bottomInset={insets.bottom}
+                />
+            ) : (
                 <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
                     <Crossword
                         puzzle={puzzle}
                         gameState={state}
                         onCellChange={handleCellChange}
-                        disabled={isCompleted}
+                        disabled
                     />
-
-                    {!isCompleted && (
-                        <View style={styles.checkSection}>
-                            <TouchableOpacity
-                                style={[
-                                    styles.checkButton,
-                                    !isFullyFilled && styles.checkButtonDisabled,
-                                ]}
-                                onPress={checkAnswers}
-                                disabled={!isFullyFilled}
-                                accessibilityRole="button"
-                                accessibilityLabel="Check answers"
-                                accessibilityState={{ disabled: !isFullyFilled }}
-                                accessibilityHint={isFullyFilled ? undefined : 'Fill all squares to check'}
-                            >
-                                <Text
-                                    style={[
-                                        styles.checkButtonText,
-                                        !isFullyFilled && styles.checkButtonTextDisabled,
-                                    ]}
-                                >
-                                    Check
-                                </Text>
-                            </TouchableOpacity>
-                            {!isFullyFilled && (
-                                <Text style={styles.checkHelper}>Fill all squares to check</Text>
-                            )}
-                        </View>
-                    )}
-
-                    {isCompleted && (
-                        <View style={styles.gameOverContainer}>
-                            <Text style={styles.gameOverTitle}>Well done!</Text>
-                            {completionTimeSecs != null && (
-                                <Text style={styles.gameOverTime}>
-                                    Solved in {formatScore(completionTimeSecs)}
-                                </Text>
-                            )}
-                            <View style={styles.gameOverActions}>
-                                {!isCustomPuzzle && (
-                                    <TouchableOpacity
-                                        style={styles.gameOverButton}
-                                        onPress={() => setShowLeaderboard(true)}
-                                        accessibilityRole="button"
-                                        accessibilityLabel="View leaderboard"
-                                    >
-                                        <Text style={styles.gameOverButtonText}>Leaderboard</Text>
-                                    </TouchableOpacity>
-                                )}
+                    <View style={styles.gameOverContainer}>
+                        <Text style={styles.gameOverTitle}>Well done!</Text>
+                        {completionTimeSecs != null && (
+                            <Text style={styles.gameOverTime}>
+                                Solved in {formatScore(completionTimeSecs)}
+                            </Text>
+                        )}
+                        <View style={styles.gameOverActions}>
+                            {!isCustomPuzzle && (
                                 <TouchableOpacity
                                     style={styles.gameOverButton}
-                                    onPress={handleShare}
+                                    onPress={() => setShowLeaderboard(true)}
                                     accessibilityRole="button"
-                                    accessibilityLabel="Share result"
+                                    accessibilityLabel="View leaderboard"
                                 >
-                                    <Text style={styles.gameOverButtonText}>Share</Text>
+                                    <Text style={styles.gameOverButtonText}>Leaderboard</Text>
                                 </TouchableOpacity>
-                                <TouchableOpacity
-                                    style={[styles.gameOverButton, styles.gameOverButtonPrimary]}
-                                    onPress={() => router.back()}
-                                    accessibilityRole="button"
-                                    accessibilityLabel={isCustomPuzzle ? "Return to puzzles" : "Return home"}
-                                >
-                                    <Text style={[styles.gameOverButtonText, styles.gameOverButtonTextPrimary]}>
-                                        {isCustomPuzzle ? 'Back to Puzzles' : 'Home'}
-                                    </Text>
-                                </TouchableOpacity>
-                            </View>
+                            )}
+                            <TouchableOpacity
+                                style={styles.gameOverButton}
+                                onPress={handleShare}
+                                accessibilityRole="button"
+                                accessibilityLabel="Share result"
+                            >
+                                <Text style={styles.gameOverButtonText}>Share</Text>
+                            </TouchableOpacity>
                         </View>
-                    )}
+                    </View>
                 </ScrollView>
-            </KeyboardAvoidingView>
+            )}
             </CrosswordErrorBoundary>
 
             {!isCustomPuzzle && (
