@@ -1,7 +1,7 @@
 import { Crossword } from '@/components/games/Crossword';
 import { CrosswordErrorBoundary } from '@/components/games/CrosswordErrorBoundary';
 import { CrosswordUpsell } from '@/components/games/CrosswordUpsell';
-import { GameHeader } from '@/components/games/GameHeader';
+import { GameHeader } from '@/components/game-ui/GameHeader';
 import { Leaderboard } from '@/components/ui/Leaderboard';
 import { Colors, GameColors, Layout, Spacing, TFL, Typography } from '@/constants/theme';
 import { getCustomPuzzle, saveCustomPuzzleScore } from '@/lib/custom-puzzles';

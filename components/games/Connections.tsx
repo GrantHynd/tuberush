@@ -591,7 +591,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.light.border,
   },
   buttonTextInactive: {
-    color: TFL.grey.medium,
+    color: TFL.grey.dark,
   },
   buttonFilled: {
     paddingVertical: 12,

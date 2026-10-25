@@ -78,6 +78,6 @@ const styles = StyleSheet.create({
         color: TFL.blue,
     },
     navTextDisabled: {
-        color: TFL.grey.medium,
+        color: TFL.grey.dark,
     },
 });
