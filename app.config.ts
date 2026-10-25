@@ -64,6 +64,12 @@ export default {
     scheme: 'tuberushv2',
     userInterfaceStyle: 'automatic',
     newArchEnabled: true,
+    runtimeVersion: {
+      policy: 'fingerprint',
+    },
+    updates: {
+      url: 'https://u.expo.dev/eff6b681-aaf5-4a18-9058-ec904b4a2a5e',
+    },
     ios: {
       supportsTablet: true,
       bundleIdentifier: 'com.tuberush.v2',
