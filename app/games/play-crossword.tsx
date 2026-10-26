@@ -309,9 +309,26 @@ export default function PlayCrossword() {
         puzzleId: '', grid: [], clues: { across: {}, down: {} },
         userAnswers: {}, completed: false,
     });
+    const latestGameRef = React.useRef<GameState | null>(null);
+    useEffect(() => {
+        latestGameRef.current = gameState;
+    }, [gameState]);
     useEffect(() => {
         timerRef.current.accumulatedPause = timer.accumulatedPause;
-    }, [timer.accumulatedPause]);
+        // Persist pause time as soon as it changes, not on the next keystroke, so a kill
+        // right after backgrounding doesn't lose it (TUB-290).
+        const game = latestGameRef.current;
+        const state = game?.state as CrosswordState | undefined;
+        if (!game || !state || state.completed || !state.startTime) return;
+        if ((state.accumulatedPause ?? 0) === timer.accumulatedPause) return;
+        const updatedGame: GameState = {
+            ...game,
+            state: { ...state, accumulatedPause: timer.accumulatedPause },
+            lastUpdated: new Date().toISOString(),
+        };
+        setGameState(updatedGame);
+        saveGame(updatedGame);
+    }, [timer.accumulatedPause, saveGame]);
 
     if (!user?.isPremium) {
         return (
