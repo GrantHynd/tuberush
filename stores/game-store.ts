@@ -31,7 +31,13 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
     saveGame: async (gameState: GameState) => {
         // Optimistic update
         set({ currentGame: gameState });
-        await offlineSyncManager.saveGameState(gameState);
+        try {
+            await offlineSyncManager.saveGameState(gameState);
+        } catch (error) {
+            // e.g. device storage full (TUB-289). The in-memory game keeps going; don't
+            // surface an unhandled rejection from the game screens.
+            console.error('Error saving game:', error);
+        }
     },
 
     createNewGame: (userId: string, gameType: GameType, gameId?: string, crosswordPuzzle?: CrosswordPuzzle) => {

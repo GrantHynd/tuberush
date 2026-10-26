@@ -19,7 +19,8 @@ const mockFrom = supabase.from as jest.Mock;
 function mockGames(result: { data: Row[] | null; error: object | null }) {
     const chain: Record<string, jest.Mock> = {};
     for (const m of ['select', 'eq', 'gte', 'lte']) chain[m] = jest.fn(() => chain);
-    chain.order = jest.fn(() => Promise.resolve(result));
+    chain.order = jest.fn(() => chain);
+    chain.abortSignal = jest.fn(() => Promise.resolve(result));
     mockFrom.mockReturnValue(chain);
     return chain;
 }
@@ -94,5 +95,23 @@ describe('startDailyGamesPrefetch', () => {
         expect(mockFrom).toHaveBeenCalledTimes(6);
         stop();
         appSpy.mockRestore();
+    });
+});
+
+describe('puzzle fetch timeout (TUB-285)', () => {
+    it('falls back to the cache when the network hangs', async () => {
+        const { getDailyGame, PUZZLE_FETCH_TIMEOUT_MS } = require('@/lib/daily-games');
+        await AsyncStorage.setItem('games_cache_v3_connections', JSON.stringify({
+            games: [row('2026-10-25', 'cached')], fetchedAt: Date.now(),
+        }));
+        const chain = mockGames({ data: null, error: null });
+        chain.abortSignal = jest.fn((signal: AbortSignal) => new Promise(resolve => {
+            signal.addEventListener('abort', () => resolve({ data: null, error: { message: 'aborted' } }));
+        }));
+        const pending = getDailyGame('connections');
+        await Promise.resolve();
+        jest.advanceTimersByTime(PUZZLE_FETCH_TIMEOUT_MS);
+        await expect(pending).resolves.toEqual({ date: '2026-10-25', tag: 'cached' });
+        expect(chain.abortSignal).toHaveBeenCalled();
     });
 });

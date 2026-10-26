@@ -27,6 +27,18 @@ interface CacheEntry {
   fetchedAt: number;
 }
 
+/** Puzzle fetches give up after this so weak connections fall back to the cache quickly (TUB-285). */
+export const PUZZLE_FETCH_TIMEOUT_MS = 3000;
+
+/** Abort signal that fires after PUZZLE_FETCH_TIMEOUT_MS. */
+function fetchTimeoutSignal(): AbortSignal {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), PUZZLE_FETCH_TIMEOUT_MS);
+  // Don't keep Node (tests) alive for the timer.
+  (timer as { unref?: () => void }).unref?.();
+  return controller.signal;
+}
+
 function cacheKey(gameType: GameType): string {
   return `${CACHE_KEY_PREFIX}${gameType}`;
 }
@@ -120,7 +132,8 @@ async function fetchFromSupabase(
       .eq('is_published', true)
       .gte('game_date', today)
       .lte('game_date', futureStr)
-      .order('game_date', { ascending: true });
+      .order('game_date', { ascending: true })
+      .abortSignal(fetchTimeoutSignal());
 
     if (error || !data) return null;
     return data as DailyGameRow[];
@@ -150,7 +163,8 @@ async function fetchRecentAndUpcoming(
       .eq('is_published', true)
       .gte('game_date', pastStr)
       .lte('game_date', futureStr)
-      .order('game_date', { ascending: false });
+      .order('game_date', { ascending: false })
+      .abortSignal(fetchTimeoutSignal());
 
     if (error || !data) return null;
     return data as DailyGameRow[];
@@ -260,6 +274,7 @@ export async function getGameByDate(
       .eq('game_type', gameType)
       .eq('game_date', date)
       .eq('is_published', true)
+      .abortSignal(fetchTimeoutSignal())
       .maybeSingle();
 
     if (!error && data) {
@@ -292,6 +307,7 @@ export async function getCrosswordByPuzzleId(
       .eq('game_type', 'crossword')
       .eq('is_published', true)
       .contains('puzzle_data', { id: puzzleId })
+      .abortSignal(fetchTimeoutSignal())
       .maybeSingle();
 
     if (!error && data?.puzzle_data) {
