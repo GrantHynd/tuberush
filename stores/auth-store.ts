@@ -3,6 +3,7 @@ import { userFromProfile, type ProfileRow } from '@/lib/profile';
 import { setUser as setSentryUser } from '@/lib/sentry';
 import { hasActiveEntitlement, logInRevenueCat, logOutRevenueCat } from '@/lib/revenuecat';
 import { StorageManager } from '@/lib/storage-manager';
+import { offlineSyncManager } from '@/lib/offline-sync-manager';
 import { APP_SCHEME } from '@/constants/Games';
 import { supabase } from '@/lib/supabase-client';
 import { useGameStore } from '@/stores/game-store';
@@ -10,6 +11,9 @@ import type { User } from '@/types/game';
 import type { Session } from '@supabase/supabase-js';
 import { Platform } from 'react-native';
 import { create } from 'zustand';
+
+/** Max wait for pending uploads before sign-out clears them locally. */
+const SIGN_OUT_FLUSH_TIMEOUT_MS = 3000;
 
 /**
  * Resolve premium from RevenueCat only.
@@ -178,10 +182,30 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         } catch {
             // Ignore RevenueCat logout errors
         }
+        // Upload pending progress while still authenticated (best effort, bounded), then
+        // drop this player's local games and queue so the next account on this device
+        // doesn't replay them (TUB-281).
+        let flushTimer: ReturnType<typeof setTimeout> | undefined;
+        try {
+            await Promise.race([
+                offlineSyncManager.forceSync(),
+                new Promise((resolve) => { flushTimer = setTimeout(resolve, SIGN_OUT_FLUSH_TIMEOUT_MS); }),
+            ]);
+        } catch {
+            // Flush is best-effort
+        } finally {
+            clearTimeout(flushTimer);
+        }
         capture('sign_out');
         resetIdentity();
         syncSentryUser(null);
         await supabase.auth.signOut();
+        try {
+            await StorageManager.clearLocalAccountData();
+        } catch {
+            // Local cleanup is best-effort
+        }
+        useGameStore.setState({ currentGame: null, gameHistory: [] });
         set({ user: null, session: null });
     },
 
