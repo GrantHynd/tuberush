@@ -10,11 +10,6 @@ export interface FeedbackToastProps {
     /** Null hides the toast. A new `id` restarts the timer. */
     message: string | null;
     id?: number;
-    tone?: 'error' | 'success';
-    /** Tag colour for success (game line colour). */
-    lineColor?: string;
-    /** Tag text; defaults to "MIND THE GAP" for errors. */
-    tag?: string;
     onHide?: () => void;
     duration?: number;
     testID?: string;
@@ -24,9 +19,6 @@ export interface FeedbackToastProps {
 export function FeedbackToast({
     message,
     id,
-    tone = 'error',
-    lineColor = StateColors.selected,
-    tag,
     onHide,
     duration = TOAST_DURATION_MS,
     testID = 'feedback-toast',
@@ -40,11 +32,10 @@ export function FeedbackToast({
         reduceRef.current = reduceMotion;
         onHideRef.current = onHide;
     });
-    const tagText = tag ?? (tone === 'error' ? 'MIND THE GAP' : 'ON TIME');
 
     useEffect(() => {
         if (!message) return;
-        announce(`${tone === 'error' ? 'Mind the gap. ' : ''}${message}`);
+        announce(`Mind the gap. ${message}`);
         opacity.setValue(0);
         translateY.setValue(reduceRef.current ? 0 : 8);
         Animated.parallel([
@@ -57,7 +48,7 @@ export function FeedbackToast({
             );
         }, duration);
         return () => clearTimeout(t);
-    }, [message, id, duration, opacity, translateY, tone]);
+    }, [message, id, duration, opacity, translateY]);
 
     if (!message) return null;
     return (
@@ -67,17 +58,9 @@ export function FeedbackToast({
             accessibilityLiveRegion="polite"
             style={[styles.toast, { opacity, transform: [{ translateY }] }]}
         >
-            <View
-                style={[
-                    styles.tag,
-                    tone === 'error' ? styles.tagError : { backgroundColor: lineColor },
-                ]}
-            >
-                <Text
-                    style={[styles.tagText, tone === 'success' && styles.tagTextLight]}
-                    maxFontSizeMultiplier={FontScaleCap.chrome}
-                >
-                    {tagText}
+            <View style={[styles.tag, styles.tagError]}>
+                <Text style={styles.tagText} maxFontSizeMultiplier={FontScaleCap.chrome}>
+                    MIND THE GAP
                 </Text>
             </View>
             <Text style={styles.message} maxFontSizeMultiplier={FontScaleCap.chrome}>
@@ -105,6 +88,5 @@ const styles = StyleSheet.create({
     tag: { borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 },
     tagError: { backgroundColor: StateColors.premium },
     tagText: { ...GameType.label, color: '#111111', letterSpacing: 0.5, fontWeight: '700' },
-    tagTextLight: { color: '#FFFFFF' },
     message: { ...GameType.body, fontSize: 15, lineHeight: 20, color: '#FFFFFF', flex: 1 },
 });

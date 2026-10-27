@@ -1,11 +1,10 @@
-import { ConnectionsPuzzle } from "@/constants/ConnectionsData";
 import { FontFamily, FontScaleCap, GameType, LineColors, Size, Spacing, StateColors } from "@/constants/theme";
 import { FeedbackToast } from "@/components/game-ui/FeedbackToast";
 import { LineRail } from "@/components/game-ui/LineRail";
 import { Tile, type TileState } from "@/components/game-ui/Tile";
 import { useReduceMotion } from "@/hooks/useReduceMotion";
 import { announce } from "@/lib/a11y";
-import { ConnectionsState } from "@/types/game";
+import { ConnectionsPuzzle, ConnectionsState } from "@/types/game";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import * as Haptics from "expo-haptics";
 import React, { useCallback, useEffect, useRef, useState } from "react";

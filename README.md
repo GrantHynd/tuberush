@@ -72,13 +72,13 @@ tuberush-v2/
 │   ├── games/               # Connections, Crossword, grid previews, error boundary, history list
 │   ├── home/                # PuzzleCard, SectionHeader, StatCard
 │   ├── leaderboard/         # Avatar, BoroughList, Podium, RankedList, WeekNavigator, etc.
-│   └── ui/                  # GameCard, GameTypeBadge, PremiumBadge, SyncIndicator, etc.
+│   └── ui/                  # GameTypeBadge, etc.
 ├── hooks/                    # useAnalytics, useGameHistory, useLeaderboardOverview,
 │                             # useBoroughRank, useCrosswordTimer, usePuzzleCarousel, ...
 ├── lib/                      # supabase-client, custom-puzzles, daily-games, leaderboard,
 │                             # offline-sync-manager, storage-manager, posthog, revenuecat
 ├── stores/                   # Zustand: auth-store, game-store
-├── constants/                 # Games, ConnectionsData, CrosswordData, Boroughs, UKCities, theme
+├── constants/                 # Games, Boroughs, UKCities, theme
 ├── types/                    # TypeScript types (game.ts, database.types.ts in lib/)
 ├── lambda/generate-connections/  # AWS Lambda (SAM): nightly Connections puzzle
 ├── lambda/generate-crossword/    # AWS Lambda (SAM): nightly crossword (grid solver + Claude clues)

@@ -1,7 +1,6 @@
 /** TUB-295: accessibility pass — feedback has a VoiceOver equivalent, selection is not colour-only. */
 import { Connections } from '@/components/games/Connections';
-import type { ConnectionsPuzzle } from '@/constants/ConnectionsData';
-import type { ConnectionsState } from '@/types/game';
+import type { ConnectionsPuzzle, ConnectionsState } from '@/types/game';
 import { act, fireEvent, render } from '@testing-library/react-native';
 import React from 'react';
 import { AccessibilityInfo } from 'react-native';
