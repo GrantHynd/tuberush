@@ -1,5 +1,4 @@
-import type { ConnectionsPuzzle } from '@/constants/ConnectionsData';
-import type { CrosswordPuzzle } from '@/types/game';
+import type { ConnectionsPuzzle, CrosswordPuzzle } from '@/types/game';
 import { supabase } from './supabase-client';
 
 export interface CustomPuzzleRow {

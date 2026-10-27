@@ -1,5 +1,4 @@
 import { CROSSWORD_9X9_A } from '@/constants/fixtures/crossword-9x9-a';
-import { CROSSWORD_DATA } from '@/constants/CrosswordData';
 import { playableOutline } from '@/components/games/Crossword';
 
 function clueGivesAnswer(clue: string, answer: string): boolean {
@@ -14,13 +13,12 @@ function clueGivesAnswer(clue: string, answer: string): boolean {
 describe('9x9-A QA fixture', () => {
     const puzzle = CROSSWORD_9X9_A;
 
-    it('matches the 9x9-A mask and is not a production daily', () => {
+    it('matches the 9x9-A mask', () => {
         expect(puzzle.rows).toBe(9);
         expect(puzzle.cols).toBe(9);
         const blacks = puzzle.grid.flat().filter((cell) => cell.isBlack).length;
         // 9x9-A mask: 35 blocked cells of 81.
         expect(blacks).toBe(35);
-        expect(CROSSWORD_DATA.some((p) => p.id === puzzle.id)).toBe(false);
     });
 
     it('numbers the fifteen slots and keeps every crossing', () => {

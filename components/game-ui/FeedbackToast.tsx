@@ -11,11 +11,6 @@ export interface FeedbackToastProps {
     /** Null hides the toast. A new `id` restarts the timer. */
     message: string | null;
     id?: number;
-    tone?: 'error' | 'success';
-    /** Tag colour for success (game accent). */
-    lineColor?: string;
-    /** Tag text; defaults to "NOT QUITE" for errors. */
-    tag?: string;
     onHide?: () => void;
     duration?: number;
     testID?: string;
@@ -25,15 +20,11 @@ export interface FeedbackToastProps {
 export function FeedbackToast({
     message,
     id,
-    tone = 'error',
-    lineColor,
-    tag,
     onHide,
     duration = TOAST_DURATION_MS,
     testID = 'feedback-toast',
 }: FeedbackToastProps) {
     const { colors } = useTheme();
-    const accent = lineColor ?? colors.primary;
     const reduceMotion = useReduceMotion();
     const [opacity] = useState(() => new Animated.Value(0));
     const [translateY] = useState(() => new Animated.Value(8));
@@ -43,7 +34,6 @@ export function FeedbackToast({
         reduceRef.current = reduceMotion;
         onHideRef.current = onHide;
     });
-    const tagText = tag ?? (tone === 'error' ? 'NOT QUITE' : 'ON TIME');
     const styles = useMemo(
         () => makeStyles(colors.toast, colors.toastText, colors.onPrimary, colors.text, colors.surface, colors.border),
         [colors],
@@ -51,7 +41,7 @@ export function FeedbackToast({
 
     useEffect(() => {
         if (!message) return;
-        announce(`${tone === 'error' ? 'Not quite. ' : ''}${message}`);
+        announce(`Not quite. ${message}`);
         opacity.setValue(0);
         translateY.setValue(reduceRef.current ? 0 : 8);
         Animated.parallel([
@@ -64,7 +54,7 @@ export function FeedbackToast({
             );
         }, duration);
         return () => clearTimeout(t);
-    }, [message, id, duration, opacity, translateY, tone]);
+    }, [message, id, duration, opacity, translateY]);
 
     if (!message) return null;
     return (
@@ -74,17 +64,9 @@ export function FeedbackToast({
             accessibilityLiveRegion="polite"
             style={[styles.toast, { opacity, transform: [{ translateY }] }]}
         >
-            <View
-                style={[
-                    styles.tag,
-                    tone === 'error' ? styles.tagError : { backgroundColor: accent },
-                ]}
-            >
-                <Text
-                    style={[styles.tagText, tone === 'success' && { color: colors.onPrimary }]}
-                    maxFontSizeMultiplier={FontScaleCap.chrome}
-                >
-                    {tagText}
+            <View style={[styles.tag, styles.tagError]}>
+                <Text style={styles.tagText} maxFontSizeMultiplier={FontScaleCap.chrome}>
+                    NOT QUITE
                 </Text>
             </View>
             <Text style={styles.message} maxFontSizeMultiplier={FontScaleCap.chrome}>

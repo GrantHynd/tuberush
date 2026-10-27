@@ -1,6 +1,5 @@
 import { Connections } from "@/components/games/Connections";
-import { ConnectionsPuzzle } from "@/constants/ConnectionsData";
-import { ConnectionsState } from "@/types/game";
+import { ConnectionsPuzzle, ConnectionsState } from "@/types/game";
 import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 import * as Haptics from "expo-haptics";
 import React from "react";

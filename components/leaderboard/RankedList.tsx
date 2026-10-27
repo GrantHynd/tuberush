@@ -122,16 +122,6 @@ export function RankedList({
                         compact
                     />
                 ))}
-                {userEntryOutsideList && (
-                    <>
-                        <GapIndicator />
-                        <EntryRow
-                            item={userEntryOutsideList}
-                            isMe
-                            compact
-                        />
-                    </>
-                )}
             </View>
         );
     }
