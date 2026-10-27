@@ -13,8 +13,7 @@
     "type-check": "tsc --noEmit",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage",
-    "verify-build": "bash scripts/verify-build.sh"
+    "test:coverage": "jest --coverage"
   },
   "dependencies": {
     "@expo-google-fonts/fira-sans": "^0.4.1",

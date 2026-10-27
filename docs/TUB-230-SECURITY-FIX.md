@@ -57,7 +57,6 @@ The fix involves three layers of protection:
 ### Display Utilities
 - `lib/display-utils.ts`
   - Modified `getDisplayName()` to accept username directly
-  - Added email fallback for backwards compatibility
 
 ### UI Components
 - `components/leaderboard/RankedList.tsx`

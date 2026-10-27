@@ -59,30 +59,6 @@ Puzzles must satisfy these rules (enforced by `__tests__/CrosswordData.test.ts`)
 5. **Answer consistency**: Each clue's `answer` matches the letters in the grid at its position
 6. **Numbered cells**: Every clue number appears as a `number` on a grid cell; the cell at `(row, col)` for each clue has `number === clue.number`
 
-## How to Add Puzzles
+## Where puzzles live
 
-1. **Design the grid**: Decide rows, cols, and black square positions
-2. **Build the grid**: Create a 2D array of `CrosswordCell`. For each white cell, set `letter`, `isBlack: false`, and `number` on the first cell of each word. For black cells, set `letter: null`, `isBlack: true`
-3. **Add clues**: For each word, add a `CrosswordClue` with `number`, `clue`, `answer` (uppercase), `row`, `col`, and `length`. Across clues extend right; down clues extend down
-4. **Append to data**: Add the puzzle object to `CROSSWORD_DATA` in `constants/CrosswordData.ts`
-5. **Assign a date**: Use `YYYY-MM-DD` for `date` (e.g. `'2025-03-16'` for a specific day, or `new Date().toISOString().split('T')[0]` for today)
-6. **Verify**: Run `npm test -- CrosswordData.test` to ensure validation passes
-
-## Storage and Delivery
-
-### Current (MVP)
-
-Puzzles are **bundled locally** in `constants/CrosswordData.ts`. There is no backend or remote fetch for puzzle content.
-
-- **API**: `getDailyPuzzle()` returns the puzzle for today's date, or the first puzzle as fallback
-- **API**: `getPuzzleById(id)` returns a puzzle by ID, or `undefined` if not found
-- **Benefits**: No backend complexity, works offline, fast load
-
-### Future Option (Remote)
-
-If remote delivery is needed later:
-
-1. Create a Supabase table `crossword_puzzles` with columns: `id`, `date`, `title`, `rows`, `cols`, `grid` (JSONB), `clues` (JSONB)
-2. Add RLS policy allowing public `SELECT` for puzzle content (read-only)
-3. Game progress continues to use the existing `game_states` table
-4. Update `usePuzzle` and `getDailyPuzzle`/`getPuzzleById` to fetch from Supabase when remote is enabled
+Published crossword puzzles are rows in the `games` table (`game_type = 'crossword'`). `lib/daily-games.ts` loads them from the network, then from the AsyncStorage cache. Nightly generation is `lambda/generate-crossword`. `constants/CrosswordData.ts` is a bundled sample covered by `__tests__/CrosswordData.test.ts`. It is not how puzzles are delivered.
