@@ -227,6 +227,13 @@ export interface Database {
           player_count: number;
         }[];
       };
+      get_profile_usernames: {
+        Args: { p_ids: string[] };
+        Returns: {
+          id: string;
+          username: string | null;
+        }[];
+      };
     };
     Enums: Record<string, never>;
   };
