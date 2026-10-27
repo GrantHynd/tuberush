@@ -26,7 +26,7 @@ Sign-in and session restore do the same three steps:
 - A borough that is not in `constants/Boroughs.ts` is dropped.
 - `isPremium` is the RevenueCat result. Web is always free. A failed lookup is free, not a crash.
 
-Premium is not stored on the profile. `refreshPremiumStatus` and `refreshPremiumStatusFromRevenueCat` re-read it. See `lib/revenuecat.ts`.
+Premium is not stored on the profile. `refreshPremiumStatusFromRevenueCat` re-reads it after a purchase. See `lib/revenuecat.ts`.
 
 ## Side effects
 

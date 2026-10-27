@@ -3,7 +3,7 @@ import { offlineSyncManager } from '@/lib/offline-sync-manager';
 import { StorageManager } from '@/lib/storage-manager';
 import { useAuthStore } from '@/stores/auth-store';
 import { useGameStore } from '@/stores/game-store';
-import type { GameHistoryConfig, GameHistoryListItem, GameHistorySection, GameHistoryStats } from '@/types/game-history';
+import type { BasePuzzle, GameHistoryConfig, GameHistoryListItem, GameHistorySection, GameHistoryStats } from '@/types/game-history';
 import { useCallback, useEffect, useState } from 'react';
 
 const DAYS_PER_BATCH = 14; // 2 weeks
@@ -84,6 +84,52 @@ function formatSublabel(playCount: number | undefined): string {
     return playCount > 0 ? `${playCount} commuters played` : '0 commuters played';
 }
 
+function buildItems(
+    puzzles: BasePuzzle[],
+    playCounts: (number | undefined)[],
+    gameIds: string[],
+    gameStatesMap: Map<string, { state: unknown }>,
+    currentGame: { id: string; state: unknown } | null,
+    config: GameHistoryConfig,
+): GameHistoryListItem[] {
+    const items: GameHistoryListItem[] = [];
+    for (let i = 0; i < puzzles.length; i++) {
+        const puzzle = puzzles[i];
+        const playCount = config.getPlayCounts ? playCounts[i] : undefined;
+        const gameId = gameIds[i];
+        const gameFromStore = currentGame?.id === gameId ? currentGame : null;
+        const game = gameFromStore ?? gameStatesMap.get(gameId) ?? null;
+        const parsed = config.parseState(game);
+
+        const date = new Date(config.getPuzzleDate(puzzle) + 'T12:00:00');
+        const today = new Date();
+        const isToday = date.toDateString() === today.toDateString();
+
+        const sublabel = config.getPlayCounts
+            ? formatSublabel(playCount)
+            : '';
+
+        const navigateKey = config.gameType === 'connections'
+            ? config.getPuzzleDate(puzzle)
+            : (puzzle as { id: string }).id;
+
+        items.push({
+            id: puzzle.id,
+            date: config.getPuzzleDate(puzzle),
+            dayNumber: date.getDate(),
+            label: formatPuzzleLabel(config.getPuzzleDate(puzzle)),
+            isToday,
+            sublabel,
+            isCompleted: parsed.isCompleted,
+            completionTime: parsed.completionTime,
+            score: parsed.score,
+            isWon: parsed.isWon,
+            navigateKey,
+        });
+    }
+    return items;
+}
+
 export function useGameHistoryList(config: GameHistoryConfig) {
     const user = useAuthStore(state => state.user);
     const currentGame = useGameStore(state => state.currentGame);
@@ -123,48 +169,13 @@ export function useGameHistoryList(config: GameHistoryConfig) {
                 gameStatesMap = nextMap;
             }
 
-            const buildItems = (playCounts: (number | undefined)[]) => {
-                const items: GameHistoryListItem[] = [];
-                for (let i = 0; i < puzzles.length; i++) {
-                    const puzzle = puzzles[i];
-                    const playCount = config.getPlayCounts ? playCounts[i] : undefined;
-                    const gameId = gameIds[i];
-                    const gameFromStore = currentGame?.id === gameId ? currentGame : null;
-                    const game = gameFromStore ?? gameStatesMap.get(gameId) ?? null;
-                    const parsed = config.parseState(game);
-
-                    const date = new Date(config.getPuzzleDate(puzzle) + 'T12:00:00');
-                    const today = new Date();
-                    const isToday = date.toDateString() === today.toDateString();
-
-                    const sublabel = config.getPlayCounts
-                        ? formatSublabel(playCount)
-                        : '';
-
-                    const navigateKey = config.gameType === 'connections'
-                        ? config.getPuzzleDate(puzzle)
-                        : (puzzle as { id: string }).id;
-
-                    items.push({
-                        id: puzzle.id,
-                        date: config.getPuzzleDate(puzzle),
-                        dayNumber: date.getDate(),
-                        label: formatPuzzleLabel(config.getPuzzleDate(puzzle)),
-                        isToday,
-                        isLive: isToday,
-                        sublabel,
-                        isCompleted: parsed.isCompleted,
-                        completionTime: parsed.completionTime,
-                        score: parsed.score,
-                        isWon: parsed.isWon,
-                        navigateKey,
-                    });
-                }
-                return items;
-            };
-
             const initialItems = buildItems(
-                config.getPlayCounts ? puzzles.map(() => undefined) : []
+                puzzles,
+                config.getPlayCounts ? puzzles.map(() => undefined) : [],
+                gameIds,
+                gameStatesMap,
+                currentGame,
+                config,
             );
             setSections(buildSections(groupItemsByWeek(initialItems)));
             setStats({
@@ -180,7 +191,7 @@ export function useGameHistoryList(config: GameHistoryConfig) {
                     ? puzzles.map(p => config.getPlayCountIdentifier!(p))
                     : puzzles.map(p => config.getPuzzleDate(p));
                 config.getPlayCounts(identifiers).then(counts => {
-                    const items = buildItems(counts);
+                    const items = buildItems(puzzles, counts, gameIds, gameStatesMap, currentGame, config);
                     setSections(buildSections(groupItemsByWeek(items)));
                 });
             }
@@ -216,47 +227,14 @@ export function useGameHistoryList(config: GameHistoryConfig) {
                 gameStatesMap = nextMap;
             }
 
-            const buildItems = (playCounts: (number | undefined)[]) => {
-                const items: GameHistoryListItem[] = [];
-                for (let i = 0; i < puzzles.length; i++) {
-                    const puzzle = puzzles[i];
-                    const playCount = config.getPlayCounts ? playCounts[i] : undefined;
-                    const gameId = gameIds[i];
-                    const gameFromStore = currentGame?.id === gameId ? currentGame : null;
-                    const game = gameFromStore ?? gameStatesMap.get(gameId) ?? null;
-                    const parsed = config.parseState(game);
-
-                    const date = new Date(config.getPuzzleDate(puzzle) + 'T12:00:00');
-                    const today = new Date();
-                    const isToday = date.toDateString() === today.toDateString();
-
-                    const sublabel = config.getPlayCounts
-                        ? formatSublabel(playCount)
-                        : '';
-
-                    const navigateKey = config.gameType === 'connections'
-                        ? config.getPuzzleDate(puzzle)
-                        : (puzzle as { id: string }).id;
-
-                    items.push({
-                        id: puzzle.id,
-                        date: config.getPuzzleDate(puzzle),
-                        dayNumber: date.getDate(),
-                        label: formatPuzzleLabel(config.getPuzzleDate(puzzle)),
-                        isToday,
-                        isLive: isToday,
-                        sublabel,
-                        isCompleted: parsed.isCompleted,
-                        completionTime: parsed.completionTime,
-                        score: parsed.score,
-                        isWon: parsed.isWon,
-                        navigateKey,
-                    });
-                }
-                return items;
-            };
-
-            const newItems = buildItems(config.getPlayCounts ? puzzles.map(() => undefined) : []);
+            const newItems = buildItems(
+                puzzles,
+                config.getPlayCounts ? puzzles.map(() => undefined) : [],
+                gameIds,
+                gameStatesMap,
+                currentGame,
+                config,
+            );
             setSections(prev => {
                 const existingItems = prev.flatMap(s => s.data);
                 const combined = [...existingItems, ...newItems].sort((a, b) =>
@@ -282,7 +260,7 @@ export function useGameHistoryList(config: GameHistoryConfig) {
                     ? puzzles.map(p => config.getPlayCountIdentifier!(p))
                     : puzzles.map(p => config.getPuzzleDate(p));
                 config.getPlayCounts(identifiers).then(counts => {
-                    const itemsWithCounts = buildItems(counts);
+                    const itemsWithCounts = buildItems(puzzles, counts, gameIds, gameStatesMap, currentGame, config);
                     setSections(prev => {
                         const existingItems = prev.flatMap(s => s.data);
                         const existingIds = new Set(existingItems.map(i => i.id));

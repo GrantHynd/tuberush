@@ -4,8 +4,6 @@ import type { SyncOperation } from '@/types/game';
 const STORAGE_KEYS = {
     GAME_STATE: 'game_state_',
     SYNC_QUEUE: 'sync_queue',
-    USER_PREFERENCES: 'user_preferences',
-    LAST_SYNC: 'last_sync_timestamp',
     DEAD_LETTER: 'sync_dead_letter',
 } as const;
 
@@ -84,23 +82,6 @@ export class StorageManager {
     }
 
     /**
-     * Get all game states
-     */
-    static async getAllGameStates(): Promise<any[]> {
-        try {
-            const keys = await AsyncStorage.getAllKeys();
-            const gameKeys = keys.filter(key => key.startsWith(STORAGE_KEYS.GAME_STATE));
-            const states = await AsyncStorage.multiGet(gameKeys);
-            return states
-                .map(([_, value]) => value ? JSON.parse(value) : null)
-                .filter(state => state !== null);
-        } catch (error) {
-            console.error('Error getting all game states:', error);
-            return [];
-        }
-    }
-
-    /**
      * Delete game state
      */
     static async deleteGameState(gameId: string): Promise<void> {
@@ -155,27 +136,6 @@ export class StorageManager {
      */
     static getSyncQueue(): Promise<SyncOperation[]> {
         return withQueueLock(() => this.readQueue());
-    }
-
-    /**
-     * Clear sync queue
-     */
-    static clearSyncQueue(): Promise<void> {
-        return withQueueLock(async () => {
-            try {
-                await this.writeQueue([]);
-            } catch (error) {
-                console.error('Error clearing sync queue:', error);
-                throw error;
-            }
-        });
-    }
-
-    /**
-     * Remove specific operation from sync queue
-     */
-    static async removeFromSyncQueue(operationId: string): Promise<void> {
-        await this.removeFromSyncQueueBatch([operationId]);
     }
 
     /**
@@ -241,43 +201,6 @@ export class StorageManager {
     }
 
     /**
-     * Save user preferences
-     */
-    static async saveUserPreferences(preferences: any): Promise<void> {
-        try {
-            await AsyncStorage.setItem(STORAGE_KEYS.USER_PREFERENCES, JSON.stringify(preferences));
-        } catch (error) {
-            console.error('Error saving user preferences:', error);
-            throw error;
-        }
-    }
-
-    /**
-     * Get user preferences
-     */
-    static async getUserPreferences(): Promise<any> {
-        try {
-            const data = await AsyncStorage.getItem(STORAGE_KEYS.USER_PREFERENCES);
-            return data ? JSON.parse(data) : {};
-        } catch (error) {
-            console.error('Error getting user preferences:', error);
-            return {};
-        }
-    }
-
-    /**
-     * Update last sync timestamp
-     */
-    static async updateLastSyncTimestamp(): Promise<void> {
-        try {
-            await AsyncStorage.setItem(STORAGE_KEYS.LAST_SYNC, new Date().toISOString());
-        } catch (error) {
-            console.error('Error updating last sync timestamp:', error);
-            throw error;
-        }
-    }
-
-    /**
      * Drop this device's copy of the signed-in player's games and pending uploads.
      * Called after the server account is deleted so a later signup cannot sync them back.
      */
@@ -285,25 +208,13 @@ export class StorageManager {
         try {
             const keys = await AsyncStorage.getAllKeys();
             const gameKeys = keys.filter((key) => key.startsWith(STORAGE_KEYS.GAME_STATE));
-            const toRemove = [...gameKeys, STORAGE_KEYS.SYNC_QUEUE, STORAGE_KEYS.LAST_SYNC, STORAGE_KEYS.DEAD_LETTER];
+            const toRemove = [...gameKeys, STORAGE_KEYS.SYNC_QUEUE, STORAGE_KEYS.DEAD_LETTER];
             if (toRemove.length > 0) {
                 await AsyncStorage.multiRemove(toRemove);
             }
         } catch (error) {
             console.error('Error clearing local account data:', error);
             throw error;
-        }
-    }
-
-    /**
-     * Get last sync timestamp
-     */
-    static async getLastSyncTimestamp(): Promise<string | null> {
-        try {
-            return await AsyncStorage.getItem(STORAGE_KEYS.LAST_SYNC);
-        } catch (error) {
-            console.error('Error getting last sync timestamp:', error);
-            return null;
         }
     }
 }

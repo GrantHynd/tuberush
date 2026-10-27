@@ -61,68 +61,8 @@ export function isSentryEnabled(): boolean {
   return sentryInitialized && !__DEV__;
 }
 
-/** Capture an exception manually */
-export function captureException(
-  error: Error,
-  context?: Record<string, any>,
-): void {
-  if (!isSentryEnabled()) return;
-  
-  if (context) {
-    Sentry.captureException(error, { extra: context });
-  } else {
-    Sentry.captureException(error);
-  }
-}
-
-/** Capture a message (for non-error situations) */
-export function captureMessage(
-  message: string,
-  level: Sentry.SeverityLevel = 'info',
-  context?: Record<string, any>,
-): void {
-  if (!isSentryEnabled()) return;
-  
-  if (context) {
-    Sentry.captureMessage(message, { level, extra: context });
-  } else {
-    Sentry.captureMessage(message, level);
-  }
-}
-
 /** Set user context for error reports */
 export function setUser(user: { id: string; email?: string; username?: string } | null): void {
   if (!isSentryEnabled()) return;
   Sentry.setUser(user);
-}
-
-/** Add custom context to error reports */
-export function setContext(key: string, context: Record<string, any>): void {
-  if (!isSentryEnabled()) return;
-  Sentry.setContext(key, context);
-}
-
-/** Add a breadcrumb (for debugging context) */
-export function addBreadcrumb(breadcrumb: {
-  message: string;
-  category?: string;
-  level?: Sentry.SeverityLevel;
-  data?: Record<string, any>;
-}): void {
-  if (!isSentryEnabled()) return;
-  Sentry.addBreadcrumb(breadcrumb);
-}
-
-/**
- * Send a non-fatal test event. Call this from a temporary debug control in a
- * release or preview build. It does not crash the app, and it is not shown in Settings.
- */
-export function triggerTestError(): void {
-  if (!isSentryEnabled()) {
-    console.warn('[Sentry] Test error not sent — Sentry is disabled in development');
-    return;
-  }
-  captureException(
-    new Error('Sentry test error — if you see this in Sentry, the integration is working'),
-  );
 }

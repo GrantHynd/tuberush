@@ -84,7 +84,6 @@ interface AuthState {
     signOut: () => Promise<void>;
     deleteAccount: () => Promise<void>;
     checkSession: () => Promise<void>;
-    refreshPremiumStatus: () => Promise<void>;
     refreshPremiumStatusFromRevenueCat: () => Promise<void>;
     updateProfile: (updates: Partial<User>) => Promise<void>;
     resetPasswordForEmail: (email: string) => Promise<void>;
@@ -205,7 +204,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         } catch {
             // Local cleanup is best-effort
         }
-        useGameStore.setState({ currentGame: null, gameHistory: [] });
+        useGameStore.setState({ currentGame: null });
         set({ user: null, session: null });
     },
 
@@ -241,7 +240,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         } catch {
             // Cached games must not keep the deleted account on screen.
         }
-        useGameStore.setState({ currentGame: null, gameHistory: [] });
+        useGameStore.setState({ currentGame: null });
         set({ user: null, session: null, pendingPasswordReset: false });
     },
 
@@ -285,31 +284,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             syncSentryUser(null);
             set({ user: null, session: null, loading: false });
         }
-    },
-
-    refreshPremiumStatus: async () => {
-        const user = get().user;
-        if (!user) return;
-
-        const { data: profile } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', user.id)
-            .single();
-
-        const isPremium = await resolvePremiumStatus();
-
-        set({
-            user: profile
-                ? userFromProfile({
-                    id: user.id,
-                    email: user.email,
-                    isPremium,
-                    profile: profile as ProfileRow,
-                    metadataUsername: user.username,
-                })
-                : { ...user, isPremium },
-        });
     },
 
     refreshPremiumStatusFromRevenueCat: async () => {

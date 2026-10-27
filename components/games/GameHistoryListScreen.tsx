@@ -67,7 +67,6 @@ export function GameHistoryListScreen({
             dayNumber={item.dayNumber}
             label={item.label}
             isToday={item.isToday}
-            isLive={item.isLive}
             sublabel={item.sublabel || undefined}
             isCompleted={item.isCompleted}
             completionTime={item.completionTime}

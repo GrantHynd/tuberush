@@ -42,7 +42,6 @@ describe('Game Store - Crossword', () => {
   beforeEach(() => {
     useGameStore.setState({
       currentGame: null,
-      gameHistory: [],
       syncStatus: { status: 'synced', message: 'All changes synced' },
     });
     jest.clearAllMocks();

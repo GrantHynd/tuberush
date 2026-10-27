@@ -53,7 +53,7 @@ describe('Crossword paywall (TUB-301)', () => {
     it('list item shows a lock marker for locked puzzles', async () => {
         const { getByTestId, getByLabelText } = await render(
             <GamePuzzleListItem
-                dayNumber={1} label="Mon 1 Jan" isToday={false} isLive={false}
+                dayNumber={1} label="Mon 1 Jan" isToday={false}
                 isCompleted={false} accentColor="#A4161A" hasWinLoss={false}
                 isLocked onPress={jest.fn()}
             />,
