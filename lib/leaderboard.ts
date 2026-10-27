@@ -76,6 +76,23 @@ export function filterAndRerank(rows: WeeklyRow[], borough: string): WeeklyRow[]
     return kept.map((r, i) => ({ ...r, rank: i + 1, total_players: kept.length }));
 }
 
+type ProfileUsername = { id: string; username: string | null };
+
+/**
+ * Copy only id → username from get_profile_usernames onto daily leaderboard rows.
+ * Ignores every other field so a profile column such as email cannot ride along.
+ */
+export function mergeProfileUsernames<T extends { user_id: string; profiles?: { username: string | null } | null }>(
+    rows: T[],
+    names: ProfileUsername[],
+): T[] {
+    const byId = new Map(names.map((name) => [name.id, name.username]));
+    return rows.map((row) => {
+        if (!byId.has(row.user_id)) return row;
+        return { ...row, profiles: { username: byId.get(row.user_id) ?? null } };
+    });
+}
+
 export const leaderboard = {
     /**
      * Submit a score to the leaderboard.
@@ -198,7 +215,21 @@ export const leaderboard = {
         if (error && isMissingSchemaError(error)) ({ data, error } = await build(false));
         if (error) throw error;
 
-        return data as (LeaderboardEntry & { profiles: { username: string | null } | null })[];
+        const rows = (data ?? []) as (LeaderboardEntry & {
+            user_id: string;
+            profiles: { username: string | null } | null;
+        })[];
+        // profiles SELECT is auth.uid() = id, so the embed above is null for everyone else.
+        // get_profile_usernames is the column-limited read (id, username) for those rows.
+        // Until that migration is applied, keep the embed result and still show scores.
+        const ids = rows.map((row) => row.user_id).filter((id): id is string => Boolean(id));
+        if (ids.length === 0) return rows;
+
+        const { data: names, error: namesError } = await supabase.rpc('get_profile_usernames', {
+            p_ids: ids,
+        });
+        if (namesError || !Array.isArray(names)) return rows;
+        return mergeProfileUsernames(rows, names as ProfileUsername[]);
     },
 
     /**

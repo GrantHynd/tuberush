@@ -7,10 +7,33 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { supabase } from '@/lib/supabase-client';
-import { leaderboard } from '@/lib/leaderboard';
+import { leaderboard, mergeProfileUsernames } from '@/lib/leaderboard';
 import { getDisplayName } from '@/lib/display-utils';
 
 const mockRpc = supabase.rpc as jest.Mock;
+const mockFrom = supabase.from as jest.Mock;
+
+const LOCKDOWN_SQL = readFileSync(
+    join(
+        __dirname,
+        '../supabase/migrations/20261027000001_lock_rpc_execute_and_leaderboard_usernames.sql',
+    ),
+    'utf8',
+);
+
+function mockDailyLeaderboardQuery(rows: object[]) {
+    const result = { data: rows, error: null };
+    const chain: Record<string, unknown> = {};
+    chain.select = jest.fn(() => chain);
+    chain.eq = jest.fn(() => chain);
+    chain.order = jest.fn(() => chain);
+    chain.limit = jest.fn(() => chain);
+    chain.or = jest.fn(() => chain);
+    chain.then = (onFulfilled: (value: unknown) => unknown, onRejected?: (reason: unknown) => unknown) =>
+        Promise.resolve(result).then(onFulfilled, onRejected);
+    mockFrom.mockReturnValue(chain);
+    return chain;
+}
 
 const WEEKLY_PARAMS = {
     p_game_type: 'crossword',
@@ -195,6 +218,153 @@ describe('Leaderboard Security (TUB-230)', () => {
             expect(sql).toMatch(
                 /REVOKE ALL ON FUNCTION get_borough_breakdown\(TEXT, DATE, DATE\) FROM anon/,
             );
+        });
+    });
+
+    describe('migration 20261027000001', () => {
+        const sql = LOCKDOWN_SQL;
+
+        function sliceFunction(name: string, until: string): string {
+            const start = sql.indexOf(name);
+            expect(start).toBeGreaterThanOrEqual(0);
+            const end = sql.indexOf(until, start);
+            expect(end).toBeGreaterThan(start);
+            return sql.slice(start, end);
+        }
+
+        it('locks nextval_text to the two puzzle sequences and service_role', () => {
+            const fn = sliceFunction(
+                'CREATE OR REPLACE FUNCTION public.nextval_text(seq_name TEXT)',
+                'CREATE OR REPLACE FUNCTION public.get_connections_play_count',
+            );
+            expect(fn).toMatch(/SET search_path = ''/);
+            expect(fn).toMatch(/WHEN 'connections_puzzle_id_seq'/);
+            expect(fn).toMatch(/WHEN 'crossword_puzzle_id_seq'/);
+            expect(fn).toMatch(/pg_catalog\.nextval\('public\.connections_puzzle_id_seq'/);
+            expect(fn).toMatch(/pg_catalog\.nextval\('public\.crossword_puzzle_id_seq'/);
+            expect(fn).not.toMatch(/nextval\s*\(\s*seq_name\s*\)/);
+            expect(fn).toMatch(/sequence not allowed/);
+
+            expect(sql).toMatch(/REVOKE ALL ON FUNCTION nextval_text\(TEXT\) FROM PUBLIC/);
+            expect(sql).toMatch(/REVOKE ALL ON FUNCTION nextval_text\(TEXT\) FROM anon/);
+            expect(sql).toMatch(/REVOKE ALL ON FUNCTION nextval_text\(TEXT\) FROM authenticated/);
+            expect(sql).toMatch(/GRANT EXECUTE ON FUNCTION nextval_text\(TEXT\) TO service_role/);
+            expect(sql).not.toMatch(/GRANT EXECUTE ON FUNCTION nextval_text\(TEXT\) TO anon/);
+            expect(sql).not.toMatch(/GRANT EXECUTE ON FUNCTION nextval_text\(TEXT\) TO authenticated/);
+            expect(sql).not.toMatch(/GRANT EXECUTE ON FUNCTION nextval_text\(TEXT\) TO PUBLIC/);
+        });
+
+        it('sets empty search_path and grants play-count RPCs to authenticated only', () => {
+            const locked = [
+                [/REVOKE ALL ON FUNCTION get_connections_play_count\(TEXT\) FROM PUBLIC/, /REVOKE ALL ON FUNCTION get_connections_play_count\(TEXT\) FROM anon/, /GRANT EXECUTE ON FUNCTION get_connections_play_count\(TEXT\) TO authenticated/, /GRANT EXECUTE ON FUNCTION get_connections_play_count\(TEXT\) TO anon/],
+                [/REVOKE ALL ON FUNCTION get_connections_play_counts\(TEXT\[\]\) FROM PUBLIC/, /REVOKE ALL ON FUNCTION get_connections_play_counts\(TEXT\[\]\) FROM anon/, /GRANT EXECUTE ON FUNCTION get_connections_play_counts\(TEXT\[\]\) TO authenticated/, /GRANT EXECUTE ON FUNCTION get_connections_play_counts\(TEXT\[\]\) TO anon/],
+                [/REVOKE ALL ON FUNCTION get_crossword_play_count\(TEXT\) FROM PUBLIC/, /REVOKE ALL ON FUNCTION get_crossword_play_count\(TEXT\) FROM anon/, /GRANT EXECUTE ON FUNCTION get_crossword_play_count\(TEXT\) TO authenticated/, /GRANT EXECUTE ON FUNCTION get_crossword_play_count\(TEXT\) TO anon/],
+                [/REVOKE ALL ON FUNCTION get_crossword_play_counts\(TEXT\[\]\) FROM PUBLIC/, /REVOKE ALL ON FUNCTION get_crossword_play_counts\(TEXT\[\]\) FROM anon/, /GRANT EXECUTE ON FUNCTION get_crossword_play_counts\(TEXT\[\]\) TO authenticated/, /GRANT EXECUTE ON FUNCTION get_crossword_play_counts\(TEXT\[\]\) TO anon/],
+            ] as const;
+            for (const [fromPublic, fromAnon, toAuthenticated, toAnon] of locked) {
+                expect(sql).toMatch(fromPublic);
+                expect(sql).toMatch(fromAnon);
+                expect(sql).toMatch(toAuthenticated);
+                expect(sql).not.toMatch(toAnon);
+            }
+
+            const bodies = [
+                sliceFunction(
+                    'CREATE OR REPLACE FUNCTION public.get_connections_play_count(puzzle_date TEXT)',
+                    'CREATE OR REPLACE FUNCTION public.get_connections_play_counts',
+                ),
+                sliceFunction(
+                    'CREATE OR REPLACE FUNCTION public.get_connections_play_counts(puzzle_dates TEXT[])',
+                    'CREATE OR REPLACE FUNCTION public.get_crossword_play_count',
+                ),
+                sliceFunction(
+                    'CREATE OR REPLACE FUNCTION public.get_crossword_play_count(puzzle_id TEXT)',
+                    'CREATE OR REPLACE FUNCTION public.get_crossword_play_counts',
+                ),
+                sliceFunction(
+                    'CREATE OR REPLACE FUNCTION public.get_crossword_play_counts(puzzle_ids TEXT[])',
+                    'CREATE OR REPLACE FUNCTION public.get_profile_usernames',
+                ),
+            ];
+            for (const body of bodies) {
+                expect(body).toMatch(/SET search_path = ''/);
+                expect(body).toMatch(/FROM public\.game_states/);
+                expect(body).not.toMatch(/FROM game_states/);
+            }
+        });
+
+        it('revokes the anon INSERT and UPDATE on profiles from 20261017154551', () => {
+            expect(sql).toMatch(/REVOKE INSERT, UPDATE ON TABLE public\.profiles FROM anon/);
+            expect(sql).not.toMatch(/REVOKE INSERT, UPDATE ON TABLE public\.profiles FROM authenticated/);
+            expect(sql).not.toMatch(/GRANT INSERT, UPDATE ON TABLE public\.profiles TO anon/);
+        });
+
+        it('reads daily-board usernames through a column-limited security-definer RPC', () => {
+            const fn = sliceFunction(
+                'CREATE OR REPLACE FUNCTION public.get_profile_usernames(p_ids UUID[])',
+                'REVOKE ALL ON FUNCTION nextval_text',
+            );
+            expect(fn).toMatch(/SECURITY DEFINER/);
+            expect(fn).toMatch(/SET search_path = ''/);
+            expect(fn).toMatch(/RETURNS TABLE \(id UUID, username TEXT\)/);
+            expect(fn).toMatch(/SELECT p\.id, p\.username/);
+            expect(fn).toMatch(/FROM public\.profiles p/);
+            expect(fn).toMatch(/FROM public\.leaderboard l/);
+            expect(fn).not.toMatch(/email/i);
+            expect(sql).toMatch(/REVOKE ALL ON FUNCTION get_profile_usernames\(UUID\[\]\) FROM PUBLIC/);
+            expect(sql).toMatch(/REVOKE ALL ON FUNCTION get_profile_usernames\(UUID\[\]\) FROM anon/);
+            expect(sql).toMatch(/GRANT EXECUTE ON FUNCTION get_profile_usernames\(UUID\[\]\) TO authenticated/);
+        });
+    });
+
+    describe('daily leaderboard usernames', () => {
+        const otherPlayer = {
+            id: 'row-1',
+            user_id: 'other-user',
+            city: 'London',
+            borough: 'Camden',
+            score: 42,
+            profiles: null,
+        };
+
+        it('fills other players from get_profile_usernames and does not copy email', async () => {
+            mockDailyLeaderboardQuery([otherPlayer]);
+            mockRpc.mockResolvedValue({
+                data: [{ id: 'other-user', username: 'tube_runner', email: 'secret@example.com' }],
+                error: null,
+            });
+
+            const rows = await leaderboard.getLeaderboard('crossword', '2026-10-27');
+
+            expect(mockRpc).toHaveBeenCalledWith('get_profile_usernames', {
+                p_ids: ['other-user'],
+            });
+            expect(rows[0].profiles).toEqual({ username: 'tube_runner' });
+            expect(rows[0].profiles).not.toHaveProperty('email');
+            expect(rows[0]).not.toHaveProperty('email');
+            expect(JSON.stringify(rows[0])).not.toMatch(/secret@example.com/);
+        });
+
+        it('still returns scores when the username RPC is not deployed yet', async () => {
+            mockDailyLeaderboardQuery([otherPlayer]);
+            mockRpc.mockResolvedValue({
+                data: null,
+                error: { code: 'PGRST202', message: 'Could not find the function' },
+            });
+
+            const rows = await leaderboard.getLeaderboard('crossword', '2026-10-27');
+
+            expect(rows[0].score).toBe(42);
+            expect(rows[0].profiles).toBeNull();
+        });
+
+        it('mergeProfileUsernames keeps rows the RPC did not return', () => {
+            const merged = mergeProfileUsernames(
+                [otherPlayer, { ...otherPlayer, id: 'row-2', user_id: 'self', profiles: { username: 'me' } }],
+                [{ id: 'other-user', username: 'tube_runner' }],
+            );
+            expect(merged[0].profiles).toEqual({ username: 'tube_runner' });
+            expect(merged[1].profiles).toEqual({ username: 'me' });
         });
     });
 });
