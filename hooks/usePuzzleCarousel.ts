@@ -1,12 +1,10 @@
-import type { ConnectionsPuzzle } from '@/constants/ConnectionsData';
-import type { CrosswordPuzzle } from '@/types/game';
 import { getRecentAndUpcomingGames } from '@/lib/daily-games';
 import { formatScore } from '@/lib/display-utils';
 import { offlineSyncManager } from '@/lib/offline-sync-manager';
 import { supabase } from '@/lib/supabase-client';
 import { toLocalDateString } from '@/lib/week-utils';
 import { useAuthStore } from '@/stores/auth-store';
-import type { ConnectionsState, CrosswordState } from '@/types/game';
+import type { ConnectionsPuzzle, ConnectionsState, CrosswordPuzzle, CrosswordState } from '@/types/game';
 import { useCallback, useEffect, useState } from 'react';
 
 async function getConnectionsPlayCount(date: string): Promise<number> {

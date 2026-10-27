@@ -24,8 +24,6 @@ export interface PuzzleCardProps {
     completionLabel?: string;
     backgroundColor: string;
     onPress: () => void;
-    /** 'carousel' for horizontal scroll (fixed width), 'list' for vertical list (full width) */
-    variant?: 'carousel' | 'list';
     /** Game name included in the a11y label, e.g. "Connections". */
     accessibilityGame?: string;
 }
@@ -65,7 +63,6 @@ export function PuzzleCard({
     completionLabel,
     backgroundColor,
     onPress,
-    variant = 'carousel',
     accessibilityGame,
 }: PuzzleCardProps) {
     let statusContent: React.ReactNode = null;
@@ -95,7 +92,7 @@ export function PuzzleCard({
         <Card
             variant="filled"
             color={backgroundColor}
-            style={[styles.card, variant === 'list' && styles.cardList]}
+            style={styles.card}
             onPress={onPress}
             accessibilityLabel={`${label}${accessibilityGame ? `, ${accessibilityGame}` : ''}${a11ySuffix}`}
         >
@@ -117,9 +114,6 @@ const styles = StyleSheet.create({
         width: CARD_WIDTH,
         minHeight: 100,
         justifyContent: 'space-between',
-    },
-    cardList: {
-        width: '100%',
     },
     header: {
         flexDirection: 'row',

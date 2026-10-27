@@ -1,8 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
 import { AppState, type AppStateStatus } from 'react-native';
-import type { ConnectionsPuzzle } from '@/constants/ConnectionsData';
-import type { CrosswordPuzzle } from '@/types/game';
+import type { ConnectionsPuzzle, CrosswordPuzzle } from '@/types/game';
 import { supabase } from './supabase-client';
 import { toLocalDateString } from './week-utils';
 

@@ -14,13 +14,9 @@ const MAPPING = {
   'house.fill': 'home',
   // MaterialIcons has no outlined home; SF Symbols on iOS shows the outline.
   house: 'home',
-  'paperplane.fill': 'send',
-  'chevron.left.forwardslash.chevron.right': 'code',
   'chevron.right': 'chevron-right',
   'person.fill': 'person',
-  'lock.fill': 'lock',
   'checkmark.circle.fill': 'check-circle',
-  'arrow.clockwise': 'refresh',
   'arrow.right.square': 'logout',
   'ticket.fill': 'confirmation-number',
 } as const satisfies Record<string, MaterialIconName>;

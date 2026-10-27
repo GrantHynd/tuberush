@@ -1,6 +1,5 @@
 import { Connections } from "@/components/games/Connections";
 import { Leaderboard } from "@/components/ui/Leaderboard";
-import type { ConnectionsPuzzle } from "@/constants/ConnectionsData";
 import { getCustomPuzzle, saveCustomPuzzleScore } from "@/lib/custom-puzzles";
 import { getDailyGame, getGameByDate } from "@/lib/daily-games";
 import { scoreOutbox } from "@/lib/score-outbox";
@@ -13,7 +12,7 @@ import { formatScore } from "@/lib/display-utils";
 import { capture } from "@/lib/posthog";
 import { useAuthStore } from "@/stores/auth-store";
 import { useGameStore } from "@/stores/game-store";
-import { ConnectionsState } from "@/types/game";
+import { ConnectionsPuzzle, ConnectionsState } from "@/types/game";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";

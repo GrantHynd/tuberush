@@ -27,11 +27,6 @@ export const GameColors = {
   connections: TFL.blue,
 };
 
-export const Fonts = {
-  rounded: 'System',
-  mono: 'System',
-};
-
 /* -------------------------------------------------------------------------- */
 /* "Mind the Gap" design tokens (TUB-293). Single source for game UI.          */
 /* Token names are internal only; never surface line names in UI copy.         */
@@ -114,14 +109,6 @@ export const Size = {
   minTarget: 44,
   primaryButton: 48,
   radius: 12,
-} as const;
-
-/** Connections game group colours — standard difficulty colours (1→4) */
-export const ConnectionsGroupColors = {
-  yellow: '#F9DF6D',
-  green: '#A0C35A',
-  blue: '#B0C4EF',
-  purple: '#BA81C5',
 } as const;
 
 export const Colors = {
@@ -248,13 +235,6 @@ export const Layout = {
       shadowOpacity: 0.05,
       shadowRadius: 2,
       elevation: 2,
-    },
-    md: {
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.1,
-      shadowRadius: 12,
-      elevation: 4,
     },
   },
 };

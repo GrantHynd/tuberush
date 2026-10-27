@@ -1,5 +1,3 @@
-import { BOROUGHS } from './Boroughs';
-
 /**
  * Curated list of UK cities and towns across England, Scotland, Wales, and Northern Ireland.
  * London is included as a top-level option; selecting it triggers borough sub-selection.
@@ -137,10 +135,6 @@ export const UK_CITIES = [
   'Windermere',
 ] as const;
 
-export type UKCity = (typeof UK_CITIES)[number];
-
 export function isLondon(city: string): boolean {
   return city === 'London';
 }
-
-export { BOROUGHS };

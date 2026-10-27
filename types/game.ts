@@ -13,10 +13,16 @@ export interface User {
 }
 
 export interface ConnectionsGroup {
-    id: string;
     category: string;
     items: string[];
-    color: string; // Hex code for group color
+    color: string;
+    difficulty: 1 | 2 | 3 | 4;
+}
+
+export interface ConnectionsPuzzle {
+    id: string;
+    date: string; // YYYY-MM-DD
+    groups: ConnectionsGroup[];
 }
 
 export interface ConnectionsState {

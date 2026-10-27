@@ -10,7 +10,7 @@ import { FeedbackToast } from '@/components/game-ui/FeedbackToast';
 import { announce } from '@/lib/a11y';
 import { wrongLettersMessage } from '@/lib/crossword-feedback';
 import { Leaderboard } from '@/components/ui/Leaderboard';
-import { Colors, GameColors, Layout, Spacing, TFL, Typography } from '@/constants/theme';
+import { Colors, GameColors, Spacing, Typography } from '@/constants/theme';
 import { getCustomPuzzle, saveCustomPuzzleScore } from '@/lib/custom-puzzles';
 import { formatScore } from '@/lib/display-utils';
 import { capture } from '@/lib/posthog';
@@ -561,26 +561,8 @@ const styles = StyleSheet.create({
         padding: Spacing.xs,
         marginLeft: Spacing.xs,
     },
-    headerCenter: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginLeft: Spacing.sm,
-        flex: 1,
-    },
     headerTitle: {
         ...Typography.h2,
-    },
-    badge: {
-        backgroundColor: TFL.yellow,
-        paddingHorizontal: Spacing.sm,
-        paddingVertical: 2,
-        borderRadius: Layout.borderRadius.xl,
-        marginLeft: Spacing.sm,
-    },
-    badgeText: {
-        fontSize: 11,
-        fontWeight: '700',
-        color: Colors.light.text,
     },
     headerRight: {
         alignItems: 'flex-end' as const,
@@ -592,10 +574,6 @@ const styles = StyleSheet.create({
         fontVariant: ['tabular-nums'] as const,
         color: Colors.light.text,
     },
-    headerDate: {
-        ...Typography.caption,
-        color: TFL.grey.dark,
-    },
     scroll: {
         flex: 1,
     },
@@ -603,64 +581,7 @@ const styles = StyleSheet.create({
         flexGrow: 1,
         paddingBottom: Spacing.xl,
     },
-    checkSection: {
-        paddingHorizontal: Spacing.md,
-        paddingTop: Spacing.lg,
-        alignItems: 'center',
-    },
-    checkButton: {
-        minHeight: 48,
-        justifyContent: 'center',
-        paddingVertical: 12,
-        paddingHorizontal: 32,
-        borderRadius: 24,
-        borderWidth: 1,
-        borderColor: Colors.light.text,
-    },
-    checkButtonDisabled: {
-        borderColor: '#6B7280',
-        borderStyle: 'dashed',
-    },
-    checkHelper: {
-        marginTop: Spacing.xs,
-        fontSize: 14,
-        color: '#4B5563',
-    },
-    checkButtonPrimary: {
-        backgroundColor: Colors.light.text,
-    },
-    checkButtonText: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: Colors.light.text,
-    },
-    checkButtonTextDisabled: {
-        color: TFL.grey.dark,
-    },
-    checkButtonTextPrimary: {
-        color: Colors.light.background,
-    },
     backToPuzzles: { alignSelf: 'center', marginTop: Spacing.md },
-    gameOverContainer: {
-        paddingHorizontal: Spacing.md,
-        paddingVertical: Spacing.lg,
-        alignItems: 'center',
-    },
-    gameOverTitle: {
-        fontSize: 20,
-        fontWeight: '700',
-        color: Colors.light.text,
-        marginBottom: 4,
-    },
-    gameOverTime: {
-        fontSize: 15,
-        color: TFL.grey.dark,
-        marginBottom: Spacing.md,
-    },
-    gameOverActions: {
-        flexDirection: 'row',
-        gap: Spacing.sm,
-    },
     gameOverButton: {
         minHeight: 48,
         justifyContent: 'center',
@@ -670,15 +591,9 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: Colors.light.text,
     },
-    gameOverButtonPrimary: {
-        backgroundColor: Colors.light.text,
-    },
     gameOverButtonText: {
         fontSize: 14,
         fontWeight: '600',
         color: Colors.light.text,
-    },
-    gameOverButtonTextPrimary: {
-        color: Colors.light.background,
     },
 });

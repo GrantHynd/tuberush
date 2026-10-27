@@ -528,11 +528,6 @@ const styles = StyleSheet.create({
         fontWeight: '500',
         flexShrink: 0,
     },
-    rowValue: {
-        fontSize: 16,
-        color: Colors.light.icon,
-        fontWeight: '400',
-    },
     rowValueTruncatable: {
         fontSize: 16,
         color: Colors.light.icon,
