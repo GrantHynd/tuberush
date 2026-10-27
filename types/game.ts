@@ -142,11 +142,6 @@ export interface BoroughBreakdownEntry {
     topScore: number;
 }
 
-export interface CityPlayerCount {
-    city: string;
-    playerCount: number;
-}
-
 export interface GameOverviewData {
     gameType: GameType;
     userRank: number | null;

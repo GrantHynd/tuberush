@@ -1,4 +1,4 @@
-import { leaderboard } from '@/lib/leaderboard';
+import { getLocationDisplay, leaderboard } from '@/lib/leaderboard';
 import { useAuthStore } from '@/stores/auth-store';
 import { useCallback, useEffect, useState } from 'react';
 
@@ -11,12 +11,6 @@ export function useLocationRank() {
     const user = useAuthStore((state) => state.user);
     const [rank, setRank] = useState<LocationRank | null>(null);
     const [loading, setLoading] = useState(true);
-
-    const getLocationDisplay = () => {
-        if (!user?.city) return null;
-        if (user.city === 'London' && user.borough) return user.borough;
-        return user.city;
-    };
 
     const load = useCallback(async () => {
         if (!user?.city) {
@@ -34,7 +28,7 @@ export function useLocationRank() {
                 'area',
                 user
             );
-            const location = getLocationDisplay();
+            const location = getLocationDisplay(user);
             if (userRank !== null && location) {
                 setRank({ location, rank: userRank });
             } else if (location) {
@@ -44,7 +38,7 @@ export function useLocationRank() {
             }
         } catch (err) {
             console.error('Failed to load location rank:', err);
-            const location = getLocationDisplay();
+            const location = user ? getLocationDisplay(user) : null;
             setRank(location ? { location, rank: 0 } : null);
         } finally {
             setLoading(false);

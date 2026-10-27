@@ -58,11 +58,6 @@ export async function initPostHog(): Promise<PostHog | null> {
   return posthogClient;
 }
 
-/** Get the PostHog client instance (null if not initialized) */
-export function getPostHog(): PostHog | null {
-  return posthogClient;
-}
-
 /** Capture a named event with optional properties */
 export function capture(event: string, properties?: Record<string, any>): void {
   posthogClient?.capture(event, properties);

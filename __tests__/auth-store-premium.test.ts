@@ -67,15 +67,8 @@ describe('premium status from RevenueCat', () => {
   it('stays free when the RevenueCat lookup throws', async () => {
     Platform.OS = 'ios';
     mockHasActiveEntitlement.mockRejectedValue(new Error('network'));
-    useAuthStore.setState({
-      user: {
-        id: 'user-1',
-        email: 'rider@example.com',
-        isPremium: true,
-      },
-    });
 
-    await useAuthStore.getState().refreshPremiumStatus();
+    await useAuthStore.getState().signIn('rider@example.com', 'secret');
 
     expect(useAuthStore.getState().user?.isPremium).toBe(false);
   });

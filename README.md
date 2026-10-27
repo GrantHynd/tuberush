@@ -38,7 +38,7 @@ A daily word game app for British commuters, built with React Native/Expo, offli
 - Profile management
 
 ✅ **Analytics**
-- PostHog product analytics via `hooks/useAnalytics.ts`
+- PostHog product analytics via `lib/posthog.ts`
 
 ✅ **Cloud Sync**
 - Real-time game state synchronization
@@ -73,8 +73,8 @@ tuberush-v2/
 │   ├── home/                # PuzzleCard, SectionHeader, StatCard
 │   ├── leaderboard/         # Avatar, BoroughList, Podium, RankedList, WeekNavigator, etc.
 │   └── ui/                  # GameCard, GameTypeBadge, PremiumBadge, SyncIndicator, etc.
-├── hooks/                    # useAnalytics, useGameHistory, useLeaderboardOverview,
-│                             # useBoroughRank, useCrosswordTimer, usePuzzleCarousel, ...
+├── hooks/                    # useGameHistoryList, useLeaderboardOverview,
+│                             # useCrosswordTimer, usePuzzleCarousel, ...
 ├── lib/                      # supabase-client, custom-puzzles, daily-games, leaderboard,
 │                             # offline-sync-manager, storage-manager, posthog, revenuecat
 ├── stores/                   # Zustand: auth-store, game-store
