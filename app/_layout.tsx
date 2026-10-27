@@ -4,7 +4,7 @@ import { configureRevenueCat } from '@/lib/revenuecat';
 import { initSentry } from '@/lib/sentry';
 import { supabase } from '@/lib/supabase-client';
 import { useAuthStore } from '@/stores/auth-store';
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import { DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import * as Sentry from '@sentry/react-native';
 import * as Linking from 'expo-linking';
 import { Stack, router } from 'expo-router';
@@ -12,7 +12,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
 import { gameFonts } from '@/lib/fonts';
 import { useEffect } from 'react';
-import { useColorScheme, Platform } from 'react-native';
+import { Platform } from 'react-native';
 import 'react-native-reanimated';
 import { startScoreOutbox } from '@/lib/score-outbox';
 
@@ -54,7 +54,6 @@ async function handleAuthDeepLink(url: string) {
 }
 
 function RootLayout() {
-  const colorScheme = useColorScheme();
   const checkSession = useAuthStore(state => state.checkSession);
   // Fira Sans (TUB-293). Render once loaded or failed; on failure the system font is used.
   const [fontsLoaded, fontError] = useFonts(gameFonts);
@@ -106,7 +105,7 @@ function RootLayout() {
   if (!fontsLoaded && !fontError) return null;
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+    <ThemeProvider value={DefaultTheme}>
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="auth" options={{ presentation: 'modal', title: 'Sign In' }} />
@@ -122,7 +121,7 @@ function RootLayout() {
         <Stack.Screen name="leaderboard/game" options={{ headerShown: false }} />
         <Stack.Screen name="leaderboard/boroughs" options={{ headerShown: false }} />
       </Stack>
-      <StatusBar style="auto" />
+      <StatusBar style="dark" />
     </ThemeProvider>
   );
 }
