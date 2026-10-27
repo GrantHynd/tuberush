@@ -33,5 +33,4 @@ React Native / Expo mobile app using Expo Router, Supabase backend, and TypeScri
 ## Conventions
 - Use functional components with hooks
 - Keep business logic in hooks/ and stores/, not in components
-- Use date-fns for date manipulation
 - Supabase types are in lib/database.types.ts
