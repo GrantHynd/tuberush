@@ -132,6 +132,105 @@ export interface Database {
         };
         Relationships: [];
       };
+      puzzle_drafts: {
+        Row: {
+          id: string;
+          game_type: 'connections' | 'crossword';
+          target_date: string;
+          payload: Json;
+          status: 'draft' | 'approved' | 'rejected' | 'published';
+          revision: number;
+          history: Json;
+          feedback: string | null;
+          approved_by: string | null;
+          approved_at: string | null;
+          created_by_bot: string;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          game_type: 'connections' | 'crossword';
+          target_date: string;
+          payload: Json;
+          status?: 'draft' | 'approved' | 'rejected' | 'published';
+          revision?: number;
+          history?: Json;
+          feedback?: string | null;
+          approved_by?: string | null;
+          approved_at?: string | null;
+          created_by_bot: string;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          game_type?: 'connections' | 'crossword';
+          target_date?: string;
+          payload?: Json;
+          status?: 'draft' | 'approved' | 'rejected' | 'published';
+          revision?: number;
+          history?: Json;
+          feedback?: string | null;
+          approved_by?: string | null;
+          approved_at?: string | null;
+          created_by_bot?: string;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      publish_keys: {
+        Row: {
+          id: string;
+          bot_id: string;
+          key_id: string;
+          key_hash: string;
+          hash_alg: 'sha256';
+          created_at: string;
+          created_by: string | null;
+          expires_at: string | null;
+          revoked_at: string | null;
+          revoked_by: string | null;
+          rotated_from: string | null;
+          last_used_at: string | null;
+          label: string | null;
+        };
+        Insert: {
+          id?: string;
+          bot_id: string;
+          key_id: string;
+          key_hash: string;
+          hash_alg?: 'sha256';
+          created_at?: string;
+          created_by?: string | null;
+          expires_at?: string | null;
+          revoked_at?: string | null;
+          revoked_by?: string | null;
+          rotated_from?: string | null;
+          last_used_at?: string | null;
+          label?: string | null;
+        };
+        Update: {
+          id?: string;
+          bot_id?: string;
+          key_id?: string;
+          key_hash?: string;
+          hash_alg?: 'sha256';
+          created_at?: string;
+          created_by?: string | null;
+          expires_at?: string | null;
+          revoked_at?: string | null;
+          revoked_by?: string | null;
+          rotated_from?: string | null;
+          last_used_at?: string | null;
+          label?: string | null;
+        };
+        Relationships: [];
+      };
       game_states: {
         Row: {
           id: string;
@@ -226,6 +325,65 @@ export interface Database {
           city: string;
           player_count: number;
         }[];
+      };
+      review_puzzle_draft: {
+        Args: {
+          p_draft_id: string;
+          p_decision: string;
+          p_feedback: string | null;
+        };
+        Returns: string;
+      };
+      submit_puzzle_draft: {
+        Args: {
+          p_key_hash: string;
+          p_game_type: string;
+          p_target_date: string;
+          p_payload: Json;
+        };
+        Returns: string;
+      };
+      update_puzzle_draft: {
+        Args: {
+          p_key_hash: string;
+          p_draft_id: string;
+          p_game_type: string;
+          p_target_date: string;
+          p_payload: Json;
+        };
+        Returns: string;
+      };
+      verify_publish_key: {
+        Args: { p_key_hash: string };
+        Returns: { bot_id: string; key_id: string }[];
+      };
+      register_publish_key: {
+        Args: {
+          p_bot_id: string;
+          p_key_id: string;
+          p_key_hash: string;
+          p_expires_at?: string | null;
+          p_label?: string | null;
+        };
+        Returns: string;
+      };
+      revoke_publish_key: {
+        Args: { p_key_id: string };
+        Returns: undefined;
+      };
+      rotate_publish_key: {
+        Args: {
+          p_old_id: string;
+          p_new_key_id: string;
+          p_new_key_hash: string;
+          p_expires_at?: string | null;
+          p_label?: string | null;
+        };
+        Returns: string;
+      };
+      mark_puzzle_draft_published: {
+        Args: { p_draft_id: string };
+        Returns: string;
       };
     };
     Enums: Record<string, never>;
