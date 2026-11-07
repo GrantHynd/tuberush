@@ -62,7 +62,7 @@ export default {
     orientation: 'portrait',
     icon: './assets/images/icon.png',
     scheme: 'tuberushv2',
-    userInterfaceStyle: 'automatic',
+    userInterfaceStyle: 'light',
     newArchEnabled: true,
     runtimeVersion: {
       policy: 'fingerprint',
@@ -104,9 +104,6 @@ export default {
           imageWidth: 200,
           resizeMode: 'contain',
           backgroundColor: '#ffffff',
-          dark: {
-            backgroundColor: '#000000',
-          },
         },
       ],
       [

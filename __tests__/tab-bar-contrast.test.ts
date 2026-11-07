@@ -18,7 +18,6 @@ describe('tab bar contrast (TUB-270)', () => {
 
     it('has an explicit white tab bar background', () => {
         expect(bg).toBe('#FFFFFF');
-        expect(Colors.dark.tabBarBackground).toBe('#FFFFFF');
     });
 
     it('inactive label/icon meets WCAG AA 4.5:1', () => {

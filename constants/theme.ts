@@ -146,26 +146,6 @@ export const Colors = {
       gameOverlay: 'rgba(26, 26, 30, 0.92)',
     },
   },
-  dark: { // Keeping same as light to force light theme
-    text: '#111111',
-    background: '#FFFFFF',
-    tint: TFL.blue,
-    icon: '#6B7280',
-    /** Inactive tab icon/label: #4B5563 = 7.56:1 on white (WCAG AA). */
-    tabIconDefault: TFL.grey.dark,
-    tabIconSelected: TFL.blue,
-    /** Explicit so contrast holds regardless of device appearance. */
-    tabBarBackground: '#FFFFFF',
-    card: TFL.grey.light,
-    border: '#E5E7EB',
-    error: TFL.red,
-    success: TFL.green,
-    warning: TFL.yellow,
-    surface: {
-      gameBase: '#1A1A1E',
-      gameOverlay: 'rgba(26, 26, 30, 0.92)',
-    },
-  },
 };
 
 export const Typography = {
