@@ -40,13 +40,6 @@ jest.mock("expo-font", () => ({
   loadAsync: jest.fn(),
 }));
 
-// Mock Expo Secure Store
-jest.mock("expo-secure-store", () => ({
-  getItemAsync: jest.fn(),
-  setItemAsync: jest.fn(),
-  deleteItemAsync: jest.fn(),
-}));
-
 // Mock Reanimated
 jest.mock("react-native-reanimated", () => {
   const Reanimated = require("react-native-reanimated/mock");

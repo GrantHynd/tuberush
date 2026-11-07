@@ -95,7 +95,6 @@ export default {
     },
     plugins: [
       'posthog-react-native/expo',
-      'expo-sqlite',
       'expo-router',
       [
         'expo-splash-screen',

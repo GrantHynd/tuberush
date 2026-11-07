@@ -37,11 +37,12 @@ yarn-error.*
 # typescript
 *.tsbuildinfo
 
-app-example
-
 # generated native folders
 /ios
 /android
 
 # AWS SAM build output
 .aws-sam/
+
+# Supabase CLI local state
+supabase/.temp/
