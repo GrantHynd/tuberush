@@ -1,0 +1,28 @@
+{
+  "gameType": "connections",
+  "targetDate": "2026-11-08",
+  "payload": {
+    "id": "248",
+    "date": "2026-11-08",
+    "groups": [
+      {
+        "category": "TUBE LINES",
+        "items": ["BAKERLOO", "CENTRAL", "DISTRICT", "NORTHERN"],
+        "difficulty": 1,
+        "color": "#DC241F"
+      },
+      {
+        "category": "ROYAL PARKS",
+        "items": ["HYDE", "REGENT", "GREEN", "ST JAMES"],
+        "difficulty": 2,
+        "color": "#007D32"
+      },
+      {
+        "category": "LONDON AIRPORTS",
+        "items": ["HEATHROW", "GATWICK", "STANSTED", "LUTON"],
+        "difficulty": 3,
+        "color": "#0019A8"
+      }
+    ]
+  }
+}

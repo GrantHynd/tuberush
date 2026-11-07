@@ -1,0 +1,9 @@
+{
+  "gameType": "connections",
+  "targetDate": "2026-11-08",
+  "payload": {
+    "id": "1",
+    "date": "2026-11-08",
+    "groups": "nope"
+  }
+}
