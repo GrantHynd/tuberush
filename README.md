@@ -78,7 +78,7 @@ tuberush-v2/
 ├── lib/                      # supabase-client, custom-puzzles, daily-games, leaderboard,
 │                             # offline-sync-manager, storage-manager, posthog, revenuecat
 ├── stores/                   # Zustand: auth-store, game-store
-├── constants/                 # Games, ConnectionsData, CrosswordData, Boroughs, UKCities, theme
+├── constants/                 # Games, Boroughs, UKCities, theme
 ├── types/                    # TypeScript types (game.ts, database.types.ts in lib/)
 ├── lambda/generate-connections/  # AWS Lambda (SAM): nightly Connections puzzle
 ├── lambda/generate-crossword/    # AWS Lambda (SAM): nightly crossword (grid solver + Claude clues)
@@ -131,7 +131,7 @@ How the main product areas fit together:
    - `EXPO_PUBLIC_REVENUECAT_API_KEY` (from RevenueCat dashboard)
    - `EXPO_PUBLIC_POSTHOG_API_KEY` (from PostHog project settings)
 
-   The puzzle-generation Lambdas read their API keys (`ANTHROPIC_API_KEY`, `ANTHROPIC_DAILY_PUZZLE_SKILL_ID`, etc.) from the AWS Secrets Manager secret `tuberush/daily-games` (see `template.yaml`).
+   The puzzle-generation Lambdas read their API keys (`ANTHROPIC_API_KEY`, `ANTHROPIC_CONNECTIONS_SKILL_ID`, `ANTHROPIC_CROSSWORD_SKILL_ID`, and the Supabase URL and service role key) from the AWS Secrets Manager secret `tuberush/daily-games` (see `template.yaml`).
 
 4. **Start the development server**
    ```bash
@@ -174,7 +174,7 @@ const handleMove = async (index: number) => {
 ```typescript
 // Premium features are gated
 if (game.isPremium && !user?.isPremium) {
-  router.push('/subscribe');
+  openPaywall();
   return;
 }
 ```
@@ -264,9 +264,9 @@ These tests run against a real simulator/emulator and verify the app from a user
 
 1. Install Maestro: `curl -Ls "https://get.maestro.mobile.dev" | bash`
 2. Ensure your simulator is running.
-3. Run the flow:
+3. Run the guest flow:
    ```bash
-   maestro test .maestro/flow.yaml
+   maestro test .maestro/01_guest_start.yaml
    ```
 
 See `.maestro/README.md` for more details.
