@@ -183,10 +183,6 @@ The auth store manages authentication state using Zustand:
 - Fetches fresh profile data
 - Restores user state if valid session exists
 
-#### `refreshPremiumStatus()`
-- Re-reads the RevenueCat entitlement
-- A lookup error leaves the user on the free tier
-
 ### 4. UI Components
 
 #### Auth Screen (`app/auth.tsx`)

@@ -3,14 +3,10 @@
  * @see https://www.revenuecat.com/docs/getting-started/installation/reactnative
  */
 
-import Purchases, { PurchasesPackage } from 'react-native-purchases';
+import Purchases from 'react-native-purchases';
 
 /** Entitlement identifier - must match RevenueCat dashboard */
 export const ENTITLEMENT_ID = 'TubeRush Pro';
-
-/** Product identifiers - configure in RevenueCat dashboard */
-export const PRODUCT_ID_MONTHLY = 'monthly';
-export const PRODUCT_ID_YEARLY = 'yearly';
 
 /** True only after configure() succeeds. False when native module unavailable (Expo Go, web). */
 let configured = false;
@@ -71,28 +67,4 @@ export async function hasActiveEntitlement(): Promise<boolean> {
   const customerInfo = await Purchases.getCustomerInfo();
   const entitlement = customerInfo.entitlements.active[ENTITLEMENT_ID];
   return entitlement?.isActive ?? false;
-}
-
-/** Get customer info for display and debugging */
-export async function getCustomerInfo() {
-  if (!isRevenueCatConfigured()) return null;
-  return Purchases.getCustomerInfo();
-}
-
-/** Get current offerings (products/packages) */
-export async function getOfferings() {
-  if (!isRevenueCatConfigured()) return null;
-  return Purchases.getOfferings();
-}
-
-/** Purchase a package (e.g. monthly or yearly) */
-export async function purchasePackage(pkg: PurchasesPackage) {
-  const { customerInfo } = await Purchases.purchasePackage(pkg);
-  return customerInfo;
-}
-
-/** Restore purchases */
-export async function restorePurchases() {
-  const customerInfo = await Purchases.restorePurchases();
-  return customerInfo;
 }

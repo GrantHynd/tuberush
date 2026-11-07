@@ -1,3 +1,4 @@
+import { formatScore } from '@/lib/display-utils';
 import type { GameHistoryEntry } from '@/lib/game-history';
 import { toLocalDateString } from '@/lib/week-utils';
 import type { GameType } from '@/types/game';
@@ -104,11 +105,7 @@ export function trendSummary(points: TrendPoint[]): string {
     const early = secs.slice(0, half).reduce((a, b) => a + b, 0) / half;
     const late = secs.slice(half).reduce((a, b) => a + b, 0) / (secs.length - half);
     const direction = late < early ? 'improving' : late > early ? 'slowing' : 'steady';
-    return `best ${fmt(Math.min(...secs))}, average ${fmt(avg)}, ${direction}`;
-}
-
-function fmt(s: number): string {
-    return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+    return `best ${formatScore(Math.min(...secs))}, average ${formatScore(avg)}, ${direction}`;
 }
 
 export interface DistributionBucket {

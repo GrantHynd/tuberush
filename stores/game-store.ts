@@ -1,22 +1,18 @@
 import { offlineSyncManager, SyncStatus } from '@/lib/offline-sync-manager';
-import { StorageManager } from '@/lib/storage-manager';
 import { CrosswordPuzzle, GameState, GameType, ConnectionsState, CrosswordState } from '@/types/game';
 import { create } from 'zustand';
 
 interface GameStoreState {
     currentGame: GameState | null;
-    gameHistory: GameState[];
     syncStatus: SyncStatus;
     loadGame: (gameId: string, userId: string) => Promise<GameState | null>;
     saveGame: (gameState: GameState) => Promise<void>;
     createNewGame: (userId: string, gameType: GameType, gameId?: string, crosswordPuzzle?: CrosswordPuzzle) => GameState;
-    deleteGame: (gameId: string) => Promise<void>;
     syncNow: () => Promise<void>;
 }
 
-export const useGameStore = create<GameStoreState>((set, get) => ({
+export const useGameStore = create<GameStoreState>((set) => ({
     currentGame: null,
-    gameHistory: [],
     syncStatus: { status: 'synced', message: 'All changes synced' },
 
     loadGame: async (gameId: string, userId: string) => {
@@ -83,15 +79,6 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
 
         set({ currentGame: newGame });
         return newGame;
-    },
-
-    deleteGame: async (gameId: string) => {
-        await StorageManager.deleteGameState(gameId);
-        const { currentGame, gameHistory } = get();
-        set({
-            gameHistory: gameHistory.filter(g => g.id !== gameId),
-            currentGame: currentGame?.id === gameId ? null : currentGame,
-        });
     },
 
     syncNow: async () => {

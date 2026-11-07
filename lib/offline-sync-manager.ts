@@ -80,24 +80,10 @@ class OfflineSyncManager {
 
 
     /**
-     * Get current network status
-     */
-    getNetworkStatus(): boolean {
-        return this.isOnline;
-    }
-
-    /**
      * Add sync status listener
      */
     addSyncListener(listener: (status: SyncStatus) => void) {
         this.syncListeners.push(listener);
-    }
-
-    /**
-     * Remove sync status listener
-     */
-    removeSyncListener(listener: (status: SyncStatus) => void) {
-        this.syncListeners = this.syncListeners.filter(l => l !== listener);
     }
 
     /**
@@ -231,7 +217,6 @@ class OfflineSyncManager {
                     }
                 }
             }
-            await StorageManager.updateLastSyncTimestamp();
         } finally {
             this.isSyncing = false;
         }
@@ -330,18 +315,6 @@ class OfflineSyncManager {
         }
 
         return gameState;
-    }
-
-    /**
-     * Get count of pending operations
-     */
-    async getDeadLetterCount(): Promise<number> {
-        return (await StorageManager.getDeadLetter()).length;
-    }
-
-    async getPendingOperationsCount(): Promise<number> {
-        const queue = await StorageManager.getSyncQueue();
-        return queue.length;
     }
 
     /**

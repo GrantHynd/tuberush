@@ -8,7 +8,6 @@ export interface GamePuzzleListItemProps {
     dayNumber: number;
     label: string;
     isToday: boolean;
-    isLive: boolean;
     sublabel?: string;
     isCompleted: boolean;
     completionTime?: string;
@@ -31,7 +30,6 @@ export function GamePuzzleListItem({
     dayNumber,
     label,
     isToday,
-    isLive,
     sublabel,
     isCompleted,
     completionTime,
@@ -81,7 +79,7 @@ export function GamePuzzleListItem({
             <View style={styles.content}>
                 <View style={styles.labelRow}>
                     <Text style={styles.label}>{label}</Text>
-                    {isLive && (
+                    {isToday && (
                         <View style={[styles.liveBadge, { backgroundColor: accentColor }]}>
                             <Text style={styles.liveText}>LIVE</Text>
                         </View>

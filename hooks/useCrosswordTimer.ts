@@ -1,3 +1,4 @@
+import { formatScore } from '@/lib/display-utils';
 import type { CrosswordState } from '@/types/game';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, type AppStateStatus } from 'react-native';
@@ -74,10 +75,7 @@ export function useCrosswordTimer(state: CrosswordState): UseCrosswordTimerResul
         elapsedMs = Math.max(0, end - startTime - accumulatedPause);
     }
     const elapsedSeconds = Math.floor(elapsedMs / 1000);
-
-    const minutes = Math.floor(elapsedSeconds / 60);
-    const secs = elapsedSeconds % 60;
-    const formatted = `${minutes}:${secs.toString().padStart(2, '0')}`;
+    const formatted = formatScore(elapsedSeconds);
 
     return { elapsedSeconds, formatted, isRunning, accumulatedPause };
 }

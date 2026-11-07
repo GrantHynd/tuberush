@@ -1,6 +1,6 @@
 import { supabase } from './supabase-client';
 import { EMPTY_VALUE } from './display-utils';
-import { LeaderboardEntry, GameType, WeeklyLeaderboardEntry, BoroughBreakdownEntry, CityPlayerCount } from '@/types/game';
+import { LeaderboardEntry, GameType, WeeklyLeaderboardEntry, BoroughBreakdownEntry } from '@/types/game';
 import { Borough } from '@/constants/Boroughs';
 import type { User } from '@/types/game';
 import { toLocalDateString } from './week-utils';
@@ -306,29 +306,5 @@ export const leaderboard = {
             leaderUsername: r.leader_username,
             topScore: r.top_score,
         }));
-    },
-
-    /**
-     * Available cities with player counts for a given week and game type.
-     */
-    async getAvailableCities(
-        gameType: GameType,
-        weekStart: string,
-        weekEnd: string
-    ): Promise<CityPlayerCount[]> {
-        const { data, error } = await supabase.rpc('get_available_cities', {
-            p_game_type: gameType,
-            p_week_start: weekStart,
-            p_week_end: weekEnd,
-        });
-
-        if (error) throw error;
-
-        return ((data ?? []) as { city: string; player_count: number }[]).map(
-            (r) => ({
-                city: r.city,
-                playerCount: r.player_count,
-            })
-        );
     },
 };

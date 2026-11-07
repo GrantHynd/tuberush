@@ -86,7 +86,6 @@ export const connectionsGameHistoryConfig: GameHistoryConfig = {
   },
   getPlayCounts: getConnectionsPlayCounts,
   hasWinLoss: true,
-  showScore: true,
 };
 
 async function getCrosswordPlayCounts(puzzleIds: string[]): Promise<number[]> {
@@ -137,5 +136,4 @@ export const crosswordGameHistoryConfig: GameHistoryConfig = {
     return { isCompleted, isWon: isCompleted, completionTime };
   },
   hasWinLoss: false,
-  showScore: false,
 };

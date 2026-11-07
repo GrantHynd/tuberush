@@ -36,7 +36,6 @@ describe('deleteAccount', () => {
         syncStatus: 'pending',
         version: 1,
       } as never,
-      gameHistory: [],
     });
     invoke.mockResolvedValue({ data: { ok: true }, error: null });
     signOut.mockResolvedValue({ error: null });

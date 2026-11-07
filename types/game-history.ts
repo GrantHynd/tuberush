@@ -10,7 +10,6 @@ export interface GameHistoryListItem {
     dayNumber: number;
     label: string;
     isToday: boolean;
-    isLive: boolean;
     sublabel: string;
     isCompleted: boolean;
     completionTime?: string;
@@ -44,8 +43,6 @@ export interface GameHistoryConfig<P extends BasePuzzle = BasePuzzle> {
         completionTime?: string;
         score?: string;
     };
-    /** If true, show score (e.g. mistakes). If false, hide (e.g. crossword has no mistakes) */
-    showScore?: boolean;
     /** Optional: fetch play counts. identifiers come from getPlayCountIdentifier if set, else getPuzzleDate */
     getPlayCounts?: (identifiers: string[]) => Promise<number[]>;
     /** Optional: when getPlayCounts is set, use this to get the identifier per puzzle (e.g. puzzle.id for crossword) */

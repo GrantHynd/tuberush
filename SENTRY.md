@@ -34,26 +34,6 @@ The Expo plugin in `app.config.ts` is fixed to organization `grant-hynd` and pro
 
 Sentry does not send events from `expo start` or a debug simulator build. The SDK is disabled when `__DEV__` is true.
 
-Install a preview or production build with `EXPO_PUBLIC_SENTRY_DSN` set, then call `triggerTestError()` from `lib/sentry.ts`. That sends a captured exception and does not crash the app. Confirm the event in the `tuberush` project has a readable stack trace.
-
-## Manual capture
-
-```typescript
-import { captureException, captureMessage, addBreadcrumb } from '@/lib/sentry';
-
-try {
-  // some code
-} catch (error) {
-  captureException(error as Error, { extra: 'context' });
-}
-
-captureMessage('Something important happened', 'info');
-
-addBreadcrumb({
-  message: 'User clicked button',
-  category: 'ui',
-  level: 'info',
-});
-```
+Install a preview or production build with `EXPO_PUBLIC_SENTRY_DSN` set. Unhandled errors from that build are reported to the `tuberush` project. Confirm an event has a readable stack trace.
 
 Do not attach passwords, tokens, or other secrets to events.
