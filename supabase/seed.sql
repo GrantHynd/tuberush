@@ -1,12 +1,18 @@
 -- ============================================================
 -- TubeRush Leaderboard Seed Data
 -- 50 test users across UK cities, scores for current week.
--- Run in Supabase SQL Editor to populate a test environment.
+-- Run in the Supabase SQL Editor after the database setup in
+-- supabase/README.md.
 --
--- Prerequisites: all migrations applied (schema.sql through
--- 20250315_leaderboard_weekly_rpcs.sql).
---
--- To reset: run the cleanup block at the bottom first.
+-- ON CONFLICT (user_id, game_date, game_type) needs one unique
+-- index on those columns. leaderboard_user_game_date_key
+-- (20261025000001_leaderboard_unique_user_game_date.sql) is enough.
+-- The UNIQUE (user_id, game_date, game_type) constraint in
+-- update_schema.sql is enough on its own as well.
+-- Inserts also need leaderboard.city, a nullable borough
+-- (20250315000002_city_borough_location.sql), and the signup
+-- trigger from schema.sql.
+-- The deletes below clear any previous @tuberush.test rows.
 -- ============================================================
 
 -- ----------------------------------------------------------
