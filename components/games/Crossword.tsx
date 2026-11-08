@@ -3,8 +3,8 @@ import { GameKeyboard } from '@/components/game-ui/GameKeyboard';
 import { FontScaleCap } from '@/constants/theme';
 import { useTheme } from '@/hooks/useTheme';
 import { decorativeIconProps } from '@/lib/a11y';
+import { nearestOpenCell } from '@/lib/grid-hit';
 import {
-    MIN_TARGET_CELL,
     MIN_CELL,
     cellSizeToFit,
     gridExtent,
@@ -17,7 +17,6 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
     AccessibilityInfo,
     type AccessibilityActionEvent,
-    type GestureResponderEvent,
     type LayoutChangeEvent,
     Pressable,
     ScrollView,
@@ -50,8 +49,6 @@ interface GridCellProps {
     isError: boolean;
     userAnswer: string;
     disabled: boolean;
-    /** False when cells are < 44pt: the grid-level Pressable handles touch instead. */
-    pressable: boolean;
     accessibilityLabel: string;
     onPress: (row: number, col: number) => void;
     onAdjust: (delta: 1 | -1) => void;
@@ -78,7 +75,7 @@ export function errorMarkColors(colors: {
 
 const GridCell = React.memo(function GridCell({
     cell, rowIndex, colIndex, size, isSelected, isActiveWord, isError,
-    userAnswer, disabled, pressable, accessibilityLabel, onPress, onAdjust, outline,
+    userAnswer, disabled, accessibilityLabel, onPress, onAdjust, outline,
 }: GridCellProps) {
     const { colors } = useTheme();
     const mark = errorMarkColors(colors);
@@ -97,7 +94,18 @@ const GridCell = React.memo(function GridCell({
         !cell.isBlack && { borderColor: isError ? mark.border : colors.cellOutline },
     ];
     if (cell.isBlack) {
-        return <View style={style} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />;
+        return (
+            <Pressable
+                style={style}
+                testID={`cell-${rowIndex}-${colIndex}`}
+                onPress={() => onPress(rowIndex, colIndex)}
+                disabled={disabled}
+                pointerEvents="box-only"
+                accessible={false}
+                accessibilityElementsHidden
+                importantForAccessibility="no-hide-descendants"
+            />
+        );
     }
     const content = (
         <>
@@ -151,19 +159,13 @@ const GridCell = React.memo(function GridCell({
             else if (e.nativeEvent.actionName === 'decrement') onAdjust(-1);
         },
     };
-    if (!pressable) {
-        return (
-            <View style={style} testID={`cell-${rowIndex}-${colIndex}`} {...a11y}>
-                {content}
-            </View>
-        );
-    }
     return (
         <Pressable
             style={style}
             testID={`cell-${rowIndex}-${colIndex}`}
             onPress={() => onPress(rowIndex, colIndex)}
             disabled={disabled}
+            pointerEvents="box-only"
             {...a11y}
         >
             {content}
@@ -225,7 +227,6 @@ export function Crossword({
     const availW = (area?.w ?? screenW) - 2 * SIDE_MARGIN;
     const availH = area ? area.h - GRID_PAD_V : Math.max(0, screenH - 420);
     const size = staticCellSize ?? cellSizeToFit(availW, availH, n);
-    const pressableCells = size >= MIN_TARGET_CELL;
     const extent = gridExtent(size, n);
     const gridScrolls = !staticCellSize && area != null && (extent > availW + 1 || extent > availH + 1);
 
@@ -332,22 +333,20 @@ export function Crossword({
         [disabled, isOpen, selectedCell, cellToClue, direction],
     );
 
-    /** Grid-level tap for < 44pt cells: snap to the nearest open cell. */
-    const onGridPress = (e: GestureResponderEvent) => {
-        const { locationX, locationY } = e.nativeEvent;
-        const step = size + 1;
-        const tr = Math.min(rows - 1, Math.max(0, Math.floor((locationY - 1) / step)));
-        const tc = Math.min(cols - 1, Math.max(0, Math.floor((locationX - 1) / step)));
-        let best: { r: number; c: number; d: number } | null = null;
-        for (let r = 0; r < rows; r++) {
-            for (let c = 0; c < cols; c++) {
-                if (!isOpen(r, c)) continue;
-                const d = Math.abs(r - tr) + Math.abs(c - tc);
-                if (!best || d < best.d) best = { r, c, d };
-            }
-        }
-        if (best) selectCell(best.r, best.c);
-    };
+    /**
+     * Each cell is the touch target, including cells under 44pt. iOS locationX/Y
+     * are relative to that cell, so a grid overlay that treats them as grid
+     * coordinates selects row 1, column 1 for every tap. Open cells select
+     * themselves. A blocked cell selects the nearest open cell by index, which
+     * stays correct when the board is offset or scrolled.
+     */
+    const selectAt = useCallback(
+        (row: number, col: number) => {
+            const best = nearestOpenCell(row, col, rows, cols, isOpen);
+            if (best) selectCell(best.row, best.col);
+        },
+        [rows, cols, isOpen, selectCell],
+    );
 
     const step = (row: number, col: number, delta: 1 | -1, dir: Direction) =>
         dir === 'across' ? { row, col: col + delta } : { row: row + delta, col };
@@ -448,9 +447,8 @@ export function Crossword({
                                 isError={!!errorCells?.has(k)}
                                 userAnswer={ans}
                                 disabled={disabled}
-                                pressable={pressableCells}
                                 accessibilityLabel={getCellLabel(r, c, ans)}
-                                onPress={selectCell}
+                                onPress={selectAt}
                                 onAdjust={moveWithinWord}
                                 outline={playableOutline(grid, r, c)}
                             />
@@ -475,20 +473,10 @@ export function Crossword({
                         style={styles.gridScroll}
                         contentContainerStyle={styles.gridScrollContent}
                     >
-                        {pressableCells || disabled ? (
-                            gridNode
-                        ) : (
-                            <Pressable onPress={onGridPress} testID="crossword-grid-touch" accessible={false}>
-                                {gridNode}
-                            </Pressable>
-                        )}
-                    </ScrollView>
-                ) : pressableCells || disabled ? (
-                    gridNode
-                ) : (
-                    <Pressable onPress={onGridPress} testID="crossword-grid-touch" accessible={false}>
                         {gridNode}
-                    </Pressable>
+                    </ScrollView>
+                ) : (
+                    gridNode
                 )}
             </View>
 

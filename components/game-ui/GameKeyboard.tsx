@@ -104,6 +104,10 @@ export function GameKeyboard({
                             accessibilityRole="button"
                             accessibilityLabel={checkLabel}
                             accessibilityState={{ disabled: !!checkDisabled }}
+                            // iOS maps disabled to UIAccessibilityTraitNotEnabled and omits
+                            // accessibilityHint from the tree for that trait, so the inspector
+                            // shows an empty hint while enabled=false stays set. Android still
+                            // exposes this string as tooltipText. Leave the label as "Check".
                             accessibilityHint={checkDisabled ? 'Fill all squares to check' : undefined}
                             testID="key-check"
                             style={({ pressed }) => [

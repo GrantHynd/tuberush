@@ -1,4 +1,5 @@
 import { useTheme } from '@/hooks/useTheme';
+import { decorativeIconProps } from '@/lib/a11y';
 import { Card } from '@/components/ui/Card';
 import { type Palette, Radius, Spacing, Typography } from '@/constants/theme';
 import { formatCountdown, type TodayGameRow, type TodayRowState } from '@/lib/today-puzzles';
@@ -98,7 +99,12 @@ export function TodayHeroCard({ rows, nextPuzzleAt, loading }: TodayHeroCardProp
                               ]}
                           >
                               <View style={[styles.swatch, { backgroundColor: colors[meta.fill] }]}>
-                                  <MaterialIcons name={meta.icon} size={22} color={colors[meta.ink]} />
+                                  <MaterialIcons
+                                      name={meta.icon}
+                                      size={22}
+                                      color={colors[meta.ink]}
+                                      {...decorativeIconProps}
+                                  />
                               </View>
                               <View style={styles.rowText}>
                                   <Text style={styles.gameName}>{meta.name}</Text>

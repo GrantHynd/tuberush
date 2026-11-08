@@ -91,7 +91,7 @@ export default function AuthScreen() {
                 </Text>
                 <Text
                     style={styles.subtitle}
-                    numberOfLines={2}
+                    numberOfLines={1}
                     adjustsFontSizeToFit
                     minimumFontScale={0.35}
                 >

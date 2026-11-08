@@ -72,8 +72,9 @@ describe('shared game components (TUB-294)', () => {
         expect(onCheck).not.toHaveBeenCalled();
         const check = getByTestId('key-check');
         expect(check.props.accessibilityState.disabled).toBe(true);
-        expect(check.props.accessibilityHint).toBe('Fill all squares to check');
         expect(check.props.accessibilityLabel).toBe('Check');
+        // React prop. iOS omits the hint from the native tree while enabled=false stays set.
+        expect(check.props.accessibilityHint).toBe('Fill all squares to check');
     });
 
     it('Check keeps the whole word when text scales', async () => {

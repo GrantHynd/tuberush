@@ -2,7 +2,9 @@ import AuthScreen from '@/app/auth';
 import { gameTabAccessibilityLabels } from '@/app/(tabs)/_layout';
 import RebrandPreviewScreen from '@/components/dev/RebrandPreview';
 import { GameHeader } from '@/components/game-ui/GameHeader';
+import { SectionHeader } from '@/components/home/SectionHeader';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { GAMES } from '@/constants/Games';
 import { LARGE_TEXT_FONT_SCALE } from '@/lib/a11y';
 import { useAuthStore } from '@/stores/auth-store';
 import { render, within } from '@testing-library/react-native';
@@ -86,7 +88,7 @@ describe('accessibility text and icon labels (TUB-330)', () => {
         const { getByTestId, getByText } = await render(<AuthScreen />);
         expect(getByTestId('auth-scroll')).toBeTruthy();
         const greeting = getByText('Welcome back!');
-        expect(greeting.props.numberOfLines).toBe(2);
+        expect(greeting.props.numberOfLines).toBe(1);
         expect(greeting.props.adjustsFontSizeToFit).toBe(true);
         expect(StyleSheet.flatten(greeting.props.style).width).toBe('100%');
         const signIn = getByTestId('auth-submit-button');
@@ -100,8 +102,30 @@ describe('accessibility text and icon labels (TUB-330)', () => {
         const check = getByTestId('key-check');
         expect(check.props.accessibilityState.disabled).toBe(true);
         expect(check.props.accessibilityLabel).toBe('Check');
+        // Present on the React node. iOS drops this from the native tree for a not-enabled control.
         expect(check.props.accessibilityHint).toBe('Fill all squares to check');
         const flat = StyleSheet.flatten(check.props.style);
         expect(flat.borderStyle).toBe('dashed');
+    });
+
+    it('hides Home section icons so their private-use glyphs are not accessibility nodes', async () => {
+        const hub = String.fromCodePoint(0xe9f4);
+        const grid = String.fromCodePoint(0xe3ec);
+        const { getByText, queryByText } = await render(
+            <>
+                <SectionHeader icon={GAMES.connections.icon} title={GAMES.connections.name} />
+                <SectionHeader icon={GAMES.crossword.icon} title="Crossword" />
+            </>,
+        );
+        expect(queryByText(hub)).toBeNull();
+        expect(queryByText(grid)).toBeNull();
+        for (const glyph of [hub, grid]) {
+            const icon = getByText(glyph, { includeHiddenElements: true });
+            expect(icon.props.accessible).toBe(false);
+            expect(icon.props.accessibilityElementsHidden).toBe(true);
+            expect(icon.props.importantForAccessibility).toBe('no-hide-descendants');
+        }
+        expect(getByText('Interchange')).toBeTruthy();
+        expect(getByText('Crossword')).toBeTruthy();
     });
 });

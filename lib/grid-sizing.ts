@@ -6,16 +6,15 @@
  * the same clamp when the measured area can hold 36pt cells, and a smaller
  * cell down to `MIN_FIT_CELL` when it cannot. Forcing 36pt into a shorter
  * area clips the bottom rows once Dynamic Type grows the clue and keyboard.
- * Cells under `MIN_TARGET_CELL` already use nearest-cell taps. If the area is
- * shorter than `MIN_FIT_CELL`, the board scrolls instead of clipping.
+ * If the area is shorter than `MIN_FIT_CELL`, the board scrolls instead of clipping.
+ * Every open cell stays its own press target at any size. A grid-level handler
+ * cannot use iOS locationX/Y: those are relative to the touched child.
  */
 export const GRID_LINE = 1;
 export const MIN_CELL = 36;
 export const MAX_CELL = 64;
 /** Smallest cell that still shows a letter when the 36pt floor will not fit. */
 export const MIN_FIT_CELL = 18;
-/** Below this, cells are too small to be individual targets; taps snap to the nearest open cell. */
-export const MIN_TARGET_CELL = 44;
 
 export interface LayoutParams {
     w: number;

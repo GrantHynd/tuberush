@@ -1,4 +1,5 @@
 import { useTheme } from '@/hooks/useTheme';
+import { decorativeIconProps } from '@/lib/a11y';
 import { type Palette, Radius, Spacing, Typography } from '@/constants/theme';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import React from 'react';
@@ -32,6 +33,7 @@ export function SectionHeader({
                     size={22}
                     color={colors.text}
                     style={styles.icon}
+                    {...decorativeIconProps}
                 />
                 <Text style={styles.title}>{title}</Text>
                 {badge && (

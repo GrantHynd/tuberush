@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, fireEvent, act } from '@testing-library/react-native';
 import { Crossword } from '@/components/games/Crossword';
+import { CROSSWORD_9X9_A } from '@/constants/fixtures/crossword-9x9-a';
 import type { CrosswordState, CrosswordCell, CrosswordPuzzle } from '@/types/game';
 
 describe('Crossword Component', () => {
@@ -103,18 +104,27 @@ describe('Crossword Component', () => {
       expect(getByTestId('cell-0-0').props.style).toEqual(expect.arrayContaining([expect.objectContaining({ width: 64, height: 64 })]));
     });
 
-    it('snaps grid taps to the nearest open cell when cells are below 44pt', async () => {
-      const { getByTestId } = await renderCw();
+    it('selects the pressed open cell below 44pt, including a scrolled board', async () => {
+      const { getByTestId, queryByTestId } = await renderCw();
       await act(async () => {
         fireEvent(getByTestId('crossword-grid-area'), 'layout', { nativeEvent: { layout: { width: 152, height: 152 } } });
       });
-      // 120x136 → raw 39 → cell 39 (< 44): grid-level touch
-      const touch = getByTestId('crossword-grid-touch');
-      // Tap the black cell at row 1, col 1 → nearest open cell
-      await act(async () => {
-        fireEvent.press(touch, { nativeEvent: { locationX: 1 + 40 * 1 + 10, locationY: 1 + 40 * 2 + 10 } });
+      expect(queryByTestId('crossword-grid-touch')).toBeNull();
+      // Cell-local coordinates are what iOS sends. Selection follows the cell, not that point.
+      await fireEvent.press(getByTestId('cell-2-1'), {
+        nativeEvent: { locationX: 4, locationY: 4, pageX: 900, pageY: 30, target: 41 },
       });
       expect(getByTestId('cell-2-1').props.accessibilityState.selected).toBe(true);
+      expect(getByTestId('cell-0-0').props.accessibilityState.selected).toBe(false);
+    });
+
+    it('selects the nearest open cell when a blocked square is tapped', async () => {
+      const { getByTestId } = await renderCw();
+      const blocked = getByTestId('cell-1-1', { includeHiddenElements: true });
+      expect(blocked.props.accessible).toBe(false);
+      expect(blocked.props.accessibilityElementsHidden).toBe(true);
+      await fireEvent.press(blocked);
+      expect(getByTestId('cell-0-1').props.accessibilityState.selected).toBe(true);
     });
 
     it('shrinks below 36pt so a short area still holds every row', async () => {
@@ -134,6 +144,11 @@ describe('Crossword Component', () => {
       });
       expect(getByTestId('cell-0-0').props.style).toEqual(expect.arrayContaining([expect.objectContaining({ width: 18, height: 18 })]));
       expect(getByTestId('crossword-grid-scroll')).toBeTruthy();
+      await fireEvent.press(getByTestId('cell-2-2'), {
+        nativeEvent: { locationX: 3, locationY: 3, pageX: 12, pageY: 400, target: 9 },
+      });
+      expect(getByTestId('cell-2-2').props.accessibilityState.selected).toBe(true);
+      expect(getByTestId('cell-0-0').props.accessibilityState.selected).toBe(false);
     });
   });
 
@@ -181,6 +196,8 @@ describe('Crossword Component', () => {
       const onCheck = jest.fn();
       const { getByTestId, rerender } = await renderCw({ onCheck, checkDisabled: true });
       expect(getByTestId('key-check').props.accessibilityState.disabled).toBe(true);
+      expect(getByTestId('key-check').props.accessibilityLabel).toBe('Check');
+      // React hint. iOS omits it from the native tree when the control is not enabled.
       expect(getByTestId('key-check').props.accessibilityHint).toBe('Fill all squares to check');
       await rerender(<Crossword puzzle={testPuzzle} gameState={baseGameState} onCellChange={mockOnCellChange} onCheck={onCheck} />);
       await fireEvent.press(getByTestId('key-check'));
@@ -207,3 +224,69 @@ describe('Crossword Component', () => {
     });
   });
 });
+
+describe('sub-44pt hits on the measured grid (SE3)', () => {
+  const onCellChange = jest.fn();
+  const state: CrosswordState = {
+    puzzleId: CROSSWORD_9X9_A.id,
+    grid: CROSSWORD_9X9_A.grid,
+    clues: { across: {}, down: {} },
+    userAnswers: {},
+    completed: false,
+  };
+
+  const childLocal = {
+    nativeEvent: { locationX: 4, locationY: 4, pageX: 880, pageY: 24, target: 41 },
+  };
+
+  const renderSized = (size: number) =>
+    render(
+      <Crossword
+        puzzle={CROSSWORD_9X9_A}
+        gameState={state}
+        onCellChange={onCellChange}
+        onCheck={jest.fn()}
+        staticCellSize={size}
+      />,
+    );
+
+  beforeEach(() => {
+    onCellChange.mockClear();
+  });
+
+  it.each([
+    [37, 'cell-8-8', 'Row 9, column 9'],
+    [35, 'cell-8-8', 'Row 9, column 9'],
+    [23, 'cell-4-4', 'Row 5, column 5'],
+    [43, 'cell-4-4', 'Row 5, column 5'],
+    [64, 'cell-2-2', 'Row 3, column 3'],
+  ])('a %ipt tap selects %s and leaves it an accessibility node', async (size, id, label) => {
+    const { getByTestId, queryByTestId } = await renderSized(size);
+    const cell = getByTestId(id);
+    expect(queryByTestId('crossword-grid-touch')).toBeNull();
+    expect(cell.props.accessible).toBe(true);
+    expect(cell.props.accessibilityRole).toBe('button');
+    expect(cell.props.accessibilityLabel).toContain(label);
+    expect(cell.props.accessibilityActions.map((action: { name: string }) => action.name)).toEqual([
+      'activate',
+      'increment',
+      'decrement',
+    ]);
+    await fireEvent.press(cell, childLocal);
+    expect(getByTestId(id).props.accessibilityState.selected).toBe(true);
+    expect(getByTestId('cell-0-0').props.accessibilityState.selected).toBe(false);
+  });
+
+  it('activates a 23pt cell from the accessibility action and types with the keyboard', async () => {
+    const { getByTestId } = await renderSized(23);
+    await fireEvent(getByTestId('cell-4-4'), 'accessibilityAction', {
+      nativeEvent: { actionName: 'activate' },
+    });
+    expect(getByTestId('cell-4-4').props.accessibilityState.selected).toBe(true);
+    expect(getByTestId('cell-4-4').props.accessibilityRole).toBe('adjustable');
+    await fireEvent.press(getByTestId('key-Q'));
+    expect(onCellChange).toHaveBeenCalledWith(4, 4, 'Q');
+    expect(getByTestId('cell-4-5').props.accessibilityState.selected).toBe(true);
+  });
+});
+
