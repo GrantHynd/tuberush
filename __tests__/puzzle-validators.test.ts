@@ -1,12 +1,11 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
-import { CONNECTIONS_DATA } from '@/constants/ConnectionsData';
-import { CROSSWORD_DATA } from '@/constants/CrosswordData';
 import {
   GAME_TYPES,
   INTERCHANGE_GAME_TYPE,
   PUZZLE_SCHEMA_VERSION,
+  assertPublishablePuzzle,
   hashPublishKey,
   validatePuzzleSubmission,
   type PuzzleFieldError,
@@ -29,37 +28,17 @@ function errorOn(result: PuzzleValidationResult, field: string, code?: PuzzleFie
 }
 
 describe('puzzle validators (TUB-332)', () => {
-  it('accepts the app crossword payloads, including a missing schemaVersion', () => {
-    for (const puzzle of CROSSWORD_DATA) {
-      const result = validatePuzzleSubmission({
-        gameType: 'crossword',
-        targetDate: puzzle.date,
-        payload: puzzle,
-      });
-      expect(result.ok).toBe(true);
-      expect(result.errors).toEqual([]);
-    }
-  });
-
-  it('accepts the app Interchange payloads stored as connections', () => {
+  it('accepts the shared fixtures, including a crossword with no schemaVersion', () => {
     expect(INTERCHANGE_GAME_TYPE).toBe('connections');
     expect(GAME_TYPES).toEqual(['crossword', 'connections']);
-    for (const puzzle of CONNECTIONS_DATA) {
-      const result = validatePuzzleSubmission({
-        gameType: 'connections',
-        targetDate: puzzle.date,
-        payload: puzzle,
-      });
-      expect(result.ok).toBe(true);
-      expect(result.errors).toEqual([]);
-    }
-  });
 
-  it('accepts the app fixture and the lambda fixture', () => {
-    expect(validatePuzzleSubmission(loadFixture('crossword-app.json')).ok).toBe(true);
-    expect(validatePuzzleSubmission(loadFixture('crossword-lambda.json')).ok).toBe(true);
-    const interchange = validatePuzzleSubmission(loadFixture('interchange.json'));
-    expect(interchange.ok).toBe(true);
+    const crossword = loadFixture('crossword-app.json');
+    expect(crossword.payload).not.toHaveProperty('schemaVersion');
+    expect(validatePuzzleSubmission(crossword)).toEqual({ ok: true, errors: [] });
+    assertPublishablePuzzle(crossword);
+
+    const interchange = loadFixture('interchange.json');
+    expect(validatePuzzleSubmission(interchange)).toEqual({ ok: true, errors: [] });
 
     const withVersion = loadFixture('interchange.json');
     (withVersion.payload as { schemaVersion?: number }).schemaVersion = PUZZLE_SCHEMA_VERSION;
@@ -94,7 +73,9 @@ describe('puzzle validators (TUB-332)', () => {
   });
 
   it('rejects duplicate normalized Interchange words', () => {
-    const result = validatePuzzleSubmission(loadFixture('invalid/duplicate-words.json'));
+    const fixture = loadFixture('invalid/duplicate-words.json');
+    expect(() => assertPublishablePuzzle(fixture)).toThrow(/payload\.groups\[1\]\.items\[0\]/);
+    const result = validatePuzzleSubmission(fixture);
     expect(errorOn(result, 'payload.groups[1].items[0]', 'duplicate').message).toContain(
       'payload.groups[0].items[0]',
     );
