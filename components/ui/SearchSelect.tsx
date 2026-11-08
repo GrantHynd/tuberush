@@ -1,3 +1,4 @@
+import { useTheme } from '@/hooks/useTheme';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
     FlatList,
@@ -9,7 +10,7 @@ import {
     View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Colors, Typography, Spacing, Layout } from '@/constants/theme';
+import { type Palette, Typography, Spacing, Layout } from '@/constants/theme';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 
 export interface SearchSelectProps {
@@ -38,6 +39,8 @@ export function SearchSelect({
     onClose,
     closeOnSelect = true,
 }: SearchSelectProps) {
+    const { colors } = useTheme();
+    const styles = React.useMemo(() => makeStyles(colors), [colors]);
     const [query, setQuery] = useState('');
     const [debouncedQuery, setDebouncedQuery] = useState('');
     const [seenVisible, setSeenVisible] = useState(visible);
@@ -108,7 +111,7 @@ export function SearchSelect({
                         value={query}
                         onChangeText={setQuery}
                         placeholder={placeholder}
-                        placeholderTextColor={Colors.light.icon}
+                        placeholderTextColor={colors.textSecondary}
                         autoCapitalize="none"
                         autoCorrect={false}
                         accessibilityLabel={accessibilityLabel}
@@ -152,7 +155,7 @@ export function SearchSelect({
                                 <IconSymbol
                                     name="checkmark.circle.fill"
                                     size={22}
-                                    color={Colors.light.tint}
+                                    color={colors.primary}
                                 />
                             )}
                         </TouchableOpacity>
@@ -163,10 +166,11 @@ export function SearchSelect({
     );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Palette) {
+    return StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: Colors.light.background,
+        backgroundColor: colors.background,
     },
     header: {
         flexDirection: 'row',
@@ -174,36 +178,35 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         padding: Spacing.md,
         borderBottomWidth: 1,
-        borderBottomColor: Colors.light.border,
+        borderBottomColor: colors.border,
     },
     title: {
-        ...Typography.h3,
-    },
+        ...Typography.h3, color: colors.text },
     closeButton: {
-        color: Colors.light.tint,
+        color: colors.primary,
         fontSize: 16,
         fontWeight: '600',
     },
     searchContainer: {
         padding: Spacing.md,
         borderBottomWidth: 1,
-        borderBottomColor: Colors.light.border,
+        borderBottomColor: colors.border,
     },
     searchInput: {
-        backgroundColor: Colors.light.card,
+        backgroundColor: colors.elevated,
         borderWidth: 1,
-        borderColor: Colors.light.border,
+        borderColor: colors.border,
         borderRadius: Layout.borderRadius.md,
         paddingHorizontal: Spacing.md,
         paddingVertical: Spacing.sm,
         fontSize: 16,
-        color: Colors.light.text,
+        color: colors.text,
         minHeight: 44,
     },
     item: {
         padding: Spacing.md,
         borderBottomWidth: 1,
-        borderBottomColor: Colors.light.border,
+        borderBottomColor: colors.border,
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
@@ -211,17 +214,19 @@ const styles = StyleSheet.create({
     },
     itemText: {
         fontSize: 16,
-        color: Colors.light.text,
+        color: colors.text,
         flex: 1,
     },
     selectedItemText: {
-        color: Colors.light.tint,
+        color: colors.primary,
         fontWeight: '600',
     },
     emptyText: {
         textAlign: 'center',
-        color: Colors.light.icon,
+        color: colors.textSecondary,
         padding: Spacing.xl,
         fontSize: 16,
     },
 });
+}
+

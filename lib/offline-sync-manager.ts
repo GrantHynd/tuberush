@@ -78,7 +78,6 @@ class OfflineSyncManager {
         });
     }
 
-
     /**
      * Get current network status
      */

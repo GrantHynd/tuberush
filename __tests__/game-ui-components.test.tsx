@@ -36,17 +36,17 @@ describe('shared game components (TUB-294)', () => {
         expect(el.props.accessibilityState.disabled).toBe(state === 'disabled' || state === 'solved');
     });
 
-    it('selected Tile shows a station dot', async () => {
+    it('selected Tile shows a tick', async () => {
         const { getByTestId } = await render(<Tile testID="t" label="HYDE" state="selected" onPress={jest.fn()} />);
-        expect(getByTestId('t-dot')).toBeTruthy();
+        expect(getByTestId('t-tick', { includeHiddenElements: true })).toBeTruthy();
     });
 
     it('FeedbackToast announces and auto-hides after 2.5s', async () => {
         jest.useFakeTimers();
         const onHide = jest.fn();
         const { getByText } = await render(<FeedbackToast message="Not a line. 3 tries left." onHide={onHide} />);
-        expect(getByText('MIND THE GAP')).toBeTruthy();
-        expect(AccessibilityInfo.announceForAccessibility).toHaveBeenCalledWith('Mind the gap. Not a line. 3 tries left.');
+        expect(getByText('NOT QUITE')).toBeTruthy();
+        expect(AccessibilityInfo.announceForAccessibility).toHaveBeenCalledWith('Not quite. Not a line. 3 tries left.');
         await act(async () => { jest.advanceTimersByTime(3000); });
         expect(onHide).toHaveBeenCalled();
         jest.useRealTimers();
@@ -70,17 +70,35 @@ describe('shared game components (TUB-294)', () => {
         const { getByTestId } = await render(<GameKeyboard onKey={jest.fn()} onBackspace={jest.fn()} onCheck={onCheck} checkDisabled />);
         await fireEvent.press(getByTestId('key-check'));
         expect(onCheck).not.toHaveBeenCalled();
+        const check = getByTestId('key-check');
+        expect(check.props.accessibilityState.disabled).toBe(true);
+        expect(check.props.accessibilityLabel).toBe('Check');
+        // React prop. iOS omits the hint from the native tree while enabled=false stays set.
+        expect(check.props.accessibilityHint).toBe('Fill all squares to check');
+    });
+
+    it('Check keeps the whole word when text scales', async () => {
+        const { getByText } = await render(<GameKeyboard onKey={jest.fn()} onBackspace={jest.fn()} onCheck={jest.fn()} />);
+        const label = getByText('Check', { includeHiddenElements: true });
+        expect(label.props.numberOfLines).toBe(1);
+        expect(label.props.adjustsFontSizeToFit).toBe(true);
+        expect(label.props.accessible).toBe(false);
+        expect(label.props.accessibilityElementsHidden).toBe(true);
     });
 
     it('ClueBar exposes prev/next/toggle', async () => {
         const p = jest.fn(); const n = jest.fn(); const t = jest.fn();
-        const { getByRole } = await render(
+        const { getByRole, getByText, getByTestId } = await render(
             <ClueBar label="1 Across" clue="Keep these open" length={4} lineColor="#A4161A" onPrev={p} onNext={n} onToggleDirection={t} />,
         );
+        expect(getByTestId('clue-scroll')).toBeTruthy();
         await fireEvent.press(getByRole('button', { name: 'Previous clue' }));
         await fireEvent.press(getByRole('button', { name: 'Next clue' }));
         await fireEvent.press(getByRole('button', { name: 'Switch direction' }));
         expect([p, n, t].every((f) => f.mock.calls.length === 1)).toBe(true);
+        const clue = getByText(/Keep these open/, { includeHiddenElements: true });
+        expect(clue.props.numberOfLines).toBeUndefined();
+        expect(clue.props.accessibilityElementsHidden).toBe(true);
     });
 
     it('LineRail labels a revealed group as one element', async () => {

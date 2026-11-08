@@ -1,4 +1,4 @@
-import { availableArea, cellSize, gridExtent, keyboardHeightFor, letterSize, numberSize, rawCellSize, type LayoutParams } from '@/lib/grid-sizing';
+import { availableArea, cellSize, cellSizeToFit, gridExtent, keyboardHeightFor, letterSize, MIN_CELL, MIN_FIT_CELL, numberSize, rawCellSize, type LayoutParams } from '@/lib/grid-sizing';
 import { keyboardHeight } from '@/components/game-ui/GameKeyboard';
 
 // Values copied from game-ui-review/tools/grid_sizing.py (TUB-298).
@@ -35,6 +35,17 @@ describe('grid sizing (TUB-298)', () => {
         expect(letterSize(64)).toBe(35);
         expect(numberSize(64)).toBe(15);
         expect(numberSize(36)).toBe(9);
+    });
+
+    it('fits a 9×9 into a short area instead of clamping to 36 and clipping', () => {
+        const avail = 200;
+        const fitted = cellSizeToFit(avail, avail, 9);
+        expect(fitted).toBeLessThan(MIN_CELL);
+        expect(fitted).toBeGreaterThanOrEqual(MIN_FIT_CELL);
+        expect(gridExtent(fitted, 9)).toBeLessThanOrEqual(avail);
+        expect(cellSizeToFit(1000, 1000, 5)).toBe(64);
+        expect(cellSizeToFit(343, 361, 9)).toBe(cellSize(343, 361, 9));
+        expect(cellSizeToFit(40, 40, 9)).toBe(MIN_FIT_CELL);
     });
 });
 

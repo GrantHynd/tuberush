@@ -1,6 +1,7 @@
+import { useTheme } from '@/hooks/useTheme';
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { Colors, TFL, Spacing, Layout } from '@/constants/theme';
+import { type Palette, Spacing, Layout } from '@/constants/theme';
 import { BoroughBreakdownEntry } from '@/types/game';
 import { getDisplayName, formatScore } from '@/lib/display-utils';
 
@@ -10,6 +11,8 @@ interface BoroughListProps {
 }
 
 export function BoroughList({ boroughs, userBorough }: BoroughListProps) {
+    const { colors } = useTheme();
+    const styles = React.useMemo(() => makeStyles(colors), [colors]);
     return (
         <View>
             <Text style={styles.sectionLabel}>LONDON BOROUGHS</Text>
@@ -65,21 +68,22 @@ export function BoroughList({ boroughs, userBorough }: BoroughListProps) {
     );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Palette) {
+    return StyleSheet.create({
     sectionLabel: {
         fontSize: 12,
         fontWeight: '600',
-        color: TFL.grey.dark,
+        color: colors.textSecondary,
         letterSpacing: 1,
         textTransform: 'uppercase',
         marginBottom: Spacing.sm,
         paddingHorizontal: Spacing.xs,
     },
     card: {
-        backgroundColor: Colors.light.background,
+        backgroundColor: colors.background,
         borderRadius: Layout.borderRadius.lg,
         borderWidth: 1,
-        borderColor: Colors.light.border,
+        borderColor: colors.border,
         overflow: 'hidden',
     },
     row: {
@@ -89,7 +93,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: Spacing.md,
     },
     rowHighlight: {
-        backgroundColor: TFL.blue + '0A',
+        backgroundColor: colors.primary + '0A',
     },
     accentBorder: {
         position: 'absolute',
@@ -97,7 +101,7 @@ const styles = StyleSheet.create({
         top: 0,
         bottom: 0,
         width: 3,
-        backgroundColor: TFL.blue,
+        backgroundColor: colors.primary,
     },
     info: {
         flex: 1,
@@ -110,11 +114,11 @@ const styles = StyleSheet.create({
     name: {
         fontSize: 15,
         fontWeight: '700',
-        color: Colors.light.text,
+        color: colors.text,
     },
     youPill: {
         borderWidth: 1,
-        borderColor: TFL.blue,
+        borderColor: colors.primary,
         paddingHorizontal: 6,
         paddingVertical: 1,
         borderRadius: 8,
@@ -122,12 +126,12 @@ const styles = StyleSheet.create({
     youText: {
         fontSize: 9,
         fontWeight: '700',
-        color: TFL.blue,
+        color: colors.primary,
         letterSpacing: 0.5,
     },
     subtitle: {
         fontSize: 12,
-        color: TFL.grey.dark,
+        color: colors.textSecondary,
         marginTop: 2,
     },
     scoreCol: {
@@ -137,16 +141,18 @@ const styles = StyleSheet.create({
     score: {
         fontSize: 15,
         fontWeight: '700',
-        color: Colors.light.text,
+        color: colors.text,
     },
     scoreLabel: {
         fontSize: 10,
-        color: TFL.grey.dark,
+        color: colors.textSecondary,
         marginTop: 1,
     },
     divider: {
         height: 1,
-        backgroundColor: Colors.light.border,
+        backgroundColor: colors.border,
         marginHorizontal: Spacing.md,
     },
 });
+}
+

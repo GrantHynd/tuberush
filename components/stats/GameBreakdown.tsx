@@ -1,8 +1,9 @@
+import { useTheme } from '@/hooks/useTheme';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { UpsellCard } from '@/components/ui/UpsellCard';
-import { Colors, GameColors, Radius, Spacing, TFL } from '@/constants/theme';
+import { type Palette, Radius, Spacing } from '@/constants/theme';
 import { formatMaybe, formatScore } from '@/lib/display-utils';
 import { averageTime, bestTime, currentStreak, filterHistory, streakDates, TREND_DAYS, withinDays } from '@/lib/stats';
 import type { GameHistoryEntry } from '@/lib/game-history';
@@ -27,6 +28,8 @@ export function GameBreakdown({
     onUpgrade: () => void;
     now?: Date;
 }) {
+    const { colors } = useTheme();
+    const styles = React.useMemo(() => makeStyles(colors), [colors]);
     return (
         <StatsSection title="By game" testID="stats-breakdown">
             {ROWS.map(({ game, name }, i) => {
@@ -57,14 +60,14 @@ export function GameBreakdown({
                         style={[styles.row, i > 0 && styles.divider]}
                         testID={`breakdown-${game}`}
                     >
-                        <View style={[styles.swatch, { backgroundColor: GameColors[game] }]} />
+                        <View style={[styles.swatch, { backgroundColor: game === 'connections' ? colors.gameInterchange : colors.gameCrossword }]} />
                         <View style={styles.main}>
                             <Text style={styles.name}>{name}</Text>
                             <Text style={styles.meta}>
                                 {rows.length} played · Best {formatMaybe(best, formatScore)} · Avg {formatMaybe(avg, formatScore)} · Streak {streak}
                             </Text>
                         </View>
-                        <MaterialIcons name="chevron-right" size={20} color={TFL.grey.dark} />
+                        <MaterialIcons name="chevron-right" size={20} color={colors.textSecondary} />
                     </Pressable>
                 );
             })}
@@ -72,12 +75,15 @@ export function GameBreakdown({
     );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Palette) {
+    return StyleSheet.create({
     row: { flexDirection: 'row', alignItems: 'center', paddingVertical: Spacing.s12, gap: Spacing.s12, minHeight: 48 },
-    divider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: Colors.light.border },
+    divider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
     spaced: { marginTop: Spacing.s12 },
     swatch: { width: 12, height: 12, borderRadius: Radius.sm },
     main: { flex: 1 },
-    name: { fontSize: 16, fontWeight: '600', color: Colors.light.text },
-    meta: { fontSize: 12, color: TFL.grey.dark, marginTop: 2 },
+    name: { fontSize: 16, fontWeight: '600', color: colors.text },
+    meta: { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
 });
+}
+

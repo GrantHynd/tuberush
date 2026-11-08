@@ -20,7 +20,7 @@ export const privacyHtml = `<!DOCTYPE html>
     h2 { font-size: 1.25rem; margin: 2rem 0 0.5rem; }
     p, li { margin: 0.6rem 0; }
     ul { padding-left: 1.25rem; }
-    a { color: #003688; }
+    a { color: #0D5C55; }
     .meta { color: #4b5563; margin-top: 0; }
     footer { margin-top: 2.5rem; color: #4b5563; }
   </style>
@@ -107,7 +107,7 @@ export const termsHtml = `<!DOCTYPE html>
     h2 { font-size: 1.25rem; margin: 2rem 0 0.5rem; }
     p, li { margin: 0.6rem 0; }
     ul { padding-left: 1.25rem; }
-    a { color: #003688; }
+    a { color: #0D5C55; }
     .meta { color: #4b5563; margin-top: 0; }
     footer { margin-top: 2.5rem; color: #4b5563; }
   </style>

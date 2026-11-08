@@ -1,5 +1,6 @@
+import { useTheme } from '@/hooks/useTheme';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors, Layout, Spacing, TFL } from '@/constants/theme';
+import { type Palette, Layout, Spacing } from '@/constants/theme';
 import { PRIVACY_POLICY_ROUTE, TERMS_OF_USE_ROUTE } from '@/lib/legal';
 import { useRouter } from 'expo-router';
 import React from 'react';
@@ -14,6 +15,8 @@ function LegalRow({
     route: typeof PRIVACY_POLICY_ROUTE | typeof TERMS_OF_USE_ROUTE;
     testID: string;
 }) {
+    const { colors } = useTheme();
+    const styles = React.useMemo(() => makeStyles(colors), [colors]);
     const router = useRouter();
 
     return (
@@ -25,12 +28,14 @@ function LegalRow({
             testID={testID}
         >
             <Text style={styles.rowLabel}>{label}</Text>
-            <IconSymbol name="chevron.right" size={20} color={Colors.light.icon} />
+            <IconSymbol name="chevron.right" size={20} color={colors.textSecondary} />
         </TouchableOpacity>
     );
 }
 
 export function LegalSection() {
+    const { colors } = useTheme();
+    const styles = React.useMemo(() => makeStyles(colors), [colors]);
     return (
         <View style={styles.section}>
             <Text style={styles.sectionTitle}>LEGAL</Text>
@@ -51,7 +56,8 @@ export function LegalSection() {
     );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Palette) {
+    return StyleSheet.create({
     section: {
         marginTop: Spacing.lg,
         marginBottom: Spacing.lg,
@@ -62,15 +68,15 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         textTransform: 'uppercase',
         letterSpacing: 1,
-        color: TFL.grey.dark,
+        color: colors.textSecondary,
         marginBottom: Spacing.sm,
         marginLeft: Spacing.xs,
     },
     card: {
-        backgroundColor: Colors.light.card,
+        backgroundColor: colors.elevated,
         borderRadius: Layout.borderRadius.lg,
         borderWidth: 1,
-        borderColor: Colors.light.border,
+        borderColor: colors.border,
         overflow: 'hidden',
     },
     cardRow: {
@@ -82,12 +88,14 @@ const styles = StyleSheet.create({
     },
     cardDivider: {
         height: 1,
-        backgroundColor: Colors.light.border,
+        backgroundColor: colors.border,
         marginHorizontal: Spacing.md,
     },
     rowLabel: {
         fontSize: 16,
-        color: Colors.light.text,
+        color: colors.text,
         fontWeight: '500',
     },
 });
+}
+

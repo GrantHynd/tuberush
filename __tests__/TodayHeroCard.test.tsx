@@ -51,7 +51,7 @@ it('countdown to local midnight', () => {
 describe('TodayHeroCard', () => {
     it('renders CTAs, combined a11y label and handles press', async () => {
         const onPress = jest.fn();
-        const { getByTestId, getByText } = await render(
+        const { getByTestId, getByText, queryByText } = await render(
             <TodayHeroCard rows={[
                 { gameType: 'connections', state: 'unplayed', statusText: '312 commuters played', onPress },
                 { gameType: 'crossword', state: 'locked', statusText: '1st Class puzzle', onPress: jest.fn() },
@@ -60,6 +60,12 @@ describe('TodayHeroCard', () => {
         expect(getByText('Play')).toBeTruthy();
         expect(getByText('Unlock')).toBeTruthy();
         expect(getByTestId('today-hero-connections').props.accessibilityLabel).toBe('Interchange, today, 312 commuters played, Play');
+        const hub = String.fromCodePoint(0xe9f4);
+        const grid = String.fromCodePoint(0xe3ec);
+        expect(queryByText(hub)).toBeNull();
+        expect(queryByText(grid)).toBeNull();
+        expect(getByText(hub, { includeHiddenElements: true }).props.accessibilityElementsHidden).toBe(true);
+        expect(getByText(grid, { includeHiddenElements: true }).props.accessibilityElementsHidden).toBe(true);
         await fireEvent.press(getByTestId('today-hero-connections'));
         expect(onPress).toHaveBeenCalled();
     });

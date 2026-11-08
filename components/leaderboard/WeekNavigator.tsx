@@ -1,6 +1,7 @@
+import { useTheme } from '@/hooks/useTheme';
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { Colors, TFL, Spacing, Typography } from '@/constants/theme';
+import { type Palette, Spacing, Typography } from '@/constants/theme';
 import { LiveBadge } from './LiveBadge';
 import { getWeekLabel, isCurrentWeek } from '@/lib/week-utils';
 
@@ -15,6 +16,8 @@ export function WeekNavigator({
     weekEnd,
     onWeekChange,
 }: WeekNavigatorProps) {
+    const { colors } = useTheme();
+    const styles = React.useMemo(() => makeStyles(colors), [colors]);
     const isCurrent = isCurrentWeek(weekStart);
     const label = getWeekLabel(weekStart, weekEnd);
 
@@ -34,8 +37,11 @@ export function WeekNavigator({
 
             <TouchableOpacity
                 onPress={() => onWeekChange(1)}
-                style={styles.button}
+                style={[styles.button, isCurrent && styles.buttonDisabled]}
                 disabled={isCurrent}
+                accessibilityRole="button"
+                accessibilityLabel="Later"
+                accessibilityState={{ disabled: isCurrent }}
             >
                 <Text
                     style={[
@@ -50,7 +56,8 @@ export function WeekNavigator({
     );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Palette) {
+    return StyleSheet.create({
     container: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -61,6 +68,13 @@ const styles = StyleSheet.create({
     button: {
         paddingVertical: Spacing.xs,
         paddingHorizontal: Spacing.sm,
+        borderWidth: 1,
+        borderColor: 'transparent',
+        borderRadius: 8,
+    },
+    buttonDisabled: {
+        borderStyle: 'dashed',
+        borderColor: colors.border,
     },
     center: {
         flexDirection: 'row',
@@ -70,14 +84,16 @@ const styles = StyleSheet.create({
     label: {
         ...Typography.caption,
         fontWeight: '600',
-        color: Colors.light.text,
+        color: colors.text,
     },
     navText: {
         fontSize: 14,
         fontWeight: '600',
-        color: TFL.blue,
+        color: colors.primary,
     },
     navTextDisabled: {
-        color: TFL.grey.dark,
+        color: colors.textSecondary,
     },
 });
+}
+

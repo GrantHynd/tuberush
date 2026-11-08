@@ -18,7 +18,8 @@ const CLAUDE_SKILL_TIMEOUT_MS = 60_000;
 const MAX_RETRIES = 1;
 const MAX_PAUSE_TURNS = 4;
 const ANTHROPIC_BETA_SKILLS = 'code-execution-2025-08-25,skills-2025-10-02';
-const GROUP_COLORS = ['#DC241F', '#007D32', '#0019A8', '#FFD329'];
+/** Tonal Interchange group fills (Option A). Number and label still identify the group. */
+const GROUP_COLORS = ['#18332D', '#1E3D35', '#24463D', '#2A4F45'];
 
 // ---------------------------------------------------------------------------
 // Secrets

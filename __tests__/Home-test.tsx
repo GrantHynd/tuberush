@@ -7,7 +7,6 @@ import { useLocationRank } from '@/hooks/useLocationRank';
 import { openPaywall } from '@/lib/paywall';
 jest.mock('@/lib/paywall', () => ({ openPaywall: jest.fn(() => Promise.resolve(null)) }));
 
-
 // Mock dependencies
 jest.mock('@/stores/auth-store', () => ({
   useAuthStore: jest.fn(),

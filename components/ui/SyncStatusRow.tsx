@@ -1,4 +1,5 @@
-import { Colors, Spacing, TFL } from '@/constants/theme';
+import { useTheme } from '@/hooks/useTheme';
+import { type Palette, Spacing } from '@/constants/theme';
 import type { SyncStatus } from '@/lib/offline-sync-manager';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import React from 'react';
@@ -16,14 +17,14 @@ interface SyncPresentation {
 }
 
 /** Map a sync status to what the Profile row shows. Retry is only offered when sync failed or is stale. */
-export function getSyncPresentation(syncStatus: SyncStatus | undefined): SyncPresentation {
+export function getSyncPresentation(syncStatus: SyncStatus | undefined, colors: Palette): SyncPresentation {
     switch (syncStatus?.status) {
         case 'syncing':
-            return { icon: null, color: Colors.light.icon, label: 'Syncing…', canRetry: false };
+            return { icon: null, color: colors.textSecondary, label: 'Syncing…', canRetry: false };
         case 'pending':
             return {
                 icon: 'schedule',
-                color: Colors.light.icon,
+                color: colors.textSecondary,
                 label: 'Not synced yet',
                 detail: `${syncStatus.message}. They'll sync automatically, or retry now.`,
                 canRetry: true,
@@ -31,7 +32,7 @@ export function getSyncPresentation(syncStatus: SyncStatus | undefined): SyncPre
         case 'offline':
             return {
                 icon: 'cloud-off',
-                color: Colors.light.icon,
+                color: colors.textSecondary,
                 label: 'Offline',
                 detail: "Your progress is saved on this device and will sync when you're back online.",
                 canRetry: false,
@@ -39,7 +40,7 @@ export function getSyncPresentation(syncStatus: SyncStatus | undefined): SyncPre
         case 'error':
             return {
                 icon: 'error-outline',
-                color: Colors.light.error,
+                color: colors.error,
                 label: 'Sync failed',
                 detail: `${syncStatus.message}. Check your connection and try again.`,
                 canRetry: true,
@@ -47,7 +48,7 @@ export function getSyncPresentation(syncStatus: SyncStatus | undefined): SyncPre
         case 'synced':
         case 'online':
         default:
-            return { icon: 'check-circle', color: Colors.light.success, label: 'Synced', canRetry: false };
+            return { icon: 'check-circle', color: colors.success, label: 'Synced', canRetry: false };
     }
 }
 
@@ -57,7 +58,9 @@ interface SyncStatusRowProps {
 }
 
 export function SyncStatusRow({ syncStatus, onRetry }: SyncStatusRowProps) {
-    const p = getSyncPresentation(syncStatus);
+    const { colors } = useTheme();
+    const styles = React.useMemo(() => makeStyles(colors), [colors]);
+    const p = getSyncPresentation(syncStatus, colors);
 
     return (
         <View>
@@ -67,7 +70,7 @@ export function SyncStatusRow({ syncStatus, onRetry }: SyncStatusRowProps) {
                     {p.icon ? (
                         <MaterialIcons name={p.icon} size={18} color={p.color} />
                     ) : (
-                        <ActivityIndicator size="small" color={Colors.light.icon} />
+                        <ActivityIndicator size="small" color={colors.textSecondary} />
                     )}
                     <Text style={styles.value} numberOfLines={1}>
                         {p.label}
@@ -90,7 +93,8 @@ export function SyncStatusRow({ syncStatus, onRetry }: SyncStatusRowProps) {
     );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Palette) {
+    return StyleSheet.create({
     row: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -101,7 +105,7 @@ const styles = StyleSheet.create({
     },
     label: {
         fontSize: 16,
-        color: Colors.light.text,
+        color: colors.text,
         fontWeight: '500',
         flexShrink: 0,
     },
@@ -115,7 +119,7 @@ const styles = StyleSheet.create({
     },
     value: {
         fontSize: 16,
-        color: Colors.light.icon,
+        color: colors.textSecondary,
         flexShrink: 1,
     },
     retry: {
@@ -124,13 +128,15 @@ const styles = StyleSheet.create({
     retryText: {
         fontSize: 16,
         fontWeight: '600',
-        color: TFL.blue,
+        color: colors.primary,
     },
     detail: {
         fontSize: 13,
-        color: Colors.light.icon,
+        color: colors.textSecondary,
         paddingHorizontal: Spacing.md,
         paddingBottom: Spacing.md,
         marginTop: -Spacing.sm,
     },
 });
+}
+

@@ -1,24 +1,25 @@
 import { ClueBar } from '@/components/game-ui/ClueBar';
 import { GameKeyboard } from '@/components/game-ui/GameKeyboard';
-import { FontScaleCap, GameColors, StateColors, TFL } from '@/constants/theme';
+import { FontScaleCap } from '@/constants/theme';
+import { useTheme } from '@/hooks/useTheme';
+import { decorativeIconProps } from '@/lib/a11y';
+import { nearestOpenCell } from '@/lib/grid-hit';
 import {
-    MIN_TARGET_CELL,
     MIN_CELL,
-    cellSize as computeCellSize,
+    cellSizeToFit,
     gridExtent,
     letterSize,
     numberSize,
     rawCellSize,
 } from '@/lib/grid-sizing';
 import type { CrosswordCell as CrosswordCellType, CrosswordClue, CrosswordPuzzle, CrosswordState } from '@/types/game';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
     AccessibilityInfo,
     type AccessibilityActionEvent,
-    type GestureResponderEvent,
     type LayoutChangeEvent,
     Pressable,
+    ScrollView,
     StyleSheet,
     Text,
     View,
@@ -48,48 +49,99 @@ interface GridCellProps {
     isError: boolean;
     userAnswer: string;
     disabled: boolean;
-    /** False when cells are < 44pt: the grid-level Pressable handles touch instead. */
-    pressable: boolean;
     accessibilityLabel: string;
     onPress: (row: number, col: number) => void;
     onAdjust: (delta: 1 | -1) => void;
+    /** 1pt playable outline. Omitted sides are shared with a neighbour. */
+    outline: { borderTopWidth: number; borderRightWidth: number; borderBottomWidth: number; borderLeftWidth: number };
+}
+
+/**
+ * Dark error shares the text colour, so a light disc disappears on a selected
+ * cell. When that happens the mark is a light X on the cursor ink, with a
+ * light ring. Light mode keeps the red disc and on-error ink.
+ */
+export function errorMarkColors(colors: {
+    error: string;
+    text: string;
+    onError: string;
+    cellCursor: string;
+    cellIdleText: string;
+}) {
+    const sharesText = colors.error.toLowerCase() === colors.text.toLowerCase();
+    if (!sharesText) return { border: colors.error, disc: colors.error, ink: colors.onError };
+    return { border: colors.cellCursor, disc: colors.cellCursor, ink: colors.cellIdleText };
 }
 
 const GridCell = React.memo(function GridCell({
     cell, rowIndex, colIndex, size, isSelected, isActiveWord, isError,
-    userAnswer, disabled, pressable, accessibilityLabel, onPress, onAdjust,
+    userAnswer, disabled, accessibilityLabel, onPress, onAdjust, outline,
 }: GridCellProps) {
+    const { colors } = useTheme();
+    const mark = errorMarkColors(colors);
+    const fill = cell.isBlack
+        ? colors.cellBlockedFill
+        : isSelected
+            ? colors.cellSelectedFill
+            : isActiveWord
+                ? colors.cellWordFill
+                : colors.cellIdleFill;
+    const ink = isSelected ? colors.cellSelectedText : isActiveWord ? colors.cellWordText : colors.cellIdleText;
     const style = [
         styles.cell,
-        { width: size, height: size },
-        cell.isBlack && styles.blackCell,
-        isActiveWord && !isSelected && styles.activeWordCell,
-        isSelected && styles.selectedCell,
-        isError && styles.errorCell,
+        { width: size, height: size, backgroundColor: fill },
+        !cell.isBlack && outline,
+        !cell.isBlack && { borderColor: isError ? mark.border : colors.cellOutline },
     ];
     if (cell.isBlack) {
-        return <View style={style} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />;
+        return (
+            <Pressable
+                style={style}
+                testID={`cell-${rowIndex}-${colIndex}`}
+                onPress={() => onPress(rowIndex, colIndex)}
+                disabled={disabled}
+                pointerEvents="box-only"
+                accessible={false}
+                accessibilityElementsHidden
+                importantForAccessibility="no-hide-descendants"
+            />
+        );
     }
     const content = (
         <>
             {cell.number != null && (
                 <Text
-                    style={[styles.cellNumber, { fontSize: numberSize(size) }, isSelected && styles.onSelected]}
+                    style={[styles.cellNumber, { fontSize: numberSize(size), color: ink }]}
                     maxFontSizeMultiplier={FontScaleCap.gridLetter}
-                    importantForAccessibility="no"
+                    {...decorativeIconProps}
                 >
                     {cell.number}
                 </Text>
             )}
             <Text
-                style={[styles.cellLetter, { fontSize: letterSize(size) }, isSelected && styles.onSelected]}
+                style={[styles.cellLetter, { fontSize: letterSize(size), color: ink }]}
                 maxFontSizeMultiplier={FontScaleCap.gridLetter}
+                {...decorativeIconProps}
             >
                 {userAnswer}
             </Text>
+            {isSelected ? (
+                <>
+                    <View
+                        pointerEvents="none"
+                        style={[styles.selectedRing, { borderColor: colors.cellSelectedRing }]}
+                    />
+                    <View pointerEvents="none" style={[styles.cursor, { backgroundColor: colors.cellCursor }]} />
+                </>
+            ) : null}
             {isError && (
-                <View style={styles.errIcon} accessibilityElementsHidden importantForAccessibility="no">
-                    <MaterialIcons name="close" size={10} color="#FFFFFF" />
+                <View
+                    testID="cell-error-mark"
+                    style={[styles.errIcon, { backgroundColor: mark.disc, borderColor: mark.ink }]}
+                    {...decorativeIconProps}
+                >
+                    <View style={[styles.markArm, { backgroundColor: mark.ink, transform: [{ rotate: '45deg' }] }]} />
+                    <View style={[styles.markArm, { backgroundColor: mark.ink, transform: [{ rotate: '-45deg' }] }]} />
                 </View>
             )}
         </>
@@ -107,19 +159,13 @@ const GridCell = React.memo(function GridCell({
             else if (e.nativeEvent.actionName === 'decrement') onAdjust(-1);
         },
     };
-    if (!pressable) {
-        return (
-            <View style={style} testID={`cell-${rowIndex}-${colIndex}`} {...a11y}>
-                {content}
-            </View>
-        );
-    }
     return (
         <Pressable
             style={style}
             testID={`cell-${rowIndex}-${colIndex}`}
             onPress={() => onPress(rowIndex, colIndex)}
             disabled={disabled}
+            pointerEvents="box-only"
             {...a11y}
         >
             {content}
@@ -176,11 +222,13 @@ export function Crossword({
     const n = Math.max(rows, cols, 1);
 
     // Measured grid area (Dynamic Type grows clue bar/keys → area shrinks → grid shrinks).
-    // Before first layout, estimate from the window.
+    // Before first layout, estimate from the window. The 36pt floor is lifted
+    // when that area cannot hold it, so the bottom rows stay reachable.
     const availW = (area?.w ?? screenW) - 2 * SIDE_MARGIN;
     const availH = area ? area.h - GRID_PAD_V : Math.max(0, screenH - 420);
-    const size = staticCellSize ?? computeCellSize(availW, availH, n);
-    const pressableCells = size >= MIN_TARGET_CELL;
+    const size = staticCellSize ?? cellSizeToFit(availW, availH, n);
+    const extent = gridExtent(size, n);
+    const gridScrolls = !staticCellSize && area != null && (extent > availW + 1 || extent > availH + 1);
 
     const onGridAreaLayout = useCallback(
         (e: LayoutChangeEvent) => {
@@ -285,22 +333,20 @@ export function Crossword({
         [disabled, isOpen, selectedCell, cellToClue, direction],
     );
 
-    /** Grid-level tap for < 44pt cells: snap to the nearest open cell. */
-    const onGridPress = (e: GestureResponderEvent) => {
-        const { locationX, locationY } = e.nativeEvent;
-        const step = size + 1;
-        const tr = Math.min(rows - 1, Math.max(0, Math.floor((locationY - 1) / step)));
-        const tc = Math.min(cols - 1, Math.max(0, Math.floor((locationX - 1) / step)));
-        let best: { r: number; c: number; d: number } | null = null;
-        for (let r = 0; r < rows; r++) {
-            for (let c = 0; c < cols; c++) {
-                if (!isOpen(r, c)) continue;
-                const d = Math.abs(r - tr) + Math.abs(c - tc);
-                if (!best || d < best.d) best = { r, c, d };
-            }
-        }
-        if (best) selectCell(best.r, best.c);
-    };
+    /**
+     * Each cell is the touch target, including cells under 44pt. iOS locationX/Y
+     * are relative to that cell, so a grid overlay that treats them as grid
+     * coordinates selects row 1, column 1 for every tap. Open cells select
+     * themselves. A blocked cell selects the nearest open cell by index, which
+     * stays correct when the board is offset or scrolled.
+     */
+    const selectAt = useCallback(
+        (row: number, col: number) => {
+            const best = nearestOpenCell(row, col, rows, cols, isOpen);
+            if (best) selectCell(best.row, best.col);
+        },
+        [rows, cols, isOpen, selectCell],
+    );
 
     const step = (row: number, col: number, delta: 1 | -1, dir: Direction) =>
         dir === 'across' ? { row, col: col + delta } : { row: row + delta, col };
@@ -377,10 +423,10 @@ export function Crossword({
         if (cellToClue[keyOf(selectedCell.row, selectedCell.col)]?.[other]) setDirection(other);
     };
 
-    const width = gridExtent(size, cols);
+    const { colors } = useTheme();
     const gridNode = (
         <View
-            style={[styles.gridContainer, { width: width + 4 }]}
+            style={[styles.gridContainer, { backgroundColor: colors.cellBlockedFill }]}
             accessibilityLabel={`Crossword grid, ${rows} rows by ${cols} columns`}
             testID="crossword-grid"
         >
@@ -401,10 +447,10 @@ export function Crossword({
                                 isError={!!errorCells?.has(k)}
                                 userAnswer={ans}
                                 disabled={disabled}
-                                pressable={pressableCells}
                                 accessibilityLabel={getCellLabel(r, c, ans)}
-                                onPress={selectCell}
+                                onPress={selectAt}
                                 onAdjust={moveWithinWord}
+                                outline={playableOutline(grid, r, c)}
                             />
                         );
                     })}
@@ -415,18 +461,22 @@ export function Crossword({
 
     return (
         <View style={styles.container} testID="crossword">
-            {/* TUB-298: no ScrollView — the grid is sized to fit this area. */}
+            {/* The grid is sized to this area. It scrolls only when even the 18pt floor cannot fit. */}
             <View
                 style={staticCellSize ? styles.gridAreaStatic : styles.gridArea}
                 onLayout={staticCellSize ? undefined : onGridAreaLayout}
                 testID="crossword-grid-area"
             >
-                {pressableCells || disabled ? (
-                    gridNode
-                ) : (
-                    <Pressable onPress={onGridPress} testID="crossword-grid-touch" accessible={false}>
+                {gridScrolls ? (
+                    <ScrollView
+                        testID="crossword-grid-scroll"
+                        style={styles.gridScroll}
+                        contentContainerStyle={styles.gridScrollContent}
+                    >
                         {gridNode}
-                    </Pressable>
+                    </ScrollView>
+                ) : (
+                    gridNode
                 )}
             </View>
 
@@ -436,7 +486,7 @@ export function Crossword({
                         label={`${active.clue.number} ${active.dir === 'across' ? 'Across' : 'Down'}`}
                         clue={active.clue.clue}
                         length={active.clue.length}
-                        lineColor={GameColors.crossword}
+                        lineColor={colors.gameCrossword}
                         onPrev={() => goToClue(-1)}
                         onNext={() => goToClue(1)}
                         onToggleDirection={toggleDirection}
@@ -460,8 +510,19 @@ export function Crossword({
     );
 }
 
-const NAVY = TFL.blue; // #003688
-const ACTIVE_WORD_BG = '#D6DFFB';
+/** 1pt outline on the outer edges of a playable cell. Shared edges are drawn once. */
+export function playableOutline(grid: { isBlack: boolean }[][], r: number, c: number) {
+    const open = (rr: number, cc: number) => !!grid[rr]?.[cc] && !grid[rr][cc].isBlack;
+    if (!open(r, c)) {
+        return { borderTopWidth: 0, borderRightWidth: 0, borderBottomWidth: 0, borderLeftWidth: 0 };
+    }
+    return {
+        borderTopWidth: open(r - 1, c) ? 0 : 1,
+        borderLeftWidth: open(r, c - 1) ? 0 : 1,
+        borderBottomWidth: 1,
+        borderRightWidth: 1,
+    };
+}
 
 const styles = StyleSheet.create({
     container: { flex: 1 },
@@ -473,40 +534,52 @@ const styles = StyleSheet.create({
         paddingVertical: GRID_PAD_V / 2,
     },
     gridAreaStatic: { alignItems: 'center', paddingHorizontal: SIDE_MARGIN, paddingTop: 8 },
+    gridScroll: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 },
+    gridScrollContent: { flexGrow: 1, alignItems: 'center', justifyContent: 'center' },
     gridContainer: {
-        borderWidth: 2,
-        borderColor: StateColors.gridLine,
-        backgroundColor: StateColors.gridLine,
-        borderRadius: 12,
+        borderRadius: 4,
         overflow: 'hidden',
-        padding: 1,
-        gap: 1,
     },
-    row: { flexDirection: 'row', gap: 1 },
+    row: { flexDirection: 'row' },
     cell: {
-        backgroundColor: '#FFFFFF',
         position: 'relative',
         alignItems: 'center',
         justifyContent: 'center',
     },
-    blackCell: { backgroundColor: '#1C1C1F' },
-    // TUB-295/298: tint alone is 1.33:1, so the active word also gets a 2px navy outline (11:1).
-    activeWordCell: { backgroundColor: ACTIVE_WORD_BG, borderWidth: 2, borderColor: NAVY },
-    selectedCell: { backgroundColor: NAVY, borderWidth: 3, borderColor: StateColors.cursorRing },
-    errorCell: { borderWidth: 3, borderColor: StateColors.error },
-    cellNumber: { position: 'absolute', top: 1, left: 3, color: '#374151', fontWeight: '600' },
-    cellLetter: { fontWeight: '700', color: StateColors.ink },
-    onSelected: { color: '#FFFFFF' },
-    errIcon: {
+    selectedRing: {
         position: 'absolute',
         top: 2,
+        left: 2,
         right: 2,
-        width: 14,
-        height: 14,
-        borderRadius: 7,
-        backgroundColor: StateColors.error,
+        bottom: 2,
+        borderWidth: 1,
+        borderRadius: 2,
+    },
+    cursor: {
+        position: 'absolute',
+        left: '18%',
+        right: '18%',
+        bottom: 6,
+        height: 2,
+    },
+    cellNumber: { position: 'absolute', top: 1, left: 3, fontWeight: '600' },
+    cellLetter: { fontWeight: '700' },
+    errIcon: {
+        position: 'absolute',
+        top: 1,
+        right: 1,
+        width: 16,
+        height: 16,
+        borderRadius: 8,
+        borderWidth: 1,
         alignItems: 'center',
         justifyContent: 'center',
+    },
+    markArm: {
+        position: 'absolute',
+        width: 10,
+        height: 1.5,
+        borderRadius: 1,
     },
     clueWrap: { marginHorizontal: SIDE_MARGIN, marginBottom: 8 },
 });

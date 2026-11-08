@@ -1,6 +1,7 @@
+import { useTheme } from '@/hooks/useTheme';
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { TFL } from '@/constants/theme';
+import { type Palette } from '@/constants/theme';
 
 type RingColor = 'gold' | 'silver' | 'bronze';
 
@@ -23,7 +24,10 @@ export function Avatar({
     isCurrentUser = false,
     ringColor,
 }: AvatarProps) {
-    const bgColor = isCurrentUser ? TFL.blue : TFL.grey.medium;
+    const { colors } = useTheme();
+    const styles = React.useMemo(() => makeStyles(colors), [colors]);
+    const bgColor = isCurrentUser ? colors.primary : colors.surface;
+    const letterColor = isCurrentUser ? colors.onPrimary : colors.text;
     const ring = ringColor ? RING_COLORS[ringColor] : undefined;
 
     return (
@@ -36,6 +40,10 @@ export function Avatar({
                     borderRadius: size / 2,
                     backgroundColor: bgColor,
                 },
+                !isCurrentUser && {
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                },
                 ring && {
                     borderWidth: 2.5,
                     borderColor: ring,
@@ -45,7 +53,7 @@ export function Avatar({
             <Text
                 style={[
                     styles.initial,
-                    { fontSize: size * 0.42, lineHeight: size * 0.52 },
+                    { fontSize: size * 0.42, lineHeight: size * 0.52, color: letterColor },
                 ]}
             >
                 {initial}
@@ -54,14 +62,17 @@ export function Avatar({
     );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Palette) {
+    return StyleSheet.create({
     container: {
         alignItems: 'center',
         justifyContent: 'center',
     },
     initial: {
-        color: TFL.white,
+        color: colors.onPrimary,
         fontWeight: '700',
         textAlign: 'center',
     },
 });
+}
+

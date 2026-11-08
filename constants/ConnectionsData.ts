@@ -1,4 +1,4 @@
-import { TFL } from './theme';
+import { interchangeGroups } from './theme';
 
 export interface ConnectionsGroup {
     category: string;
@@ -45,7 +45,7 @@ function generatePuzzleData(): ConnectionsPuzzle[] {
         ],
     ];
 
-    const colors = [TFL.red, TFL.green, TFL.blue, TFL.yellow];
+    const colors = interchangeGroups.map((group) => group.fill);
 
     for (let i = 0; i < 30; i++) {
         const date = new Date(today);

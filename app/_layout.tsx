@@ -4,6 +4,7 @@ import { configureRevenueCat } from '@/lib/revenuecat';
 import { initSentry } from '@/lib/sentry';
 import { supabase } from '@/lib/supabase-client';
 import { useAuthStore } from '@/stores/auth-store';
+import { palette } from '@/constants/theme';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import * as Sentry from '@sentry/react-native';
 import * as Linking from 'expo-linking';
@@ -12,7 +13,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
 import { gameFonts } from '@/lib/fonts';
 import { useEffect } from 'react';
-import { useColorScheme, Platform } from 'react-native';
+import { useColorScheme, Platform, StyleSheet, View } from 'react-native';
 import 'react-native-reanimated';
 import { startScoreOutbox } from '@/lib/score-outbox';
 
@@ -105,14 +106,50 @@ function RootLayout() {
 
   if (!fontsLoaded && !fontError) return null;
 
+  const scheme = colorScheme === 'dark' ? 'dark' : 'light';
+  const colors = palette[scheme];
+  const base = scheme === 'dark' ? DarkTheme : DefaultTheme;
+  const navTheme = {
+    ...base,
+    colors: {
+      ...base.colors,
+      primary: colors.primary,
+      background: colors.background,
+      card: colors.surface,
+      text: colors.text,
+      border: colors.border,
+      notification: colors.primary,
+    },
+  };
+
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
+    <ThemeProvider value={navTheme}>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          headerStyle: { backgroundColor: colors.surface },
+          headerShadowVisible: false,
+          headerBackground: () => (
+            <View
+              style={{
+                flex: 1,
+                backgroundColor: colors.surface,
+                borderBottomWidth: StyleSheet.hairlineWidth,
+                borderBottomColor: colors.border,
+              }}
+            />
+          ),
+          headerTintColor: colors.text,
+          headerTitleStyle: { color: colors.text },
+          contentStyle: { backgroundColor: colors.background },
+        }}
+      >
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="auth" options={{ presentation: 'modal', title: 'Sign In' }} />
-        <Stack.Screen name="forgot-password" options={{ presentation: 'modal', title: 'Forgot Password' }} />
-        <Stack.Screen name="reset-password" options={{ presentation: 'modal', title: 'Reset Password', gestureEnabled: false }} />
-        <Stack.Screen name="subscribe" options={{ presentation: 'modal', title: 'Subscription details' }} />
+        <Stack.Screen name="dev" options={{ headerShown: false }} />
+        <Stack.Screen name="auth" options={{ headerShown: true, presentation: 'modal', title: 'Sign In' }} />
+        <Stack.Screen name="forgot-password" options={{ headerShown: true, presentation: 'modal', title: 'Forgot Password' }} />
+        <Stack.Screen name="reset-password" options={{ headerShown: true, presentation: 'modal', title: 'Reset Password', gestureEnabled: false }} />
+        <Stack.Screen name="subscribe" options={{ headerShown: true, presentation: 'modal', title: 'Subscription details' }} />
         <Stack.Screen name="privacy" options={{ headerShown: false }} />
         <Stack.Screen name="terms" options={{ headerShown: false }} />
         <Stack.Screen name="games/play-crossword" options={{ headerShown: false }} />
@@ -122,7 +159,7 @@ function RootLayout() {
         <Stack.Screen name="leaderboard/game" options={{ headerShown: false }} />
         <Stack.Screen name="leaderboard/boroughs" options={{ headerShown: false }} />
       </Stack>
-      <StatusBar style="auto" />
+      <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
     </ThemeProvider>
   );
 }

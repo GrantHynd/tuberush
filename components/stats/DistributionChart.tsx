@@ -1,13 +1,17 @@
+import { useTheme } from '@/hooks/useTheme';
 import React, { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { Colors, Radius, Spacing, TFL } from '@/constants/theme';
+import { type Palette, Radius, Spacing } from '@/constants/theme';
 import { mistakeDistribution, timeDistribution, type DistributionBucket } from '@/lib/stats';
 import type { GameHistoryEntry } from '@/lib/game-history';
 import type { GameType } from '@/types/game';
 import { ListToggle } from './ListToggle';
-import { StatsSection, sectionStyles } from './StatsSection';
+import { StatsSection, useSectionStyles } from './StatsSection';
 
 export function DistributionChart({ history, game }: { history: GameHistoryEntry[]; game: GameType }) {
+    const { colors } = useTheme();
+    const styles = React.useMemo(() => makeStyles(colors), [colors]);
+    const sectionStyles = useSectionStyles();
     const [asList, setAsList] = useState(false);
     const isConnections = game === 'connections';
     const { buckets, recorded } = isConnections
@@ -48,11 +52,14 @@ export function DistributionChart({ history, game }: { history: GameHistoryEntry
     );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Palette) {
+    return StyleSheet.create({
     row: { flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.xs, gap: Spacing.sm },
-    label: { width: 44, fontSize: 12, color: TFL.grey.dark },
-    latest: { fontWeight: '700', color: Colors.light.text },
+    label: { width: 44, fontSize: 12, color: colors.textSecondary },
+    latest: { fontWeight: '700', color: colors.text },
     barTrack: { flex: 1, height: 16 },
-    bar: { height: 16, minWidth: 2, backgroundColor: TFL.blue, borderRadius: Radius.sm },
-    count: { width: 28, fontSize: 12, color: TFL.grey.dark, textAlign: 'right' },
+    bar: { height: 16, minWidth: 2, backgroundColor: colors.primary, borderRadius: Radius.sm },
+    count: { width: 28, fontSize: 12, color: colors.textSecondary, textAlign: 'right' },
 });
+}
+

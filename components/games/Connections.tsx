@@ -1,10 +1,11 @@
 import { ConnectionsPuzzle } from "@/constants/ConnectionsData";
-import { FontFamily, FontScaleCap, GameType, LineColors, Size, Spacing, StateColors } from "@/constants/theme";
+import { FontFamily, FontScaleCap, GameType, Size, Spacing, type Palette } from '@/constants/theme';
+import { useTheme } from "@/hooks/useTheme";
 import { FeedbackToast } from "@/components/game-ui/FeedbackToast";
 import { LineRail } from "@/components/game-ui/LineRail";
 import { Tile, type TileState } from "@/components/game-ui/Tile";
 import { useReduceMotion } from "@/hooks/useReduceMotion";
-import { announce } from "@/lib/a11y";
+import { announce, decorativeIconProps } from "@/lib/a11y";
 import { ConnectionsState } from "@/types/game";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import * as Haptics from "expo-haptics";
@@ -53,7 +54,7 @@ function triesText(n: number) {
 
 /**
  * Interchange (internal game_type "connections") board.
- * Playing: solved lines as numbered rails, 4x4 station-board tiles, tries carriages, controls.
+ * Playing: solved groups as numbered bars, 4x4 tiles, tries left, controls.
  * Finished: only the line rails (✓ FOUND / dashed REVEALED) — the page wraps them in FinishedGameView.
  */
 export function Connections({
@@ -63,6 +64,8 @@ export function Connections({
   onRevealComplete,
   revealImmediately,
 }: ConnectionsProps) {
+    const { colors } = useTheme();
+    const styles = React.useMemo(() => makeStyles(colors), [colors]);
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [errorItems, setErrorItems] = useState<string[]>([]);
   const [shuffledItems, setShuffledItems] = useState<string[]>([]);
@@ -196,8 +199,8 @@ export function Connections({
         guess.length === 4 &&
         puzzle.groups.some((g) => guess.filter((i) => g.items.includes(i)).length === 3);
       const left = gameState.mistakesRemaining;
-      const message = `${oneAway ? "One away." : "Not a line."} ${left > 0 ? `${triesText(left)}.` : "No tries left."}`;
-      // FeedbackToast announces "Mind the gap. <message>" to VoiceOver.
+      const message = `${oneAway ? "So close: one off." : "Not a line."} ${left > 0 ? `${triesText(left)}.` : "No tries left."}`;
+      // FeedbackToast announces "Not quite. <message>" to VoiceOver.
       setToast((prev) => ({ id: (prev?.id ?? 0) + 1, message }));
       setErrorItems(guess);
       if (errorTimerRef.current) clearTimeout(errorTimerRef.current);
@@ -221,7 +224,7 @@ export function Connections({
       setSelectedItems([]);
       setErrorItems([]);
       const latest = gameState.completedGroups[gameState.completedGroups.length - 1];
-      if (latest) announce(`Line found: ${latest}`);
+      if (latest) announce(`Group found: ${latest}`);
     }
     prevCompletedGroups.current = gameState.completedGroups.length;
   }, [gameState.completedGroups, reduceMotion]);
@@ -269,9 +272,17 @@ export function Connections({
           Tries left <Text style={styles.triesCount}>{left}</Text>
         </Text>
         <View style={styles.carriages}>
-          {Array.from({ length: MAX_TRIES }).map((_, i) => (
-            <View key={i} style={[styles.carriage, i < left ? styles.carriageOn : styles.carriageOff]} />
-          ))}
+          {Array.from({ length: MAX_TRIES }).map((_, i) => {
+            const spent = i >= left;
+            return (
+              <View
+                key={i}
+                style={[styles.carriage, spent ? styles.carriageSpent : styles.carriageOn]}
+              >
+                {spent ? <View style={styles.slash} /> : null}
+              </View>
+            );
+          })}
         </View>
       </View>
     );
@@ -293,7 +304,7 @@ export function Connections({
   return (
     <View style={styles.container}>
       <Text style={styles.instruction} maxFontSizeMultiplier={FontScaleCap.chrome}>
-        Find four lines of four stops
+        Find four groups of four.
       </Text>
 
       {gameState.completedGroups.length > 0 && <View style={styles.lines}>{renderLines()}</View>}
@@ -338,7 +349,7 @@ export function Connections({
           accessibilityState={{ disabled: false }}
           testID="btn-shuffle"
         >
-          <MaterialIcons name="shuffle" size={18} color={StateColors.ink} />
+          <MaterialIcons name="shuffle" size={18} color={colors.text} {...decorativeIconProps} />
           <Text style={styles.btnText} maxFontSizeMultiplier={FontScaleCap.chrome}>Shuffle</Text>
         </Pressable>
 
@@ -384,7 +395,8 @@ export function Connections({
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Palette) {
+  return StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: HORIZONTAL_PADDING,
@@ -392,7 +404,7 @@ const styles = StyleSheet.create({
   },
   instruction: {
     ...GameType.body,
-    color: StateColors.inactiveText,
+    color: colors.textSecondary,
     marginBottom: Spacing.sm,
   },
   lines: {
@@ -409,12 +421,13 @@ const styles = StyleSheet.create({
     marginTop: Spacing.lg,
     gap: Spacing.sm,
   },
-  triesLabel: { fontFamily: FontFamily.medium, fontSize: 15, color: StateColors.ink },
+  triesLabel: { fontFamily: FontFamily.medium, fontSize: 15, color: colors.text },
   triesCount: { fontFamily: FontFamily.bold, fontWeight: "700" },
   carriages: { flexDirection: "row", gap: 4 },
-  carriage: { width: 22, height: 12, borderRadius: 3 },
-  carriageOn: { backgroundColor: LineColors.connections },
-  carriageOff: { backgroundColor: "transparent", borderWidth: 2, borderColor: StateColors.inactiveBorder },
+  carriage: { width: 22, height: 16, borderRadius: 3, alignItems: "center", justifyContent: "center" },
+  carriageOn: { backgroundColor: colors.gameInterchange },
+  carriageSpent: { backgroundColor: "transparent", borderWidth: 2, borderColor: colors.border },
+  slash: { width: 14, height: 2, backgroundColor: colors.text, transform: [{ rotate: "45deg" }] },
   spacer: { flex: 1 },
   controls: {
     flexDirection: "row",
@@ -427,8 +440,8 @@ const styles = StyleSheet.create({
     minHeight: Size.primaryButton,
     borderRadius: Size.radius,
     borderWidth: 2,
-    borderColor: StateColors.ink,
-    backgroundColor: "#FFFFFF",
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
     alignItems: "center",
     justifyContent: "center",
     flexDirection: "row",
@@ -436,10 +449,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   btnSubmit: { flex: 1.4 },
-  btnPrimary: { backgroundColor: LineColors.connections, borderColor: LineColors.connections },
-  btnInactive: { borderStyle: "dashed", borderColor: StateColors.inactiveBorder },
+  btnPrimary: { backgroundColor: colors.gameInterchange, borderColor: colors.gameInterchange },
+  btnInactive: { borderStyle: "dashed", borderColor: colors.border, backgroundColor: "transparent" },
   pressed: { opacity: 0.8 },
-  btnText: { fontFamily: FontFamily.bold, fontSize: 16, fontWeight: "700", color: StateColors.ink },
-  btnTextPrimary: { color: "#FFFFFF" },
-  btnTextInactive: { color: StateColors.inactiveText },
+  btnText: { fontFamily: FontFamily.bold, fontSize: 16, fontWeight: "700", color: colors.text },
+  btnTextPrimary: { color: colors.onGameInterchange },
+  btnTextInactive: { color: colors.textSecondary },
 });
+}

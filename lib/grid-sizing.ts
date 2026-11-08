@@ -1,13 +1,20 @@
 /**
  * Crossword grid sizing (TUB-298). Mirrors game-ui-review/tools/grid_sizing.py:
  * cell = clamp(floor((min(availW, availH) − (n+1)·LINE) / n), MIN, MAX).
- * The grid never scrolls; it shrinks to fit between the header and the clue bar + keyboard.
+ *
+ * `cellSize` is that design clamp (36–64). The live grid uses `cellSizeToFit`:
+ * the same clamp when the measured area can hold 36pt cells, and a smaller
+ * cell down to `MIN_FIT_CELL` when it cannot. Forcing 36pt into a shorter
+ * area clips the bottom rows once Dynamic Type grows the clue and keyboard.
+ * If the area is shorter than `MIN_FIT_CELL`, the board scrolls instead of clipping.
+ * Every open cell stays its own press target at any size. A grid-level handler
+ * cannot use iOS locationX/Y: those are relative to the touched child.
  */
 export const GRID_LINE = 1;
 export const MIN_CELL = 36;
 export const MAX_CELL = 64;
-/** Below this, cells are too small to be individual targets; taps snap to the nearest open cell. */
-export const MIN_TARGET_CELL = 44;
+/** Smallest cell that still shows a letter when the 36pt floor will not fit. */
+export const MIN_FIT_CELL = 18;
 
 export interface LayoutParams {
     w: number;
@@ -42,6 +49,14 @@ export function rawCellSize(availW: number, availH: number, n: number): number {
 
 export function cellSize(availW: number, availH: number, n: number): number {
     return Math.max(MIN_CELL, Math.min(MAX_CELL, rawCellSize(availW, availH, n)));
+}
+
+/** Live grid size. Matches `cellSize` when the area can hold `MIN_CELL`. */
+export function cellSizeToFit(availW: number, availH: number, n: number): number {
+    const raw = rawCellSize(Math.max(0, availW), Math.max(0, availH), n);
+    if (raw >= MIN_CELL) return Math.min(MAX_CELL, raw);
+    if (raw <= 0) return MIN_FIT_CELL;
+    return Math.max(MIN_FIT_CELL, raw);
 }
 
 export function letterSize(cell: number): number {

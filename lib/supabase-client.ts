@@ -17,9 +17,18 @@ const supabasePublishableKey =
   process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
   '';
 
+const authStorage =
+  typeof window === 'undefined'
+    ? {
+        getItem: async () => null,
+        setItem: async () => {},
+        removeItem: async () => {},
+      }
+    : AsyncStorage;
+
 export const supabase = createClient(supabaseUrl, supabasePublishableKey, {
   auth: {
-    storage: AsyncStorage,
+    storage: authStorage,
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,

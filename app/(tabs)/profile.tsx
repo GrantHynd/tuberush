@@ -1,3 +1,4 @@
+import { useTheme } from '@/hooks/useTheme';
 import { openPaywall } from '@/lib/paywall';
 import { Card } from '@/components/ui/Card';
 import { LegalSection } from '@/components/LegalSection';
@@ -24,7 +25,7 @@ import {
     FlatList,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Colors, Layout, Radius, Spacing, TFL, Typography } from '@/constants/theme';
+import { type Palette, Layout, Radius, Spacing, Typography } from '@/constants/theme';
 import { BOROUGHS, Borough } from '@/constants/Boroughs';
 import { UK_CITIES, isLondon } from '@/constants/UKCities';
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -51,6 +52,8 @@ function subscriptionManagementUrl(): string {
 }
 
 export default function ProfileScreen() {
+    const { colors } = useTheme();
+    const styles = React.useMemo(() => makeStyles(colors), [colors]);
     const router = useRouter();
     const { user, signOut, updateProfile, deleteAccount } = useAuthStore();
     const { syncNow, syncStatus } = useGameStore();
@@ -170,7 +173,7 @@ export default function ProfileScreen() {
                 </View>
                 <View style={styles.emptyState}>
                     <View style={styles.iconCircle}>
-                        <IconSymbol name="person.fill" size={40} color={Colors.light.tint} />
+                        <IconSymbol name="person.fill" size={40} color={colors.primary} />
                     </View>
                     <Text style={styles.emptyTitle}>Not Signed In</Text>
                     <Text style={styles.emptyText}>
@@ -216,7 +219,7 @@ export default function ProfileScreen() {
                     </TouchableOpacity>
                 )}
                 <View style={styles.membershipBadge}>
-                    <IconSymbol name="ticket.fill" size={14} color={TFL.black} />
+                    <IconSymbol name="ticket.fill" size={14} color={colors.text} />
                     <Text style={styles.membershipBadgeText}>{getMembershipTier()}</Text>
                 </View>
             </View>
@@ -241,7 +244,7 @@ export default function ProfileScreen() {
                             >
                                 {formatSettingsLocation(user)}
                             </Text>
-                            <IconSymbol name="chevron.right" size={20} color={Colors.light.icon} />
+                            <IconSymbol name="chevron.right" size={20} color={colors.textSecondary} />
                         </View>
                     </TouchableOpacity>
                 </Card>
@@ -264,7 +267,7 @@ export default function ProfileScreen() {
                             <Text style={styles.rowValueTruncatable} numberOfLines={1}>
                                 {getChosenDisplayName(user) ?? 'Add'}
                             </Text>
-                            <IconSymbol name="chevron.right" size={20} color={Colors.light.icon} />
+                            <IconSymbol name="chevron.right" size={20} color={colors.textSecondary} />
                         </View>
                     </TouchableOpacity>
 
@@ -293,7 +296,7 @@ export default function ProfileScreen() {
                                 accessibilityLabel="Manage subscription"
                             >
                                 <Text style={styles.rowLabel}>Manage subscription</Text>
-                                <IconSymbol name="chevron.right" size={20} color={Colors.light.icon} />
+                                <IconSymbol name="chevron.right" size={20} color={colors.textSecondary} />
                             </TouchableOpacity>
                             <View style={styles.cardDivider} />
                         </>
@@ -306,7 +309,7 @@ export default function ProfileScreen() {
                     <View style={styles.upsell}>
                         <UpsellCard
                             testID="profile-upsell"
-                            icon={<IconSymbol name="ticket.fill" size={24} color={Colors.light.text} />}
+                            icon={<IconSymbol name="ticket.fill" size={24} color={colors.text} />}
                             title="Upgrade to 1st Class"
                             badge={null}
                             valueProp="Crossword leaderboards and more"
@@ -332,7 +335,7 @@ export default function ProfileScreen() {
                 style={styles.signOutButton}
                 onPress={handleSignOut}
             >
-                <IconSymbol name="arrow.right.square" size={20} color={TFL.red} />
+                <IconSymbol name="arrow.right.square" size={20} color={colors.error} />
                 <Text style={styles.signOutButtonText}>Sign Out</Text>
             </TouchableOpacity>
 
@@ -345,7 +348,7 @@ export default function ProfileScreen() {
                 accessibilityLabel="Delete account"
             >
                 {deletingAccount ? (
-                    <ActivityIndicator color={TFL.red} />
+                    <ActivityIndicator color={colors.error} />
                 ) : (
                     <Text style={styles.deleteAccountButtonText}>Delete Account</Text>
                 )}
@@ -403,7 +406,7 @@ export default function ProfileScreen() {
                                     user.borough === item && styles.selectedBoroughText
                                 ]}>{item}</Text>
                                 {user.borough === item && (
-                                    <IconSymbol name="checkmark.circle.fill" size={22} color={Colors.light.tint} />
+                                    <IconSymbol name="checkmark.circle.fill" size={22} color={colors.primary} />
                                 )}
                             </TouchableOpacity>
                         )}
@@ -424,7 +427,8 @@ export default function ProfileScreen() {
     );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Palette) {
+    return StyleSheet.create({
     upsell: {
         marginTop: Spacing.md,
     },
@@ -434,7 +438,7 @@ const styles = StyleSheet.create({
         marginTop: Spacing.sm,
     },
     subscriptionDetailsText: {
-        color: Colors.light.icon,
+        color: colors.textSecondary,
         fontSize: 14,
         textDecorationLine: 'underline',
     },
@@ -443,7 +447,7 @@ const styles = StyleSheet.create({
     },
     container: {
         flex: 1,
-        backgroundColor: Colors.light.background,
+        backgroundColor: colors.background,
     },
     scrollContainer: {
         flex: 1,
@@ -451,13 +455,13 @@ const styles = StyleSheet.create({
     header: {
         alignItems: 'center',
         paddingVertical: Spacing.xl,
-        backgroundColor: Colors.light.background,
+        backgroundColor: colors.background,
     },
     avatarContainer: {
         width: 80,
         height: 80,
         borderRadius: 40,
-        backgroundColor: TFL.blue,
+        backgroundColor: colors.primary,
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: Spacing.md,
@@ -465,12 +469,12 @@ const styles = StyleSheet.create({
     avatarText: {
         fontSize: 32,
         fontWeight: 'bold',
-        color: 'white',
+        color: colors.onPrimary,
     },
     headerTitle: {
         fontSize: 18,
         fontWeight: '700',
-        color: Colors.light.text,
+        color: colors.text,
         marginBottom: Spacing.sm,
     },
     addNameLink: {
@@ -479,14 +483,14 @@ const styles = StyleSheet.create({
         marginBottom: Spacing.xs,
     },
     addNameLinkText: {
-        color: Colors.light.tint,
+        color: colors.primary,
         fontWeight: '600',
         fontSize: 15,
     },
     membershipBadge: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: TFL.yellow,
+        backgroundColor: colors.premium,
         paddingHorizontal: Spacing.md,
         paddingVertical: Spacing.xs,
         borderRadius: Radius.pill,
@@ -495,7 +499,7 @@ const styles = StyleSheet.create({
     membershipBadgeText: {
         fontSize: 13,
         fontWeight: '600',
-        color: TFL.black,
+        color: colors.text,
     },
     section: {
         marginTop: Spacing.lg,
@@ -506,7 +510,7 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         textTransform: 'uppercase',
         letterSpacing: 1,
-        color: TFL.grey.dark,
+        color: colors.textSecondary,
         marginBottom: Spacing.sm,
         marginLeft: Spacing.xs,
     },
@@ -519,23 +523,23 @@ const styles = StyleSheet.create({
     },
     cardDivider: {
         height: 1,
-        backgroundColor: Colors.light.border,
+        backgroundColor: colors.border,
         marginHorizontal: Spacing.md,
     },
     rowLabel: {
         fontSize: 16,
-        color: Colors.light.text,
+        color: colors.text,
         fontWeight: '500',
         flexShrink: 0,
     },
     rowValue: {
         fontSize: 16,
-        color: Colors.light.icon,
+        color: colors.textSecondary,
         fontWeight: '400',
     },
     rowValueTruncatable: {
         fontSize: 16,
-        color: Colors.light.icon,
+        color: colors.textSecondary,
         fontWeight: '400',
         flex: 1,
         minWidth: 0,
@@ -554,14 +558,14 @@ const styles = StyleSheet.create({
         paddingVertical: Spacing.md,
         borderRadius: Layout.borderRadius.md,
         borderWidth: 2,
-        borderColor: TFL.red,
+        borderColor: colors.error,
         alignItems: 'center',
         flexDirection: 'row',
         justifyContent: 'center',
         gap: 8,
     },
     signOutButtonText: {
-        color: TFL.red,
+        color: colors.error,
         fontWeight: '600',
         fontSize: 16,
     },
@@ -574,7 +578,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     deleteAccountButtonText: {
-        color: TFL.red,
+        color: colors.error,
         fontWeight: '600',
         fontSize: 16,
     },
@@ -588,41 +592,40 @@ const styles = StyleSheet.create({
         width: 80,
         height: 80,
         borderRadius: 40,
-        backgroundColor: Colors.light.card,
+        backgroundColor: colors.elevated,
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: Spacing.lg,
     },
     emptyTitle: {
         ...Typography.h2,
-        marginBottom: Spacing.sm,
-    },
+        marginBottom: Spacing.sm, color: colors.text },
     emptyText: {
         ...Typography.body,
         textAlign: 'center',
-        color: Colors.light.icon,
+        color: colors.textSecondary,
         marginBottom: Spacing.xl,
     },
     primaryButton: {
-        backgroundColor: Colors.light.tint,
+        backgroundColor: colors.primary,
         paddingVertical: Spacing.md,
         paddingHorizontal: Spacing.xl,
         borderRadius: Layout.borderRadius.md,
     },
     primaryButtonText: {
-        color: 'white',
+        color: colors.onPrimary,
         fontWeight: 'bold',
         fontSize: 16,
     },
     version: {
         textAlign: 'center',
         fontSize: 12,
-        color: Colors.light.icon,
+        color: colors.textSecondary,
         paddingVertical: Spacing.xl,
     },
     modalContainer: {
         flex: 1,
-        backgroundColor: Colors.light.background,
+        backgroundColor: colors.background,
     },
     modalHeader: {
         flexDirection: 'row',
@@ -630,20 +633,19 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         padding: Spacing.md,
         borderBottomWidth: 1,
-        borderBottomColor: Colors.light.border,
+        borderBottomColor: colors.border,
     },
     modalTitle: {
-        ...Typography.h3,
-    },
+        ...Typography.h3, color: colors.text },
     closeButton: {
-        color: Colors.light.tint,
+        color: colors.primary,
         fontSize: 16,
         fontWeight: '600',
     },
     boroughItem: {
         padding: Spacing.md,
         borderBottomWidth: 1,
-        borderBottomColor: Colors.light.border,
+        borderBottomColor: colors.border,
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
@@ -651,10 +653,12 @@ const styles = StyleSheet.create({
     },
     boroughText: {
         fontSize: 16,
-        color: Colors.light.text,
+        color: colors.text,
     },
     selectedBoroughText: {
-        color: Colors.light.tint,
+        color: colors.primary,
         fontWeight: '600',
     },
 });
+}
+

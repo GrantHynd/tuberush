@@ -1,3 +1,4 @@
+import { useTheme } from '@/hooks/useTheme';
 import { openPaywall } from '@/lib/paywall';
 import { Card } from '@/components/ui/Card';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
@@ -12,7 +13,7 @@ import type {
     CrosswordCarouselItem,
 } from '@/hooks/usePuzzleCarousel';
 import { GAMES } from '@/constants/Games';
-import { Colors, GameColors, Layout, Spacing, TFL, Typography } from '@/constants/theme';
+import { type Palette, Layout, Spacing, Typography } from '@/constants/theme';
 import { useAuthStore } from '@/stores/auth-store';
 import { useLocationRank } from '@/hooks/useLocationRank';
 import { usePuzzleCarousel } from '@/hooks/usePuzzleCarousel';
@@ -36,6 +37,8 @@ const HORIZONTAL_PADDING = Layout.screenPadding;
 const CARD_GAP = Layout.cardGap;
 
 export default function HomeScreen() {
+    const { colors } = useTheme();
+    const styles = React.useMemo(() => makeStyles(colors), [colors]);
     const router = useRouter();
     const bottomInset = useTabBarBottomInset();
     const { user } = useAuthStore();
@@ -140,7 +143,8 @@ export default function HomeScreen() {
                                 commuteCount={item.commuteCount}
                                 {...getCompletionPresentation('connections', item)}
                                 accessibilityGame={GAMES.connections.name}
-                                backgroundColor={GameColors.connections}
+                                backgroundColor={colors.gameInterchange}
+                                contentColor={colors.onGameInterchange}
                                 onPress={() => handleConnectionsCardPress(item.date)}
                             />
                         )}
@@ -170,7 +174,8 @@ export default function HomeScreen() {
                                 commuteCount={item.commuteCount}
                                 {...getCompletionPresentation('crossword', item)}
                                 accessibilityGame="Crossword"
-                                backgroundColor={GameColors.crossword}
+                                backgroundColor={colors.gameCrossword}
+                                contentColor={colors.onGameCrossword}
                                 onPress={() => handleCrosswordCardPress(item.puzzleId)}
                             />
                         )}
@@ -217,7 +222,7 @@ export default function HomeScreen() {
                         <MaterialIcons
                             name="location-on"
                             size={24}
-                            color={Colors.light.icon}
+                            color={colors.textSecondary}
                             style={styles.boroughIcon}
                         />
                         <View style={styles.boroughContent}>
@@ -231,7 +236,7 @@ export default function HomeScreen() {
                         <MaterialIcons
                             name="chevron-right"
                             size={24}
-                            color={TFL.grey.dark}
+                            color={colors.textSecondary}
                         />
                     </Card>
                 )}
@@ -240,10 +245,11 @@ export default function HomeScreen() {
     );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Palette) {
+    return StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: Colors.light.background,
+        backgroundColor: colors.background,
     },
     scrollContent: {
         paddingHorizontal: HORIZONTAL_PADDING,
@@ -258,22 +264,21 @@ const styles = StyleSheet.create({
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: TFL.blue,
+        backgroundColor: colors.primary,
         justifyContent: 'center',
         alignItems: 'center',
     },
     avatarText: {
         fontSize: 18,
         fontWeight: '700',
-        color: 'white',
+        color: colors.onPrimary,
     },
     section: {
         marginTop: Spacing.lg,
     },
     sectionTitle: {
         ...Typography.h3,
-        marginBottom: Spacing.sm,
-    },
+        marginBottom: Spacing.sm, color: colors.text },
     carouselContent: {
         paddingVertical: Spacing.xs,
     },
@@ -294,10 +299,10 @@ const styles = StyleSheet.create({
     },
     boroughName: {
         ...Typography.body,
-        fontWeight: '600',
-    },
+        fontWeight: '600', color: colors.text },
     boroughRank: {
         ...Typography.caption,
-        marginTop: 2,
-    },
+        marginTop: 2, color: colors.text },
 });
+}
+

@@ -1,3 +1,4 @@
+import { useTheme } from '@/hooks/useTheme';
 import { openPaywall } from '@/lib/paywall';
 import { GameSummaryCard } from "@/components/leaderboard/GameSummaryCard";
 import { LiveBadge } from "@/components/leaderboard/LiveBadge";
@@ -16,7 +17,7 @@ import {
 import { MaterialIcons } from "@expo/vector-icons";
 import { PersonalSummaryCard } from "@/components/leaderboard/PersonalSummaryCard";
 import { GAMES, GameId } from "@/constants/Games";
-import { Colors, Layout, Spacing, Typography } from "@/constants/theme";
+import { type Palette, Layout, Spacing, Typography } from '@/constants/theme';
 import { useLeaderboardOverview } from "@/hooks/useLeaderboardOverview";
 import { useTodaysNextGame } from "@/hooks/useTodaysNextGame";
 import { getRankingPrompt } from "@/lib/today-puzzles";
@@ -36,6 +37,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function TrophyScreen() {
+    const { colors } = useTheme();
+    const styles = React.useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
   const { user } = useAuthStore();
   const week = useMemo(() => getCurrentWeek(), []);
@@ -130,7 +133,7 @@ export default function TrophyScreen() {
 
         {loading ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={Colors.light.tint} />
+            <ActivityIndicator size="large" color={colors.primary} />
           </View>
         ) : error ? (
           <View style={styles.loadingContainer}>
@@ -187,7 +190,7 @@ export default function TrophyScreen() {
                         <MaterialIcons
                           name={game.icon}
                           size={24}
-                          color={Colors.light.text}
+                          color={colors.text}
                         />
                       }
                       title={game.name}
@@ -219,10 +222,11 @@ export default function TrophyScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Palette) {
+    return StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.light.background,
+    backgroundColor: colors.background,
   },
   scroll: {
     paddingHorizontal: Layout.screenPadding,
@@ -233,12 +237,12 @@ const styles = StyleSheet.create({
   },
   filterCaption: {
     ...Typography.caption,
-    color: "#4B5563",
+    color: colors.textSecondary,
     marginTop: Spacing.xs,
   },
   fewPlayers: {
     ...Typography.caption,
-    color: "#4B5563",
+    color: colors.textSecondary,
     marginBottom: Spacing.sm,
   },
   weekRow: {
@@ -250,7 +254,7 @@ const styles = StyleSheet.create({
   weekLabel: {
     fontSize: 14,
     fontWeight: "600",
-    color: Colors.light.text,
+    color: colors.text,
   },
   loadingContainer: {
     paddingVertical: Spacing.xxl,
@@ -258,10 +262,12 @@ const styles = StyleSheet.create({
   },
   errorText: {
     ...Typography.caption,
-    color: Colors.light.error,
+    color: colors.error,
   },
   gamesSection: {
     gap: Spacing.md,
     marginTop: Spacing.md,
   },
 });
+}
+

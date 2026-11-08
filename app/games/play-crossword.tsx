@@ -1,3 +1,4 @@
+import { useTheme } from '@/hooks/useTheme';
 import { openPaywall } from '@/lib/paywall';
 import { Crossword } from '@/components/games/Crossword';
 import { CrosswordErrorBoundary } from '@/components/games/CrosswordErrorBoundary';
@@ -7,10 +8,10 @@ import { FinishedGameView, type FinishedStat } from '@/components/game-ui/Finish
 import { useUserStats } from '@/hooks/useUserStats';
 import { GameHeader } from '@/components/game-ui/GameHeader';
 import { FeedbackToast } from '@/components/game-ui/FeedbackToast';
-import { announce } from '@/lib/a11y';
+import { announce, decorativeIconProps } from '@/lib/a11y';
 import { wrongLettersMessage } from '@/lib/crossword-feedback';
 import { Leaderboard } from '@/components/ui/Leaderboard';
-import { Colors, GameColors, Layout, Spacing, TFL, Typography } from '@/constants/theme';
+import { type Palette, FontScaleCap, Layout, Spacing, Typography } from '@/constants/theme';
 import { getCustomPuzzle, saveCustomPuzzleScore } from '@/lib/custom-puzzles';
 import { formatScore } from '@/lib/display-utils';
 import { capture } from '@/lib/posthog';
@@ -47,6 +48,8 @@ function formatPuzzleDate(dateStr: string): string {
 }
 
 export default function PlayCrossword() {
+    const { colors } = useTheme();
+    const styles = React.useMemo(() => makeStyles(colors), [colors]);
     const router = useRouter();
     const { puzzleId: puzzleIdParam, customPuzzleId } = useLocalSearchParams<{ puzzleId?: string; customPuzzleId?: string }>();
     const isCustomPuzzle = !!customPuzzleId;
@@ -336,7 +339,7 @@ export default function PlayCrossword() {
                 <GameHeader
                     title="Crossword"
                     subtitle="1st Class"
-                    lineColor={GameColors.crossword}
+                    lineColor={colors.gameCrossword}
                     onBack={() => (router.canGoBack?.() ? router.back() : router.replace('/' as never))}
                 />
                 <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -362,13 +365,13 @@ export default function PlayCrossword() {
                         accessibilityRole="button"
                         accessibilityLabel="Go back"
                     >
-                        <MaterialIcons name="arrow-back" size={24} color={Colors.light.text} />
+                        <MaterialIcons name="arrow-back" size={24} color={colors.text} />
                     </TouchableOpacity>
                     <Text style={styles.headerTitle}>Crossword</Text>
                     <View style={styles.headerRight} />
                 </View>
                 <View style={styles.centered}>
-                    <ActivityIndicator size="large" color={Colors.light.tint} />
+                    <ActivityIndicator size="large" color={colors.primary} />
                 </View>
             </SafeAreaView>
         );
@@ -384,13 +387,13 @@ export default function PlayCrossword() {
                         accessibilityRole="button"
                         accessibilityLabel="Go back"
                     >
-                        <MaterialIcons name="arrow-back" size={24} color={Colors.light.text} />
+                        <MaterialIcons name="arrow-back" size={24} color={colors.text} />
                     </TouchableOpacity>
                     <Text style={styles.headerTitle}>Crossword</Text>
                     <View style={styles.headerRight} />
                 </View>
                 <View style={styles.centered}>
-                    <Text style={{ color: Colors.light.text, textAlign: 'center', paddingHorizontal: 24 }}>
+                    <Text style={{ color: colors.text, textAlign: 'center', paddingHorizontal: 24 }}>
                         This puzzle isn&apos;t available. It may not be published yet, or you may be offline without a cached copy.
                     </Text>
                 </View>
@@ -408,13 +411,13 @@ export default function PlayCrossword() {
                         accessibilityRole="button"
                         accessibilityLabel="Go back"
                     >
-                        <MaterialIcons name="arrow-back" size={24} color={Colors.light.text} />
+                        <MaterialIcons name="arrow-back" size={24} color={colors.text} />
                     </TouchableOpacity>
                     <Text style={styles.headerTitle}>Crossword</Text>
                     <View style={styles.headerRight} />
                 </View>
                 <View style={styles.centered}>
-                    <ActivityIndicator size="large" color={Colors.light.tint} />
+                    <ActivityIndicator size="large" color={colors.primary} />
                 </View>
             </SafeAreaView>
         );
@@ -454,7 +457,7 @@ export default function PlayCrossword() {
             <GameHeader
                 title="Crossword"
                 subtitle={`${isCustomPuzzle ? 'Custom' : '1st Class'} · ${isCustomPuzzle ? 'Custom Puzzle' : formatPuzzleDate(gameDate ?? puzzle.date)}`}
-                lineColor={GameColors.crossword}
+                lineColor={colors.gameCrossword}
                 onBack={goBack}
                 right={
                     isCompleted ? (
@@ -465,10 +468,14 @@ export default function PlayCrossword() {
                             accessibilityLabel="Share result"
                             testID="header-share"
                         >
-                            <MaterialIcons name="ios-share" size={22} color={Colors.light.text} />
+                            <MaterialIcons name="ios-share" size={22} color={colors.text} {...decorativeIconProps} />
                         </TouchableOpacity>
                     ) : state.startTime ? (
-                        <Text style={styles.headerTimer} accessibilityLabel={`Time ${timer.formatted}`}>
+                        <Text
+                            style={styles.headerTimer}
+                            maxFontSizeMultiplier={FontScaleCap.chrome}
+                            accessibilityLabel={`Time ${timer.formatted}`}
+                        >
                             {timer.formatted}
                         </Text>
                     ) : undefined
@@ -491,7 +498,7 @@ export default function PlayCrossword() {
                 <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
                     <FinishedGameView
                         outcome="win"
-                        lineColor={GameColors.crossword}
+                        lineColor={colors.gameCrossword}
                         title="Journey complete"
                         detail={`${puzzle.title || 'Crossword'} solved`}
                         time={finalTime ?? undefined}
@@ -537,10 +544,11 @@ export default function PlayCrossword() {
     );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Palette) {
+    return StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: Colors.light.background,
+        backgroundColor: colors.background,
     },
     centered: {
         flex: 1,
@@ -568,10 +576,9 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     headerTitle: {
-        ...Typography.h2,
-    },
+        ...Typography.h2, color: colors.text },
     badge: {
-        backgroundColor: TFL.yellow,
+        backgroundColor: colors.premium,
         paddingHorizontal: Spacing.sm,
         paddingVertical: 2,
         borderRadius: Layout.borderRadius.xl,
@@ -580,7 +587,7 @@ const styles = StyleSheet.create({
     badgeText: {
         fontSize: 11,
         fontWeight: '700',
-        color: Colors.light.text,
+        color: colors.text,
     },
     headerRight: {
         alignItems: 'flex-end' as const,
@@ -590,11 +597,11 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: '600' as const,
         fontVariant: ['tabular-nums'] as const,
-        color: Colors.light.text,
+        color: colors.text,
     },
     headerDate: {
         ...Typography.caption,
-        color: TFL.grey.dark,
+        color: colors.textSecondary,
     },
     scroll: {
         flex: 1,
@@ -615,30 +622,30 @@ const styles = StyleSheet.create({
         paddingHorizontal: 32,
         borderRadius: 24,
         borderWidth: 1,
-        borderColor: Colors.light.text,
+        borderColor: colors.text,
     },
     checkButtonDisabled: {
-        borderColor: '#6B7280',
+        borderColor: colors.textDisabled,
         borderStyle: 'dashed',
     },
     checkHelper: {
         marginTop: Spacing.xs,
         fontSize: 14,
-        color: '#4B5563',
+        color: colors.textSecondary,
     },
     checkButtonPrimary: {
-        backgroundColor: Colors.light.text,
+        backgroundColor: colors.text,
     },
     checkButtonText: {
         fontSize: 16,
         fontWeight: '600',
-        color: Colors.light.text,
+        color: colors.text,
     },
     checkButtonTextDisabled: {
-        color: TFL.grey.dark,
+        color: colors.textSecondary,
     },
     checkButtonTextPrimary: {
-        color: Colors.light.background,
+        color: colors.background,
     },
     backToPuzzles: { alignSelf: 'center', marginTop: Spacing.md },
     gameOverContainer: {
@@ -649,12 +656,12 @@ const styles = StyleSheet.create({
     gameOverTitle: {
         fontSize: 20,
         fontWeight: '700',
-        color: Colors.light.text,
+        color: colors.text,
         marginBottom: 4,
     },
     gameOverTime: {
         fontSize: 15,
-        color: TFL.grey.dark,
+        color: colors.textSecondary,
         marginBottom: Spacing.md,
     },
     gameOverActions: {
@@ -668,17 +675,19 @@ const styles = StyleSheet.create({
         paddingHorizontal: 24,
         borderRadius: 24,
         borderWidth: 1,
-        borderColor: Colors.light.text,
+        borderColor: colors.text,
     },
     gameOverButtonPrimary: {
-        backgroundColor: Colors.light.text,
+        backgroundColor: colors.text,
     },
     gameOverButtonText: {
         fontSize: 14,
         fontWeight: '600',
-        color: Colors.light.text,
+        color: colors.text,
     },
     gameOverButtonTextPrimary: {
-        color: Colors.light.background,
+        color: colors.background,
     },
 });
+}
+

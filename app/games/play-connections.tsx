@@ -1,3 +1,4 @@
+import { useTheme } from '@/hooks/useTheme';
 import { Connections } from "@/components/games/Connections";
 import { Leaderboard } from "@/components/ui/Leaderboard";
 import type { ConnectionsPuzzle } from "@/constants/ConnectionsData";
@@ -6,7 +7,8 @@ import { getDailyGame, getGameByDate } from "@/lib/daily-games";
 import { scoreOutbox } from "@/lib/score-outbox";
 import { FinishedGameView, type FinishedStat } from "@/components/game-ui/FinishedGameView";
 import { GameHeader } from "@/components/game-ui/GameHeader";
-import { Colors, LineColors, Spacing, Typography } from "@/constants/theme";
+import { type Palette, Spacing, Typography } from '@/constants/theme';
+import { decorativeIconProps } from '@/lib/a11y';
 import { GAMES } from "@/constants/Games";
 import { useUserStats } from "@/hooks/useUserStats";
 import { formatScore } from "@/lib/display-utils";
@@ -61,6 +63,8 @@ function formatDate(dateStr: string): string {
 const GAME_NAME = GAMES.connections.name;
 
 export default function PlayConnectionsScreen() {
+    const { colors } = useTheme();
+    const styles = React.useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
   const { date: dateParam, customPuzzleId } = useLocalSearchParams<{ date?: string; customPuzzleId?: string }>();
   const isCustomPuzzle = !!customPuzzleId;
@@ -280,7 +284,7 @@ export default function PlayConnectionsScreen() {
       <SafeAreaView style={styles.container} edges={["top"]}>
         <GameHeader
           title={GAME_NAME}
-          lineColor={LineColors.connections}
+          lineColor={colors.gameInterchange}
           onBack={() => router.back()}
         />
         <View style={styles.centered}>
@@ -289,7 +293,7 @@ export default function PlayConnectionsScreen() {
               Puzzle not available. Go back and try again when you&apos;re online or after new puzzles are published.
             </Text>
           ) : (
-            <ActivityIndicator size="large" color={LineColors.connections} />
+            <ActivityIndicator size="large" color={colors.gameInterchange} />
           )}
         </View>
       </SafeAreaView>
@@ -356,7 +360,7 @@ export default function PlayConnectionsScreen() {
       <GameHeader
         title={GAME_NAME}
         subtitle={subtitle}
-        lineColor={LineColors.connections}
+        lineColor={colors.gameInterchange}
         onBack={goBack}
         right={
           finished ? (
@@ -366,7 +370,7 @@ export default function PlayConnectionsScreen() {
               accessibilityRole="button"
               accessibilityLabel="Share result"
             >
-              <MaterialIcons name="ios-share" size={22} color={Colors.light.text} />
+              <MaterialIcons name="ios-share" size={22} color={colors.text} {...decorativeIconProps} />
             </Pressable>
           ) : undefined
         }
@@ -376,7 +380,7 @@ export default function PlayConnectionsScreen() {
         <ScrollView contentContainerStyle={styles.finishedContent} testID="connections-finished">
           <FinishedGameView
             outcome={won ? "win" : "loss"}
-            lineColor={LineColors.connections}
+            lineColor={colors.gameInterchange}
             title={won ? "Journey complete" : "Part suspended"}
             detail={won ? "All four lines found" : lossDetail}
             time={won && timeTaken != null ? formatScore(timeTaken) : undefined}
@@ -423,10 +427,11 @@ export default function PlayConnectionsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Palette) {
+    return StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.light.background,
+    backgroundColor: colors.background,
   },
   centered: {
     flex: 1,
@@ -434,7 +439,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   message: {
-    color: Colors.light.text,
+    color: colors.text,
     textAlign: "center",
     paddingHorizontal: 24,
   },
@@ -458,6 +463,8 @@ const styles = StyleSheet.create({
   secondaryBtnText: {
     ...Typography.body,
     fontWeight: "600",
-    color: Colors.light.text,
+    color: colors.text,
   },
 });
+}
+

@@ -1,3 +1,4 @@
+import { useTheme } from '@/hooks/useTheme';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
     View,
@@ -10,7 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
-import { Colors, Spacing, Typography } from '@/constants/theme';
+import { type Palette, Spacing, Typography } from '@/constants/theme';
 import { GAMES, GameId } from '@/constants/Games';
 import { GameType } from '@/types/game';
 import { getCurrentWeek, shiftWeek } from '@/lib/week-utils';
@@ -21,6 +22,8 @@ import { LocationFilterTabs } from '@/components/leaderboard/LocationFilterTabs'
 import { BoroughList } from '@/components/leaderboard/BoroughList';
 
 export default function BoroughBreakdownScreen() {
+    const { colors } = useTheme();
+    const styles = React.useMemo(() => makeStyles(colors), [colors]);
     const router = useRouter();
     const params = useLocalSearchParams<{
         gameType: string;
@@ -61,10 +64,10 @@ export default function BoroughBreakdownScreen() {
                     <MaterialIcons
                         name="arrow-back"
                         size={24}
-                        color={Colors.light.text}
+                        color={colors.text}
                     />
                 </TouchableOpacity>
-                <MaterialIcons name={game.icon} size={22} color={Colors.light.text} />
+                <MaterialIcons name={game.icon} size={22} color={colors.text} />
                 <Text style={styles.gameName}>{game.name}</Text>
             </View>
 
@@ -90,7 +93,7 @@ export default function BoroughBreakdownScreen() {
                 <View style={styles.loadingContainer}>
                     <ActivityIndicator
                         size="large"
-                        color={Colors.light.tint}
+                        color={colors.primary}
                     />
                 </View>
             ) : boroughs.length === 0 ? (
@@ -114,10 +117,11 @@ export default function BoroughBreakdownScreen() {
     );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Palette) {
+    return StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: Colors.light.background,
+        backgroundColor: colors.background,
     },
     header: {
         flexDirection: 'row',
@@ -127,8 +131,7 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     gameName: {
-        ...Typography.h3,
-    },
+        ...Typography.h3, color: colors.text },
     scroll: {
         paddingHorizontal: Spacing.md,
         paddingBottom: Spacing.xxl,
@@ -141,6 +144,8 @@ const styles = StyleSheet.create({
     },
     emptyText: {
         ...Typography.caption,
-        color: Colors.light.icon,
+        color: colors.textSecondary,
     },
 });
+}
+

@@ -9,7 +9,6 @@ import { Alert } from 'react-native';
 import { openPaywall } from '@/lib/paywall';
 jest.mock('@/lib/paywall', () => ({ openPaywall: jest.fn(() => Promise.resolve(null)) }));
 
-
 jest.mock('@/stores/auth-store', () => ({ useAuthStore: jest.fn() }));
 jest.mock('@/stores/game-store', () => ({ useGameStore: jest.fn() }));
 jest.mock('@/lib/posthog', () => ({ capture: jest.fn() }));

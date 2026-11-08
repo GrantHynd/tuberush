@@ -1,7 +1,8 @@
+import { useTheme } from '@/hooks/useTheme';
 import React from 'react';
 import { Card } from '@/components/ui/Card';
 import { View, Text, StyleSheet } from 'react-native';
-import { Colors, Spacing, TFL, Typography } from '@/constants/theme';
+import { type Palette, Spacing, Typography } from '@/constants/theme';
 import { formatScore } from '@/lib/display-utils';
 
 interface PersonalSummaryCardProps {
@@ -14,6 +15,8 @@ interface PersonalSummaryCardProps {
 }
 
 export function PersonalSummaryCard({ overallRank, totalScore, topPercent, areaName }: PersonalSummaryCardProps) {
+    const { colors } = useTheme();
+    const styles = React.useMemo(() => makeStyles(colors), [colors]);
     return (
         <Card variant="tinted">
             <View style={styles.row}>
@@ -36,7 +39,8 @@ export function PersonalSummaryCard({ overallRank, totalScore, topPercent, areaN
     );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Palette) {
+    return StyleSheet.create({
     row: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -48,17 +52,17 @@ const styles = StyleSheet.create({
     divider: {
         width: 1,
         height: 36,
-        backgroundColor: Colors.light.border,
+        backgroundColor: colors.border,
     },
     hairline: {
         height: StyleSheet.hairlineWidth,
-        backgroundColor: Colors.light.border,
+        backgroundColor: colors.border,
         marginTop: Spacing.md,
     },
     label: {
         fontSize: 12,
         fontWeight: '500',
-        color: TFL.grey.dark,
+        color: colors.textSecondary,
         textTransform: 'uppercase',
         letterSpacing: 0.5,
         marginBottom: 4,
@@ -66,13 +70,15 @@ const styles = StyleSheet.create({
     value: {
         fontSize: 22,
         fontWeight: '700',
-        color: Colors.light.text,
+        color: colors.text,
     },
     topPercent: {
         ...Typography.body,
         fontWeight: '600',
-        color: TFL.blue,
+        color: colors.primary,
         textAlign: 'center',
         paddingTop: Spacing.s12,
     },
 });
+}
+

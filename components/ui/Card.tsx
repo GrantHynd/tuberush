@@ -1,4 +1,5 @@
-import { CardSurface, Colors, Layout, Radius, Spacing } from '@/constants/theme';
+import { useTheme } from '@/hooks/useTheme';
+import { type Palette, palette, Layout, Radius, Spacing } from '@/constants/theme';
 import React from 'react';
 import {
     Pressable,
@@ -33,17 +34,18 @@ const PADDING: Record<CardPadding, number> = {
     md: Layout.cardPadding,
 };
 
-export function getCardStyle(variant: CardVariant, color?: string): ViewStyle {
+export function getCardStyle(variant: CardVariant, color?: string, colors: Palette = palette.light): ViewStyle {
+    const surface = { borderWidth: 1 as const, borderColor: colors.border };
     switch (variant) {
         case 'filled':
-            return { backgroundColor: color ?? Colors.light.tint };
+            return { backgroundColor: color ?? colors.primary };
         case 'tinted':
-            return { backgroundColor: Colors.light.card };
+            return { backgroundColor: colors.elevated };
         case 'grouped':
-            return { backgroundColor: Colors.light.card, ...CardSurface, overflow: 'hidden' };
+            return { backgroundColor: colors.elevated, ...surface, overflow: 'hidden' };
         case 'outlined':
         default:
-            return { backgroundColor: Colors.light.background, ...CardSurface };
+            return { backgroundColor: colors.background, ...surface };
     }
 }
 
@@ -59,10 +61,12 @@ export function Card({
     accessibilityState,
     ...rest
 }: CardProps) {
+    const { colors } = useTheme();
+    const styles = React.useMemo(() => makeStyles(colors), [colors]);
     const pad = PADDING[padding ?? (variant === 'grouped' ? 'none' : 'md')];
     const base: StyleProp<ViewStyle> = [
         styles.base,
-        getCardStyle(variant, color),
+        getCardStyle(variant, color, colors),
         { padding: pad },
         disabled && styles.disabled,
         style,
@@ -90,7 +94,8 @@ export function Card({
     );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Palette) {
+    return StyleSheet.create({
     base: {
         borderRadius: Radius.lg,
     },
@@ -102,6 +107,10 @@ const styles = StyleSheet.create({
         opacity: 0.85,
     },
     disabled: {
-        opacity: 0.5,
+        borderWidth: 1,
+        borderStyle: 'dashed',
+        borderColor: colors.border,
     },
 });
+}
+

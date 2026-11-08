@@ -1,9 +1,10 @@
+import { useTheme } from '@/hooks/useTheme';
 import { LocationFilterTabs } from "@/components/leaderboard/LocationFilterTabs";
 import { Podium } from "@/components/leaderboard/Podium";
 import { RankedList } from "@/components/leaderboard/RankedList";
 import { WeekNavigator } from "@/components/leaderboard/WeekNavigator";
 import { GAMES, GameId } from "@/constants/Games";
-import { Colors, Spacing, Typography } from "@/constants/theme";
+import { type Palette, Spacing, Typography } from '@/constants/theme';
 import { useWeeklyLeaderboard } from "@/hooks/useWeeklyLeaderboard";
 import { capture } from "@/lib/posthog";
 import { getCurrentWeek, shiftWeek } from "@/lib/week-utils";
@@ -25,6 +26,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 const LIST_CAP = 50;
 
 export default function GameLeaderboardScreen() {
+    const { colors } = useTheme();
+    const styles = React.useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
   const { gameType, filter } = useLocalSearchParams<{ gameType: string; filter?: string }>();
   const { user } = useAuthStore();
@@ -91,10 +94,10 @@ export default function GameLeaderboardScreen() {
           <MaterialIcons
             name="arrow-back"
             size={24}
-            color={Colors.light.text}
+            color={colors.text}
           />
         </TouchableOpacity>
-        <MaterialIcons name={game.icon} size={22} color={Colors.light.text} />
+        <MaterialIcons name={game.icon} size={22} color={colors.text} />
         <Text style={styles.gameName}>{game.name}</Text>
       </View>
 
@@ -114,7 +117,7 @@ export default function GameLeaderboardScreen() {
 
       {loading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={Colors.light.tint} />
+          <ActivityIndicator size="large" color={colors.primary} />
         </View>
       ) : top.length === 0 ? (
         <View style={styles.loadingContainer}>
@@ -141,10 +144,11 @@ export default function GameLeaderboardScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Palette) {
+    return StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.light.background,
+    backgroundColor: colors.background,
   },
   header: {
     flexDirection: "row",
@@ -154,8 +158,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   gameName: {
-    ...Typography.h3,
-  },
+    ...Typography.h3, color: colors.text },
   scroll: {
     paddingHorizontal: Spacing.md,
     paddingBottom: Spacing.xxl,
@@ -168,6 +171,8 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     ...Typography.caption,
-    color: Colors.light.icon,
+    color: colors.textSecondary,
   },
 });
+}
+

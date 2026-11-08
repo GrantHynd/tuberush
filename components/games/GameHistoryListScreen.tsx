@@ -1,7 +1,8 @@
+import { useTheme } from '@/hooks/useTheme';
 import { GamePuzzleListItem } from '@/components/games/GamePuzzleListItem';
 import { GameHistoryStatsBar } from '@/components/games/GameHistoryStatsBar';
 import { HeaderBackButton } from '@/components/ui/HeaderBackButton';
-import { Colors, Spacing, TFL, Typography } from '@/constants/theme';
+import { type Palette, Spacing, Typography } from '@/constants/theme';
 import type { GameHistoryListItem } from '@/types/game-history';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import React from 'react';
@@ -20,7 +21,7 @@ export interface GameHistoryListScreenProps {
     icon: keyof typeof MaterialIcons.glyphMap;
     accentColor: string;
     hasWinLoss: boolean;
-    /** Badge color when completed (e.g. TFL.blue for crossword) */
+    /** Badge color when completed (e.g. colors.primary for crossword) */
     completedBadgeColor?: string;
     sections: { title: string; data: GameHistoryListItem[] }[];
     stats: { completed: number; total: number; currentStreak: number };
@@ -49,6 +50,8 @@ export function GameHistoryListScreen({
     renderItemAccessory,
     isLocked,
 }: GameHistoryListScreenProps) {
+    const { colors } = useTheme();
+    const styles = React.useMemo(() => makeStyles(colors), [colors]);
 
     const headerIcon = (
         <View style={styles.iconContainer}>
@@ -105,7 +108,7 @@ export function GameHistoryListScreen({
 
     const renderEmpty = () => (
         <View style={styles.emptyContainer}>
-            <MaterialIcons name={icon} size={48} color={TFL.grey.medium} />
+            <MaterialIcons name={icon} size={48} color={colors.textSecondary} />
             <Text style={styles.emptyTitle}>No games played yet</Text>
             <Text style={styles.emptySubtitle}>Completed puzzles will appear here</Text>
         </View>
@@ -134,16 +137,17 @@ export function GameHistoryListScreen({
     );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Palette) {
+    return StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: Colors.light.background,
+        backgroundColor: colors.background,
     },
     iconContainer: {
         width: 32,
         height: 32,
         borderRadius: 8,
-        backgroundColor: TFL.grey.light,
+        backgroundColor: colors.background,
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -154,16 +158,15 @@ const styles = StyleSheet.create({
         paddingHorizontal: Spacing.md,
         paddingTop: Spacing.lg,
         paddingBottom: Spacing.sm,
-        backgroundColor: Colors.light.background,
+        backgroundColor: colors.background,
     },
     sectionHeaderText: {
         ...Typography.label,
         fontSize: 13,
-        fontWeight: '600',
-    },
+        fontWeight: '600', color: colors.text },
     separator: {
         height: 1,
-        backgroundColor: Colors.light.border,
+        backgroundColor: colors.border,
         marginLeft: Spacing.md + 48 + Spacing.md,
     },
     showMoreButton: {
@@ -190,13 +193,15 @@ const styles = StyleSheet.create({
     emptyTitle: {
         fontSize: 18,
         fontWeight: '600',
-        color: Colors.light.text,
+        color: colors.text,
         marginTop: Spacing.md,
         marginBottom: Spacing.xs,
     },
     emptySubtitle: {
         fontSize: 15,
-        color: TFL.grey.dark,
+        color: colors.textSecondary,
         textAlign: 'center',
     },
 });
+}
+

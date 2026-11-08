@@ -1,8 +1,11 @@
+import { useTheme } from '@/hooks/useTheme';
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { TFL, Spacing } from '@/constants/theme';
+import { type Palette, Spacing } from '@/constants/theme';
 
 export function LiveBadge() {
+    const { colors } = useTheme();
+    const styles = React.useMemo(() => makeStyles(colors), [colors]);
     return (
         <View style={styles.badge}>
             <View style={styles.dot} />
@@ -11,11 +14,12 @@ export function LiveBadge() {
     );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Palette) {
+    return StyleSheet.create({
     badge: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: TFL.green + '18',
+        backgroundColor: colors.success + '18',
         paddingHorizontal: Spacing.sm,
         paddingVertical: 3,
         borderRadius: 10,
@@ -25,12 +29,14 @@ const styles = StyleSheet.create({
         width: 6,
         height: 6,
         borderRadius: 3,
-        backgroundColor: TFL.green,
+        backgroundColor: colors.success,
     },
     text: {
         fontSize: 11,
         fontWeight: '700',
-        color: TFL.green,
+        color: colors.success,
         letterSpacing: 0.5,
     },
 });
+}
+

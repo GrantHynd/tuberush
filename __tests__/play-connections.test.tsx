@@ -230,7 +230,6 @@ describe("PlayConnectionsScreen", () => {
 
       await render(<PlayConnectionsScreen />);
 
-
       await waitFor(() => {
         expect(spy).toHaveBeenCalled();
       });
@@ -274,7 +273,6 @@ describe("PlayConnectionsScreen", () => {
       const spy = jest.spyOn(connections, "Connections");
 
       await render(<PlayConnectionsScreen />);
-
 
       await waitFor(() => {
         expect(spy).toHaveBeenCalled();
@@ -329,7 +327,6 @@ describe("PlayConnectionsScreen", () => {
 
       await render(<PlayConnectionsScreen />);
 
-
       await waitFor(() => {
         expect(spy).toHaveBeenCalled();
       });
@@ -379,7 +376,6 @@ describe("PlayConnectionsScreen", () => {
 
       await render(<PlayConnectionsScreen />);
 
-
       await waitFor(() => {
         expect(spy).toHaveBeenCalled();
       });
@@ -406,7 +402,6 @@ describe("PlayConnectionsScreen", () => {
       const spy = jest.spyOn(connections, "Connections");
 
       await render(<PlayConnectionsScreen />);
-
 
       await waitFor(() => {
         expect(spy).toHaveBeenCalled();
@@ -451,7 +446,6 @@ describe("PlayConnectionsScreen", () => {
       const spy = jest.spyOn(connections, "Connections");
 
       await render(<PlayConnectionsScreen />);
-
 
       await waitFor(() => {
         expect(spy).toHaveBeenCalled();
@@ -697,7 +691,6 @@ describe("PlayConnectionsScreen", () => {
 
       await render(<PlayConnectionsScreen />);
 
-
       await waitFor(() => {
         expect(spy).toHaveBeenCalled();
       });
@@ -854,7 +847,6 @@ describe("PlayConnectionsScreen", () => {
       const spy = jest.spyOn(connections, "Connections");
 
       await render(<PlayConnectionsScreen />);
-
 
       await waitFor(() => {
         expect(spy).toHaveBeenCalled();

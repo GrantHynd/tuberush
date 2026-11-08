@@ -45,7 +45,7 @@ describe('TUB-295 accessibility', () => {
         expect(tile.props.accessibilityLabel).toBe('A1');
         await fireEvent.press(tile);
         expect(r.getByTestId('tile-A1').props.accessibilityState.selected).toBe(true);
-        expect(r.getByTestId('tile-A1-dot')).toBeTruthy();
+        expect(r.getByTestId('tile-A1-tick', { includeHiddenElements: true })).toBeTruthy();
         expect(spy).toHaveBeenCalledWith('1 of 4 selected');
         expect(r.getByText('Submit 1/4')).toBeTruthy();
     });
@@ -55,7 +55,7 @@ describe('TUB-295 accessibility', () => {
         await r.rerender(
             <Connections puzzle={puzzle} gameState={{ ...base, mistakesRemaining: 3 }} onSubmitGuess={jest.fn()} />,
         );
-        expect(spy).toHaveBeenCalledWith('Mind the gap. Not a line. 3 tries left.');
+        expect(spy).toHaveBeenCalledWith('Not quite. Not a line. 3 tries left.');
         expect(r.getByLabelText('3 tries left')).toBeTruthy();
     });
 
@@ -64,7 +64,7 @@ describe('TUB-295 accessibility', () => {
         await r.rerender(
             <Connections puzzle={puzzle} gameState={{ ...base, completedGroups: ['A'] }} onSubmitGuess={jest.fn()} />,
         );
-        expect(spy).toHaveBeenCalledWith('Line found: A');
+        expect(spy).toHaveBeenCalledWith('Group found: A');
     });
 });
 
@@ -72,7 +72,7 @@ describe('TUB-296 wrong-guess feedback', () => {
     beforeEach(() => jest.useFakeTimers());
     afterEach(() => jest.useRealTimers());
 
-    it('keeps the selection, outlines it red for 600ms and shows the Mind the gap toast', async () => {
+    it('keeps the selection, marks it incorrect for 600ms and shows the Not quite toast', async () => {
         const onSubmit = jest.fn();
         const r = await render(<Connections puzzle={puzzle} gameState={base} onSubmitGuess={onSubmit} />);
         await r.findByTestId('tile-A1');
@@ -83,8 +83,8 @@ describe('TUB-296 wrong-guess feedback', () => {
             <Connections puzzle={puzzle} gameState={{ ...base, mistakesRemaining: 3 }} onSubmitGuess={onSubmit} />,
         );
         expect(r.getByTestId('tile-A1').props.accessibilityValue).toEqual({ text: 'incorrect' });
-        expect(r.getByText('One away. 3 tries left.')).toBeTruthy();
-        expect(r.getByText('MIND THE GAP')).toBeTruthy();
+        expect(r.getByText('So close: one off. 3 tries left.')).toBeTruthy();
+        expect(r.getByText('NOT QUITE')).toBeTruthy();
         await act(async () => {
             jest.advanceTimersByTime(700);
         });

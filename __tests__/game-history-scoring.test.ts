@@ -19,7 +19,6 @@ describe('scoreToPoints', () => {
     });
 });
 
-
 describe('toGameHistoryEntry', () => {
     it('maps a leaderboard row into a history entry', () => {
         expect(toGameHistoryEntry({

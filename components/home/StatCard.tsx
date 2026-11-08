@@ -1,5 +1,6 @@
+import { useTheme } from '@/hooks/useTheme';
 import { Card } from '@/components/ui/Card';
-import { Colors, Spacing, TFL, Typography } from '@/constants/theme';
+import { type Palette, Spacing, Typography } from '@/constants/theme';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import React from 'react';
 import { StyleSheet, Text } from 'react-native';
@@ -13,12 +14,14 @@ export interface StatCardProps {
 }
 
 export function StatCard({ icon, label, value, sublabel }: StatCardProps) {
+    const { colors } = useTheme();
+    const styles = React.useMemo(() => makeStyles(colors), [colors]);
     return (
         <Card variant="tinted" style={styles.card} accessible>
             <MaterialIcons
                 name={icon}
                 size={24}
-                color={Colors.light.icon}
+                color={colors.textSecondary}
                 style={styles.icon}
             />
             <Text style={styles.label}>{label}</Text>
@@ -30,7 +33,8 @@ export function StatCard({ icon, label, value, sublabel }: StatCardProps) {
     );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Palette) {
+    return StyleSheet.create({
     card: {
         flex: 1,
         minHeight: 80,
@@ -40,16 +44,16 @@ const styles = StyleSheet.create({
     },
     label: {
         ...Typography.caption,
-        marginBottom: 2,
-    },
+        marginBottom: 2, color: colors.text },
     value: {
         ...Typography.h2,
-        fontSize: 22,
-    },
+        fontSize: 22, color: colors.text },
     sublabel: {
         ...Typography.caption,
         marginTop: 2,
-        color: TFL.grey.dark,
+        color: colors.textSecondary,
         textTransform: 'capitalize',
     },
 });
+}
+

@@ -1,3 +1,4 @@
+import { useTheme } from '@/hooks/useTheme';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -6,6 +7,7 @@ interface PremiumBadgeProps {
 }
 
 export function PremiumBadge({ size = 'medium' }: PremiumBadgeProps) {
+    const { colors } = useTheme();
     const sizeStyles = {
         small: { fontSize: 10, paddingHorizontal: 6, paddingVertical: 2 },
         medium: { fontSize: 12, paddingHorizontal: 8, paddingVertical: 4 },
@@ -13,9 +15,9 @@ export function PremiumBadge({ size = 'medium' }: PremiumBadgeProps) {
     };
 
     return (
-        <View style={[styles.badge, sizeStyles[size]]}>
-            <Text style={[styles.text, { fontSize: sizeStyles[size].fontSize }]}>
-                ⭐ PREMIUM
+        <View style={[styles.badge, { backgroundColor: colors.premium }, sizeStyles[size]]}>
+            <Text style={[styles.text, { fontSize: sizeStyles[size].fontSize, color: colors.premiumText }]}>
+                PREMIUM
             </Text>
         </View>
     );
@@ -23,12 +25,10 @@ export function PremiumBadge({ size = 'medium' }: PremiumBadgeProps) {
 
 const styles = StyleSheet.create({
     badge: {
-        backgroundColor: '#f39c12',
         borderRadius: 4,
         alignSelf: 'flex-start',
     },
     text: {
-        color: '#fff',
         fontWeight: 'bold',
     },
 });

@@ -1,6 +1,8 @@
-import { FontScaleCap, FontFamily, Size, StateColors } from '@/constants/theme';
+import { FontFamily, FontScaleCap, Size } from '@/constants/theme';
+import { useTheme } from '@/hooks/useTheme';
+import { decorativeIconProps } from '@/lib/a11y';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 export const KEY_ROWS = [
@@ -44,6 +46,20 @@ export function GameKeyboard({
     bottomInset = 0,
     testID = 'game-keyboard',
 }: GameKeyboardProps) {
+    const { colors } = useTheme();
+    const styles = useMemo(
+        () =>
+            makeStyles({
+                page: colors.background,
+                key: colors.elevated,
+                ink: colors.text,
+                border: colors.border,
+                primary: colors.primary,
+                onPrimary: colors.onPrimary,
+                disabled: colors.textSecondary,
+            }),
+        [colors],
+    );
     const keyStyle = [styles.key, { height: keyHeight, minHeight: Math.min(keyHeight, Size.minTarget) }];
     return (
         <View testID={testID} style={[styles.kb, { paddingBottom: KEYBOARD_PAD + bottomInset }]}>
@@ -57,7 +73,7 @@ export function GameKeyboard({
                             testID="key-backspace"
                             style={({ pressed }) => [keyStyle, styles.wide, pressed && styles.pressed]}
                         >
-                            <MaterialIcons name="backspace" size={20} color={StateColors.ink} />
+                            <MaterialIcons name="backspace" size={20} color={colors.text} {...decorativeIconProps} />
                         </Pressable>
                     ) : null}
                     {row.map((k) => (
@@ -69,7 +85,14 @@ export function GameKeyboard({
                             testID={`key-${k}`}
                             style={({ pressed }) => [keyStyle, pressed && styles.pressed]}
                         >
-                            <Text style={styles.keyText} maxFontSizeMultiplier={FontScaleCap.chrome}>
+                            <Text
+                                style={styles.keyText}
+                                maxFontSizeMultiplier={FontScaleCap.chrome}
+                                numberOfLines={1}
+                                adjustsFontSizeToFit
+                                minimumFontScale={0.55}
+                                {...decorativeIconProps}
+                            >
                                 {k}
                             </Text>
                         </Pressable>
@@ -81,18 +104,26 @@ export function GameKeyboard({
                             accessibilityRole="button"
                             accessibilityLabel={checkLabel}
                             accessibilityState={{ disabled: !!checkDisabled }}
+                            // iOS maps disabled to UIAccessibilityTraitNotEnabled and omits
+                            // accessibilityHint from the tree for that trait, so the inspector
+                            // shows an empty hint while enabled=false stays set. Android still
+                            // exposes this string as tooltipText. Leave the label as "Check".
                             accessibilityHint={checkDisabled ? 'Fill all squares to check' : undefined}
                             testID="key-check"
                             style={({ pressed }) => [
                                 keyStyle,
                                 styles.check,
                                 checkDisabled && styles.checkDisabled,
-                                pressed && styles.pressed,
+                                pressed && !checkDisabled && styles.pressed,
                             ]}
                         >
                             <Text
                                 style={[styles.checkText, checkDisabled && styles.checkTextDisabled]}
                                 maxFontSizeMultiplier={FontScaleCap.chrome}
+                                numberOfLines={1}
+                                adjustsFontSizeToFit
+                                minimumFontScale={0.65}
+                                {...decorativeIconProps}
                             >
                                 {checkLabel}
                             </Text>
@@ -104,29 +135,48 @@ export function GameKeyboard({
     );
 }
 
-const styles = StyleSheet.create({
-    kb: { backgroundColor: StateColors.hairline, paddingTop: KEYBOARD_PAD, paddingHorizontal: 3 },
-    row: { flexDirection: 'row', justifyContent: 'center', gap: 5 },
-    key: {
-        flex: 1,
-        maxWidth: 38,
-        borderRadius: 6,
-        backgroundColor: '#FFFFFF',
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderBottomWidth: 1,
-        borderBottomColor: '#6B7280',
-    },
-    wide: { maxWidth: 52, flex: 1.4 },
-    keyText: { fontFamily: FontFamily.medium, fontSize: 20, fontWeight: '500', color: StateColors.ink },
-    check: { maxWidth: 72, flex: 2, backgroundColor: StateColors.selected, borderBottomColor: StateColors.selected },
-    checkDisabled: {
-        backgroundColor: '#FFFFFF',
-        borderWidth: 2,
-        borderStyle: 'dashed',
-        borderColor: StateColors.inactiveBorder,
-    },
-    checkText: { fontFamily: FontFamily.semibold, fontSize: 14, fontWeight: '600', color: '#FFFFFF' },
-    checkTextDisabled: { color: StateColors.inactiveText },
-    pressed: { opacity: 0.7 },
-});
+function makeStyles(c: {
+    page: string;
+    key: string;
+    ink: string;
+    border: string;
+    primary: string;
+    onPrimary: string;
+    disabled: string;
+}) {
+    return StyleSheet.create({
+        kb: { backgroundColor: c.page, paddingTop: KEYBOARD_PAD, paddingHorizontal: 3 },
+        row: { flexDirection: 'row', justifyContent: 'center', gap: 5 },
+        key: {
+            flex: 1,
+            maxWidth: 38,
+            borderRadius: 6,
+            backgroundColor: c.key,
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderWidth: 1,
+            borderColor: c.border,
+        },
+        wide: { maxWidth: 52, flex: 1.4 },
+        keyText: { fontFamily: FontFamily.medium, fontSize: 20, fontWeight: '500', color: c.ink, width: '100%', textAlign: 'center' },
+        // Width stays 72 at the default size, where "Check" fits. Scaled text
+        // shrinks to that width so the word stays whole instead of clipping to "Chec".
+        check: { maxWidth: 72, flex: 2, backgroundColor: c.primary, borderColor: c.primary },
+        checkDisabled: {
+            backgroundColor: 'transparent',
+            borderWidth: 2,
+            borderStyle: 'dashed',
+            borderColor: c.border,
+        },
+        checkText: {
+            fontFamily: FontFamily.semibold,
+            fontSize: 14,
+            fontWeight: '600',
+            color: c.onPrimary,
+            width: '100%',
+            textAlign: 'center',
+        },
+        checkTextDisabled: { color: c.disabled },
+        pressed: { opacity: 0.7 },
+    });
+}

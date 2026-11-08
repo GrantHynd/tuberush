@@ -1,4 +1,5 @@
-import { Colors, Layout, Spacing, Typography } from '@/constants/theme';
+import { useTheme } from '@/hooks/useTheme';
+import { type Palette, Layout, Spacing, Typography } from '@/constants/theme';
 import { DISPLAY_NAME_SAVE_ERROR, validateDisplayName } from '@/lib/display-name';
 import React, { useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, StyleSheet, Text, TouchableOpacity } from 'react-native';
@@ -32,6 +33,8 @@ function SheetBody({
     onSave,
     onDismiss,
 }: Props) {
+    const { colors } = useTheme();
+    const styles = React.useMemo(() => makeStyles(colors), [colors]);
     const [value, setValue] = useState(initialValue ?? '');
     const [touched, setTouched] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -79,7 +82,7 @@ function SheetBody({
                         accessibilityRole="button"
                         accessibilityState={{ disabled: !canSave, busy: saving }}
                     >
-                        {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryText}>Save</Text>}
+                        {saving ? <ActivityIndicator color={colors.onPrimary} /> : <Text style={[styles.primaryText, !canSave && styles.disabledText]}>Save</Text>}
                     </TouchableOpacity>
                     <TouchableOpacity
                         testID="display-name-dismiss"
@@ -94,20 +97,24 @@ function SheetBody({
     );
 }
 
-const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: Colors.light.background },
+function makeStyles(colors: Palette) {
+    return StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.background },
     body: { padding: Spacing.lg, gap: Spacing.md },
-    title: { ...Typography.h3 },
+    title: { ...Typography.h3, color: colors.text },
     primary: {
-        backgroundColor: Colors.light.tint,
+        backgroundColor: colors.primary,
         minHeight: 48,
         borderRadius: Layout.borderRadius.md,
         alignItems: 'center',
         justifyContent: 'center',
         marginTop: Spacing.sm,
     },
-    disabled: { opacity: 0.5 },
-    primaryText: { color: 'white', fontWeight: '700', fontSize: 16 },
+    disabled: { backgroundColor: 'transparent', borderWidth: 1, borderStyle: 'dashed', borderColor: colors.border },
+    primaryText: { color: colors.onPrimary, fontWeight: '700', fontSize: 16 },
+    disabledText: { color: colors.textSecondary },
     secondary: { minHeight: 44, alignItems: 'center', justifyContent: 'center' },
-    secondaryText: { color: Colors.light.tint, fontWeight: '600', fontSize: 16 },
+    secondaryText: { color: colors.primary, fontWeight: '600', fontSize: 16 },
 });
+}
+

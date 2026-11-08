@@ -1,6 +1,7 @@
+import { useTheme } from '@/hooks/useTheme';
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { Colors, TFL, Spacing, Layout } from '@/constants/theme';
+import { type Palette, Spacing, Layout } from '@/constants/theme';
 import { WeeklyLeaderboardEntry } from '@/types/game';
 import {
     getDisplayName,
@@ -33,6 +34,8 @@ function EntryRow({
     isMe: boolean;
     compact: boolean;
 }) {
+    const { colors } = useTheme();
+    const styles = React.useMemo(() => makeStyles(colors), [colors]);
     const name = getDisplayName(item.username, item.userId);
     const initial = getAvatarInitial(name);
     const location = getLocationDisplay({
@@ -83,6 +86,8 @@ function EntryRow({
 }
 
 function GapIndicator() {
+    const { colors } = useTheme();
+    const styles = React.useMemo(() => makeStyles(colors), [colors]);
     return (
         <View style={styles.gapRow}>
             <View style={styles.gapDot} />
@@ -99,6 +104,8 @@ export function RankedList({
     compact = false,
     userEntryOutsideList,
 }: RankedListProps) {
+    const { colors } = useTheme();
+    const styles = React.useMemo(() => makeStyles(colors), [colors]);
     const filtered =
         startFromRank > 0
             ? entries.filter((e) => e.rank > startFromRank)
@@ -156,27 +163,28 @@ export function RankedList({
     );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Palette) {
+    return StyleSheet.create({
     card: {
-        backgroundColor: Colors.light.background,
+        backgroundColor: colors.background,
         borderRadius: Layout.borderRadius.lg,
         overflow: 'hidden',
         borderWidth: 1,
-        borderColor: Colors.light.border,
+        borderColor: colors.border,
     },
     row: {
         flexDirection: 'row',
         alignItems: 'center',
         paddingVertical: 10,
         paddingHorizontal: Spacing.md,
-        backgroundColor: Colors.light.background,
+        backgroundColor: colors.background,
     },
     rowCompact: {
         paddingVertical: 6,
         paddingHorizontal: 0,
     },
     rowHighlight: {
-        backgroundColor: TFL.blue + '0A',
+        backgroundColor: colors.primary + '0A',
     },
     accentBorder: {
         position: 'absolute',
@@ -184,14 +192,14 @@ const styles = StyleSheet.create({
         top: 0,
         bottom: 0,
         width: 3,
-        backgroundColor: TFL.blue,
+        backgroundColor: colors.primary,
         borderTopLeftRadius: Layout.borderRadius.lg,
         borderBottomLeftRadius: Layout.borderRadius.lg,
     },
     rank: {
         width: 28,
         fontSize: 14,
-        color: TFL.grey.dark,
+        color: colors.textSecondary,
         textAlign: 'center',
     },
     info: {
@@ -206,14 +214,14 @@ const styles = StyleSheet.create({
     name: {
         fontSize: 15,
         fontWeight: '600',
-        color: Colors.light.text,
+        color: colors.text,
         flexShrink: 1,
     },
     nameCompact: {
         fontSize: 13,
     },
     youPill: {
-        backgroundColor: TFL.blue + '18',
+        backgroundColor: colors.primary + '18',
         paddingHorizontal: 6,
         paddingVertical: 1,
         borderRadius: 8,
@@ -221,17 +229,17 @@ const styles = StyleSheet.create({
     youText: {
         fontSize: 10,
         fontWeight: '700',
-        color: TFL.blue,
+        color: colors.primary,
     },
     location: {
         fontSize: 12,
-        color: TFL.grey.dark,
+        color: colors.textSecondary,
         marginTop: 1,
     },
     score: {
         fontSize: 15,
         fontWeight: '700',
-        color: Colors.light.text,
+        color: colors.text,
         marginLeft: Spacing.sm,
     },
     scoreCompact: {
@@ -239,7 +247,7 @@ const styles = StyleSheet.create({
     },
     divider: {
         height: 1,
-        backgroundColor: Colors.light.border,
+        backgroundColor: colors.border,
         marginHorizontal: Spacing.md,
     },
     gapRow: {
@@ -253,6 +261,8 @@ const styles = StyleSheet.create({
         width: 5,
         height: 5,
         borderRadius: 2.5,
-        backgroundColor: TFL.grey.medium,
+        backgroundColor: colors.border,
     },
 });
+}
+

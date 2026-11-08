@@ -80,7 +80,7 @@ export default {
     },
     android: {
       adaptiveIcon: {
-        backgroundColor: '#E6F4FE',
+        backgroundColor: '#0D5C55',
         foregroundImage: './assets/images/android-icon-foreground.png',
         backgroundImage: './assets/images/android-icon-background.png',
         monochromeImage: './assets/images/android-icon-monochrome.png',
@@ -100,12 +100,14 @@ export default {
       [
         'expo-splash-screen',
         {
+          // v01 deep-teal symbol. The v11 splash mark's stem disappears on white.
           image: './assets/images/splash-icon.png',
           imageWidth: 200,
           resizeMode: 'contain',
-          backgroundColor: '#ffffff',
+          backgroundColor: '#FAF7F2',
           dark: {
-            backgroundColor: '#000000',
+            image: './assets/images/splash-icon-dark.png',
+            backgroundColor: '#0C1614',
           },
         },
       ],

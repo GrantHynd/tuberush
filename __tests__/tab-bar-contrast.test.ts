@@ -1,4 +1,4 @@
-import { Colors } from '@/constants/theme';
+import { Colors, palette } from '@/constants/theme';
 
 function luminance(hex: string): number {
     const [r, g, b] = [1, 3, 5].map((i) => {
@@ -13,20 +13,16 @@ function contrast(a: string, b: string): number {
     return (hi + 0.05) / (lo + 0.05);
 }
 
-describe('tab bar contrast (TUB-270)', () => {
-    const bg = Colors.light.tabBarBackground;
-
-    it('has an explicit white tab bar background', () => {
-        expect(bg).toBe('#FFFFFF');
-        expect(Colors.dark.tabBarBackground).toBe('#FFFFFF');
+describe('tab bar contrast (TUB-270, TUB-330)', () => {
+    it('uses the scheme surface, not a forced white bar in dark mode', () => {
+        expect(Colors.light.tabBarBackground).toBe('#FFFFFF');
+        expect(Colors.dark.tabBarBackground).toBe(palette.dark.surface);
     });
 
-    it('inactive label/icon meets WCAG AA 4.5:1', () => {
-        expect(contrast(Colors.light.tabIconDefault, bg)).toBeGreaterThanOrEqual(4.5);
-        expect(contrast(Colors.light.tabIconDefault, bg)).toBeCloseTo(7.56, 1);
-    });
-
-    it('active tint meets WCAG AA', () => {
-        expect(contrast(Colors.light.tabIconSelected, bg)).toBeGreaterThanOrEqual(4.5);
+    it('inactive and active icons meet WCAG AA 4.5:1', () => {
+        expect(contrast(Colors.light.tabIconDefault, Colors.light.tabBarBackground)).toBeGreaterThanOrEqual(4.5);
+        expect(contrast(Colors.light.tabIconSelected, Colors.light.tabBarBackground)).toBeGreaterThanOrEqual(4.5);
+        expect(contrast(Colors.dark.tabIconDefault, Colors.dark.tabBarBackground)).toBeGreaterThanOrEqual(4.5);
+        expect(contrast(Colors.dark.tabIconSelected, Colors.dark.tabBarBackground)).toBeGreaterThanOrEqual(4.5);
     });
 });

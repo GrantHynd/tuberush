@@ -1,4 +1,5 @@
-import { Colors, Spacing, TFL, Typography } from '@/constants/theme';
+import { useTheme } from '@/hooks/useTheme';
+import { type Palette, Spacing, Typography } from '@/constants/theme';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -30,29 +31,36 @@ export class CrosswordErrorBoundary extends React.Component<Props, State> {
 
     render() {
         if (this.state.hasError) {
-            return (
-                <View style={styles.container}>
-                    <MaterialIcons name="error-outline" size={48} color={TFL.grey.dark} />
-                    <Text style={styles.title}>Something went wrong</Text>
-                    <Text style={styles.subtitle}>
-                        This puzzle couldn&apos;t be loaded. Please try again.
-                    </Text>
-                    <TouchableOpacity
-                        style={styles.button}
-                        onPress={this.handleReset}
-                        accessibilityRole="button"
-                        accessibilityLabel="Try again"
-                    >
-                        <Text style={styles.buttonText}>Try Again</Text>
-                    </TouchableOpacity>
-                </View>
-            );
+            return <CrosswordErrorFallback onReset={this.handleReset} />;
         }
         return this.props.children;
     }
 }
 
-const styles = StyleSheet.create({
+function CrosswordErrorFallback({ onReset }: { onReset: () => void }) {
+    const { colors } = useTheme();
+    const styles = React.useMemo(() => makeStyles(colors), [colors]);
+    return (
+        <View style={styles.container}>
+            <MaterialIcons name="error-outline" size={48} color={colors.textSecondary} />
+            <Text style={styles.title}>Something went wrong</Text>
+            <Text style={styles.subtitle}>
+                This puzzle couldn&apos;t be loaded. Please try again.
+            </Text>
+            <TouchableOpacity
+                style={styles.button}
+                onPress={onReset}
+                accessibilityRole="button"
+                accessibilityLabel="Try again"
+            >
+                <Text style={styles.buttonText}>Try Again</Text>
+            </TouchableOpacity>
+        </View>
+    );
+}
+
+function makeStyles(colors: Palette) {
+    return StyleSheet.create({
     container: {
         flex: 1,
         justifyContent: 'center',
@@ -62,11 +70,10 @@ const styles = StyleSheet.create({
     title: {
         ...Typography.h3,
         marginTop: Spacing.md,
-        marginBottom: Spacing.xs,
-    },
+        marginBottom: Spacing.xs, color: colors.text },
     subtitle: {
         ...Typography.body,
-        color: TFL.grey.dark,
+        color: colors.textSecondary,
         textAlign: 'center',
         marginBottom: Spacing.lg,
     },
@@ -75,11 +82,13 @@ const styles = StyleSheet.create({
         paddingHorizontal: 32,
         borderRadius: 24,
         borderWidth: 1,
-        borderColor: Colors.light.text,
+        borderColor: colors.text,
     },
     buttonText: {
         fontSize: 16,
         fontWeight: '600',
-        color: Colors.light.text,
+        color: colors.text,
     },
 });
+}
+
