@@ -15,6 +15,7 @@ import { fillGrid } from '../src/solver';
 import { buildPools, seededRandom, MAX_RANK } from '../src/words';
 import { validateClueInput } from '../src/clues';
 import { generateCrossword } from '../src/index';
+import { assertPublishablePuzzle } from '../../../supabase/functions/_shared/puzzle-validators';
 
 const allowedWords = new Set<string>([
   ...(wordList as string[]).slice(0, MAX_RANK),
@@ -166,10 +167,16 @@ describe('generateCrossword (Claude mocked)', () => {
       const date = `2026-10-${d}`;
       const puzzle = (await generateCrossword('test-key', date, '42')) as {
         title: string;
+        rows: number;
+        cols: number;
         grid: { letter: string | null; isBlack: boolean }[][];
         clues: { across: { clue: string }[]; down: { clue: string }[] };
       };
       assert.equal(puzzle.title, 'Mocked Puzzle');
+      assert.equal(puzzle.rows, 9);
+      assert.equal(puzzle.cols, 9);
+      assert.equal(Object.hasOwn(puzzle, 'schemaVersion'), false);
+      assertPublishablePuzzle({ gameType: 'crossword', targetDate: date, payload: puzzle });
       assert.equal(puzzle.grid.length, 9);
       assert.ok(puzzle.grid.flat().every(c => c.isBlack || /^[A-Z]$/.test(c.letter ?? '')));
       assert.ok([...puzzle.clues.across, ...puzzle.clues.down].every(c => c.clue.startsWith('Clue for')));

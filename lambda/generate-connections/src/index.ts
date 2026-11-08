@@ -6,6 +6,7 @@
 
 import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager';
 import type { ScheduledEvent, Context } from 'aws-lambda';
+import { assertPublishablePuzzle } from './puzzle-validators';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -102,25 +103,27 @@ async function restGameExists(
   return Array.isArray(rows) && rows.length > 0;
 }
 
-async function restNextval(
-  supabaseUrl: string,
-  serviceKey: string,
-  fallback: number,
-): Promise<string> {
+async function restNextval(supabaseUrl: string, serviceKey: string): Promise<string> {
   const url = `${baseUrl(supabaseUrl)}/rest/v1/rpc/nextval_text`;
   const res = await fetch(url, {
     method: 'POST',
     headers: restHeaders(serviceKey),
     body: JSON.stringify({ seq_name: 'connections_puzzle_id_seq' }),
   });
-  if (!res.ok) {
-    const t = await res.text().catch(() => '');
-    log('rest_rpc_warn', { status: res.status, body: t.slice(0, 200) });
-    return String(fallback);
+  const body = await res.text();
+  if (!res.ok) throw new Error(`nextval_text ${res.status}: ${body.slice(0, 200)}`);
+  return requireNextvalId(body);
+}
+
+function requireNextvalId(body: string): string {
+  let val: unknown;
+  try {
+    val = JSON.parse(body);
+  } catch {
+    throw new Error('nextval_text returned no puzzle id');
   }
-  const val: unknown = await res.json().catch(() => null);
-  if (val != null && val !== '') return String(val);
-  return String(fallback);
+  if (typeof val !== 'string' || val === '') throw new Error('nextval_text returned no puzzle id');
+  return val;
 }
 
 type InsertResult = 'inserted' | 'duplicate';
@@ -344,26 +347,6 @@ function connectionsPrompt(date: string, id: string): string {
   return `${date} #${id}. Return: {"groups":[{"category":"NAME","items":["A","B","C","D"],"difficulty":1}, ...4]}`;
 }
 
-function validateConnections(
-  d: unknown,
-): d is { groups: { category: string; items: string[]; difficulty: number }[] } {
-  if (!d || typeof d !== 'object') return false;
-  const o = d as Record<string, unknown>;
-  if (!Array.isArray(o.groups) || o.groups.length !== 4) return false;
-  const seen = new Set<string>();
-  for (const g of o.groups as Record<string, unknown>[]) {
-    if (typeof g.category !== 'string') return false;
-    if (!Array.isArray(g.items) || g.items.length !== 4) return false;
-    if (typeof g.difficulty !== 'number' || g.difficulty < 1 || g.difficulty > 4) return false;
-    for (const item of g.items) {
-      if (typeof item !== 'string' || !item) return false;
-      if (seen.has(item)) return false;
-      seen.add(item);
-    }
-  }
-  return seen.size === 16;
-}
-
 async function generateConnections(
   apiKey: string,
   secrets: Secrets,
@@ -375,15 +358,16 @@ async function generateConnections(
     try {
       log('claude_call', { type: 'connections', date, attempt });
       const raw = await callClaude(apiKey, secrets, CONNECTIONS_SYSTEM, connectionsPrompt(date, id));
-      const parsed = JSON.parse(extractJSON(raw));
-      if (!validateConnections(parsed)) {
-        throw new Error(`Invalid structure: ${JSON.stringify(parsed).slice(0, 200)}`);
-      }
-      return {
+      const parsed = JSON.parse(extractJSON(raw)) as {
+        groups?: { category: string; items: string[]; difficulty: number }[];
+      };
+      const puzzle = {
         id,
         date,
-        groups: parsed.groups.map((g, i) => ({ ...g, color: GROUP_COLORS[i] })),
+        groups: (parsed.groups ?? []).map((g, i) => ({ ...g, color: GROUP_COLORS[i] })),
       };
+      assertPublishablePuzzle({ gameType: 'connections', targetDate: date, payload: puzzle });
+      return puzzle;
     } catch (err) {
       lastErr = err;
       log('claude_error', { type: 'connections', date, attempt, error: String(err).slice(0, 300) });
@@ -473,9 +457,10 @@ export async function handler(
       }
 
       try {
-        const id = await restNextval(supabaseUrl, serviceKey, generated + round + 1);
+        const id = await restNextval(supabaseUrl, serviceKey);
         log('generating', { type: 'connections', date, id });
         const puzzle = await generateConnections(anthropicApiKey, secrets, date, id);
+        assertPublishablePuzzle({ gameType: 'connections', targetDate: date, payload: puzzle });
         const ins = await restInsertGame(supabaseUrl, serviceKey, {
           game_date: date,
           puzzle_data: puzzle,

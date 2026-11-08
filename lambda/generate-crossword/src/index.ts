@@ -11,6 +11,7 @@
 
 import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager';
 import type { ScheduledEvent, Context } from 'aws-lambda';
+import { assertPublishablePuzzle } from './puzzle-validators';
 import {
   assembleCrosswordPayload,
   computeWordSlots,
@@ -106,25 +107,27 @@ async function restGameExists(
   return Array.isArray(rows) && rows.length > 0;
 }
 
-async function restNextval(
-  supabaseUrl: string,
-  serviceKey: string,
-  fallback: number,
-): Promise<string> {
+async function restNextval(supabaseUrl: string, serviceKey: string): Promise<string> {
   const url = `${baseUrl(supabaseUrl)}/rest/v1/rpc/nextval_text`;
   const res = await fetch(url, {
     method: 'POST',
     headers: restHeaders(serviceKey),
     body: JSON.stringify({ seq_name: 'crossword_puzzle_id_seq' }),
   });
-  if (!res.ok) {
-    const t = await res.text().catch(() => '');
-    log('rest_rpc_warn', { status: res.status, body: t.slice(0, 200) });
-    return String(fallback);
+  const body = await res.text();
+  if (!res.ok) throw new Error(`nextval_text ${res.status}: ${body.slice(0, 200)}`);
+  return requireNextvalId(body);
+}
+
+function requireNextvalId(body: string): string {
+  let val: unknown;
+  try {
+    val = JSON.parse(body);
+  } catch {
+    throw new Error('nextval_text returned no puzzle id');
   }
-  const val: unknown = await res.json().catch(() => null);
-  if (val != null && val !== '') return String(val);
-  return String(fallback);
+  if (typeof val !== 'string' || val === '') throw new Error('nextval_text returned no puzzle id');
+  return val;
 }
 
 type InsertResult = 'inserted' | 'duplicate';
@@ -286,9 +289,10 @@ export async function handler(
       }
 
       try {
-        const id = await restNextval(supabaseUrl, serviceKey, generated + round + 100);
+        const id = await restNextval(supabaseUrl, serviceKey);
         log('generating', { type: 'crossword', date, id });
         const puzzle = await generateCrossword(anthropicApiKey, date, id);
+        assertPublishablePuzzle({ gameType: 'crossword', targetDate: date, payload: puzzle });
         const ins = await restInsertGame(supabaseUrl, serviceKey, {
           game_date: date,
           puzzle_data: puzzle,

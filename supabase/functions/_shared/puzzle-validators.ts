@@ -1,11 +1,13 @@
 /**
  * Shared Crossword and Interchange puzzle contract (TUB-332).
  *
- * This file is the one validator imported by Supabase Edge (Deno) and by Node
- * tooling (bots, Jest). It has no npm imports and no Deno URL imports.
+ * No npm imports and no Deno URL imports. Each Lambda imports `./puzzle-validators`,
+ * a symlink to this file, because `sam build` copies only the function directory
+ * before esbuild runs. Jest imports this file directly. `assertPublishablePuzzle`
+ * is the publish boundary: call it on the final payload and do not insert on throw.
  *
- *   Deno:  import { validatePuzzleSubmission } from '../_shared/puzzle-validators.ts';
- *   Node:  import { validatePuzzleSubmission } from '@/supabase/functions/_shared/puzzle-validators';
+ *   Lambda: import { assertPublishablePuzzle } from './puzzle-validators';
+ *   Node:   import { validatePuzzleSubmission } from '@/supabase/functions/_shared/puzzle-validators';
  *
  * Game types are the stored ids. Interchange is the user-facing name of the
  * connections-style game; its game_type is `connections`.
@@ -103,6 +105,11 @@ export function validatePuzzleSubmission(input: PuzzleSubmission): PuzzleValidat
   }
 
   return finish(errors);
+}
+
+export function assertPublishablePuzzle(input: PuzzleSubmission): void {
+  const result = validatePuzzleSubmission(input);
+  if (!result.ok) throw new Error(formatPuzzleErrors(result.errors));
 }
 
 export function validateCrosswordPayload(
