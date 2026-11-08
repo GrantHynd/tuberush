@@ -18,7 +18,7 @@ describe('9x9-A QA fixture', () => {
         expect(puzzle.rows).toBe(9);
         expect(puzzle.cols).toBe(9);
         const blacks = puzzle.grid.flat().filter((cell) => cell.isBlack).length;
-        // The generator comment says 38; the 9x9-A mask itself contains 35 blocked cells.
+        // 9x9-A mask: 35 blocked cells of 81.
         expect(blacks).toBe(35);
         expect(CROSSWORD_DATA.some((p) => p.id === puzzle.id)).toBe(false);
     });

@@ -90,7 +90,12 @@ export function TodayHeroCard({ rows, nextPuzzleAt, loading }: TodayHeroCardProp
                               accessibilityRole="button"
                               accessibilityLabel={parts.join(', ')}
                               accessibilityState={{ disabled: !row.onPress }}
-                              style={({ pressed }) => [styles.row, i > 0 && styles.divider, pressed && { opacity: 0.85 }]}
+                              style={({ pressed }) => [
+                                  styles.row,
+                                  i > 0 && styles.divider,
+                                  !row.onPress && styles.rowDisabled,
+                                  pressed && row.onPress && { opacity: 0.85 },
+                              ]}
                           >
                               <View style={[styles.swatch, { backgroundColor: colors[meta.fill] }]}>
                                   <MaterialIcons name={meta.icon} size={22} color={colors[meta.ink]} />
@@ -127,6 +132,7 @@ function makeStyles(colors: Palette) {
     title: { ...Typography.h3, color: colors.text },
     caption: { fontSize: 13, color: colors.textSecondary },
     row: { flexDirection: 'row', alignItems: 'center', paddingVertical: Spacing.s12, gap: Spacing.s12, minHeight: 64 },
+    rowDisabled: { borderWidth: 1, borderStyle: 'dashed', borderColor: colors.border, borderRadius: 8 },
     divider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
     swatch: { width: 40, height: 40, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },
     rowText: { flex: 1, minWidth: 0 },

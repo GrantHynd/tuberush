@@ -75,7 +75,7 @@ function makeStyles(colors: Palette) {
         fontSize: 18, color: colors.text },
     badge: {
         marginLeft: Spacing.sm,
-        backgroundColor: colors.border,
+        backgroundColor: colors.primary,
         paddingHorizontal: 8,
         paddingVertical: 2,
         borderRadius: Radius.sm,
@@ -83,7 +83,7 @@ function makeStyles(colors: Palette) {
     badgeText: {
         fontSize: 11,
         fontWeight: '600',
-        color: colors.text,
+        color: colors.onPrimary,
     },
     seeAll: {
         fontSize: 14,

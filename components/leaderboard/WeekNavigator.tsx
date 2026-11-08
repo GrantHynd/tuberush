@@ -37,8 +37,11 @@ export function WeekNavigator({
 
             <TouchableOpacity
                 onPress={() => onWeekChange(1)}
-                style={styles.button}
+                style={[styles.button, isCurrent && styles.buttonDisabled]}
                 disabled={isCurrent}
+                accessibilityRole="button"
+                accessibilityLabel="Later"
+                accessibilityState={{ disabled: isCurrent }}
             >
                 <Text
                     style={[
@@ -65,6 +68,13 @@ function makeStyles(colors: Palette) {
     button: {
         paddingVertical: Spacing.xs,
         paddingHorizontal: Spacing.sm,
+        borderWidth: 1,
+        borderColor: 'transparent',
+        borderRadius: 8,
+    },
+    buttonDisabled: {
+        borderStyle: 'dashed',
+        borderColor: colors.border,
     },
     center: {
         flexDirection: 'row',

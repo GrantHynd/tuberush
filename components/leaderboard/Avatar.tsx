@@ -26,7 +26,8 @@ export function Avatar({
 }: AvatarProps) {
     const { colors } = useTheme();
     const styles = React.useMemo(() => makeStyles(colors), [colors]);
-    const bgColor = isCurrentUser ? colors.primary : colors.border;
+    const bgColor = isCurrentUser ? colors.primary : colors.surface;
+    const letterColor = isCurrentUser ? colors.onPrimary : colors.text;
     const ring = ringColor ? RING_COLORS[ringColor] : undefined;
 
     return (
@@ -39,6 +40,10 @@ export function Avatar({
                     borderRadius: size / 2,
                     backgroundColor: bgColor,
                 },
+                !isCurrentUser && {
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                },
                 ring && {
                     borderWidth: 2.5,
                     borderColor: ring,
@@ -48,7 +53,7 @@ export function Avatar({
             <Text
                 style={[
                     styles.initial,
-                    { fontSize: size * 0.42, lineHeight: size * 0.52 },
+                    { fontSize: size * 0.42, lineHeight: size * 0.52, color: letterColor },
                 ]}
             >
                 {initial}

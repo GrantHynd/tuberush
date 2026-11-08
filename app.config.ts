@@ -107,7 +107,7 @@ export default {
           backgroundColor: '#FAF7F2',
           dark: {
             image: './assets/images/splash-icon-dark.png',
-            backgroundColor: '#10201E',
+            backgroundColor: '#0C1614',
           },
         },
       ],

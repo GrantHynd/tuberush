@@ -108,7 +108,7 @@ export function GameHistoryListScreen({
 
     const renderEmpty = () => (
         <View style={styles.emptyContainer}>
-            <MaterialIcons name={icon} size={48} color={colors.border} />
+            <MaterialIcons name={icon} size={48} color={colors.textSecondary} />
             <Text style={styles.emptyTitle}>No games played yet</Text>
             <Text style={styles.emptySubtitle}>Completed puzzles will appear here</Text>
         </View>

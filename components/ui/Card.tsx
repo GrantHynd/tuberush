@@ -107,7 +107,9 @@ function makeStyles(colors: Palette) {
         opacity: 0.85,
     },
     disabled: {
+        borderWidth: 1,
         borderStyle: 'dashed',
+        borderColor: colors.border,
     },
 });
 }

@@ -12,7 +12,7 @@ export type TemplateId = '9x9-A' | '9x9-B' | '9x9-C' | '9x9-D' | '9x9-E';
  *
  * | Template | Black cells | Slots | Difficulty |
  * |----------|-------------|-------|------------|
- * | 9x9-A    | 38 (47%)    | 15    | easy       |
+ * | 9x9-A    | 35 (43%)    | 15    | easy       |
  * | 9x9-B    | 30 (37%)    | 18    | easy-med   |
  * | 9x9-C    | 17 (21%)    | 26    | medium     |
  * | 9x9-D    | 17 (21%)    | 24    | med-hard   |

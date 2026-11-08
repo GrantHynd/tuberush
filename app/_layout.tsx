@@ -13,7 +13,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
 import { gameFonts } from '@/lib/fonts';
 import { useEffect } from 'react';
-import { useColorScheme, Platform } from 'react-native';
+import { useColorScheme, Platform, StyleSheet, View } from 'react-native';
 import 'react-native-reanimated';
 import { startScoreOutbox } from '@/lib/score-outbox';
 
@@ -124,12 +124,32 @@ function RootLayout() {
 
   return (
     <ThemeProvider value={navTheme}>
-      <Stack>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          headerStyle: { backgroundColor: colors.surface },
+          headerShadowVisible: false,
+          headerBackground: () => (
+            <View
+              style={{
+                flex: 1,
+                backgroundColor: colors.surface,
+                borderBottomWidth: StyleSheet.hairlineWidth,
+                borderBottomColor: colors.border,
+              }}
+            />
+          ),
+          headerTintColor: colors.text,
+          headerTitleStyle: { color: colors.text },
+          contentStyle: { backgroundColor: colors.background },
+        }}
+      >
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="auth" options={{ presentation: 'modal', title: 'Sign In' }} />
-        <Stack.Screen name="forgot-password" options={{ presentation: 'modal', title: 'Forgot Password' }} />
-        <Stack.Screen name="reset-password" options={{ presentation: 'modal', title: 'Reset Password', gestureEnabled: false }} />
-        <Stack.Screen name="subscribe" options={{ presentation: 'modal', title: 'Subscription details' }} />
+        <Stack.Screen name="dev" options={{ headerShown: false }} />
+        <Stack.Screen name="auth" options={{ headerShown: true, presentation: 'modal', title: 'Sign In' }} />
+        <Stack.Screen name="forgot-password" options={{ headerShown: true, presentation: 'modal', title: 'Forgot Password' }} />
+        <Stack.Screen name="reset-password" options={{ headerShown: true, presentation: 'modal', title: 'Reset Password', gestureEnabled: false }} />
+        <Stack.Screen name="subscribe" options={{ headerShown: true, presentation: 'modal', title: 'Subscription details' }} />
         <Stack.Screen name="privacy" options={{ headerShown: false }} />
         <Stack.Screen name="terms" options={{ headerShown: false }} />
         <Stack.Screen name="games/play-crossword" options={{ headerShown: false }} />

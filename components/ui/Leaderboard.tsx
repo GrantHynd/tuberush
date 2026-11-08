@@ -82,9 +82,15 @@ export function Leaderboard({ gameType, date, onClose }: LeaderboardProps) {
                     </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                    style={[styles.filterButton, filter === 'area' && styles.filterActive]}
+                    style={[
+                        styles.filterButton,
+                        filter === 'area' && styles.filterActive,
+                        !user?.city && styles.filterDisabled,
+                    ]}
                     onPress={() => setFilter('area')}
                     disabled={!user?.city}
+                    accessibilityRole="button"
+                    accessibilityState={{ disabled: !user?.city }}
                 >
                     <Text style={[styles.filterText, filter === 'area' && styles.filterTextActive]}>
                         {getMyAreaLabel()}
@@ -160,6 +166,12 @@ function makeStyles(colors: Palette) {
         paddingVertical: Spacing.sm,
         alignItems: 'center',
         borderRadius: Layout.borderRadius.sm,
+        borderWidth: 1,
+        borderColor: 'transparent',
+    },
+    filterDisabled: {
+        borderStyle: 'dashed',
+        borderColor: colors.border,
     },
     filterActive: {
         backgroundColor: colors.background,

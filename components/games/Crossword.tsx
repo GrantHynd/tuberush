@@ -57,11 +57,29 @@ interface GridCellProps {
     outline: { borderTopWidth: number; borderRightWidth: number; borderBottomWidth: number; borderLeftWidth: number };
 }
 
+/**
+ * Dark error shares the text colour, so a light disc disappears on a selected
+ * cell. When that happens the mark is a light X on the cursor ink, with a
+ * light ring. Light mode keeps the red disc and on-error ink.
+ */
+export function errorMarkColors(colors: {
+    error: string;
+    text: string;
+    onError: string;
+    cellCursor: string;
+    cellIdleText: string;
+}) {
+    const sharesText = colors.error.toLowerCase() === colors.text.toLowerCase();
+    if (!sharesText) return { border: colors.error, disc: colors.error, ink: colors.onError };
+    return { border: colors.cellCursor, disc: colors.cellCursor, ink: colors.cellIdleText };
+}
+
 const GridCell = React.memo(function GridCell({
     cell, rowIndex, colIndex, size, isSelected, isActiveWord, isError,
     userAnswer, disabled, pressable, accessibilityLabel, onPress, onAdjust, outline,
 }: GridCellProps) {
     const { colors } = useTheme();
+    const mark = errorMarkColors(colors);
     const fill = cell.isBlack
         ? colors.cellBlockedFill
         : isSelected
@@ -74,7 +92,7 @@ const GridCell = React.memo(function GridCell({
         styles.cell,
         { width: size, height: size, backgroundColor: fill },
         !cell.isBlack && outline,
-        !cell.isBlack && { borderColor: isError ? colors.error : colors.cellOutline },
+        !cell.isBlack && { borderColor: isError ? mark.border : colors.cellOutline },
     ];
     if (cell.isBlack) {
         return <View style={style} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />;
@@ -106,8 +124,12 @@ const GridCell = React.memo(function GridCell({
                 </>
             ) : null}
             {isError && (
-                <View style={[styles.errIcon, { backgroundColor: colors.error }]} accessibilityElementsHidden importantForAccessibility="no">
-                    <MaterialIcons name="close" size={10} color={colors.onError} />
+                <View
+                    style={[styles.errIcon, { backgroundColor: mark.disc, borderColor: mark.ink }]}
+                    accessibilityElementsHidden
+                    importantForAccessibility="no"
+                >
+                    <MaterialIcons name="close" size={12} color={mark.ink} />
                 </View>
             )}
         </>
@@ -533,11 +555,12 @@ const styles = StyleSheet.create({
     cellLetter: { fontWeight: '700' },
     errIcon: {
         position: 'absolute',
-        top: 2,
-        right: 2,
-        width: 14,
-        height: 14,
-        borderRadius: 7,
+        top: 1,
+        right: 1,
+        width: 16,
+        height: 16,
+        borderRadius: 8,
+        borderWidth: 1,
         alignItems: 'center',
         justifyContent: 'center',
     },

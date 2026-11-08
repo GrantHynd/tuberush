@@ -8,7 +8,11 @@
 
 export type Scheme = 'light' | 'dark';
 
-/** V3 crossword cells. Same roles in light and dark; distinct from surface/border. */
+/**
+ * V3 crossword cells, applied in both schemes as the handoff specified.
+ * A later note suggested dark only. Light cells stay on this treatment
+ * until that is confirmed directly. Distinct from surface and border.
+ */
 export const crosswordCells = {
     cellIdleFill: '#526E64',
     cellBlockedFill: '#060B09',
@@ -42,6 +46,7 @@ const lightChrome = {
     background: '#FAF7F2',
     surface: '#FFFFFF',
     elevated: '#FFFFFF',
+    /** 3.58:1 on white. Borders and non-text marks only, never body text. */
     border: '#7A8B85',
     text: '#10201E',
     textSecondary: '#3E524E',
@@ -80,6 +85,7 @@ const darkChrome = {
     border: '#9BAFA8',
     text: '#F0F5F3',
     textSecondary: '#B0C4BE',
+    /** Same hex as textSecondary, so a disabled control needs a non-colour cue. */
     textDisabled: '#B0C4BE',
     primary: '#A8E8DC',
     onPrimary: '#0C1614',

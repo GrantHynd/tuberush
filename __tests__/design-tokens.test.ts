@@ -1,3 +1,4 @@
+import { errorMarkColors } from '@/components/games/Crossword';
 import { crosswordCells, interchangeGroup, interchangeGroups, palette } from '@/constants/theme';
 
 function lum(hex: string) {
@@ -58,6 +59,36 @@ describe('Platform tokens (TUB-325)', () => {
         expect(ratio(crosswordCells.cellCursor, crosswordCells.cellSelectedFill)).toBeGreaterThanOrEqual(4.5);
         expect(ratio(crosswordCells.cellSelectedRing, crosswordCells.cellSelectedFill)).toBeGreaterThanOrEqual(3);
         expect(ratio(palette.light.toastText, palette.light.toast)).toBeGreaterThanOrEqual(4.5);
+    });
+
+    it('keeps V3 crossword cells in both schemes until light is confirmed separately', () => {
+        expect(palette.light.cellIdleFill).toBe(crosswordCells.cellIdleFill);
+        expect(palette.dark.cellIdleFill).toBe(crosswordCells.cellIdleFill);
+        expect(palette.light.cellSelectedFill).toBe(palette.dark.cellSelectedFill);
+        expect(palette.light.cellBlockedFill).toBe(palette.dark.cellBlockedFill);
+    });
+
+    it('does not treat the light border as a text colour', () => {
+        expect(palette.light.border).toBe('#7A8B85');
+        expect(ratio(palette.light.border, '#FFFFFF')).toBeLessThan(4.5);
+        expect(palette.light.text).not.toBe(palette.light.border);
+        expect(palette.light.textSecondary).not.toBe(palette.light.border);
+        expect(ratio(palette.light.text, '#FFFFFF')).toBeGreaterThanOrEqual(4.5);
+        expect(ratio(palette.light.textSecondary, palette.light.background)).toBeGreaterThanOrEqual(4.5);
+    });
+
+    it('gives a crossword error mark a contrasting X when error shares the text colour', () => {
+        expect(palette.dark.error).toBe(palette.dark.text);
+        expect(palette.dark.textDisabled).toBe(palette.dark.textSecondary);
+        const dark = errorMarkColors(palette.dark);
+        const light = errorMarkColors(palette.light);
+        expect(dark.disc).not.toBe(palette.dark.text);
+        expect(ratio(dark.ink, dark.disc)).toBeGreaterThanOrEqual(4.5);
+        expect(ratio(dark.disc, crosswordCells.cellSelectedFill)).toBeGreaterThanOrEqual(3);
+        expect(ratio(dark.ink, crosswordCells.cellIdleFill)).toBeGreaterThanOrEqual(3);
+        expect(light.disc).toBe(palette.light.error);
+        expect(light.ink).toBe(palette.light.onError);
+        expect(ratio(light.ink, light.disc)).toBeGreaterThanOrEqual(4.5);
     });
 
     it('does not use the retired tube-line colour set', () => {

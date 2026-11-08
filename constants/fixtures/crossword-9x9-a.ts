@@ -4,7 +4,8 @@ import type { CrosswordCell, CrosswordClue, CrosswordPuzzle } from '@/types/game
  * Deterministic 9×9-A crossword for tests and the dev rebrand preview.
  * Not a daily puzzle and not loaded by the game client.
  *
- * Mask matches lambda/generate-crossword TEMPLATE_MASKS['9x9-A'].
+ * Mask matches lambda/generate-crossword TEMPLATE_MASKS['9x9-A']:
+ * 35 blocked cells of 81 (43%).
  * Every crossing was checked by hand and is re-checked in
  * __tests__/crossword-9x9-fixture.test.ts.
  */
