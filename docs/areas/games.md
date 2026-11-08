@@ -11,7 +11,9 @@ The home tab (`app/(tabs)/index.tsx`) shows a short carousel of recent puzzles. 
 
 ## Where puzzles come from
 
-Published puzzles are rows in the `games` table. `lib/daily-games.ts` loads them and caches a window in AsyncStorage. Nightly AWS Lambdas fill that table (`lambda/generate-connections`, `lambda/generate-crossword`). The crossword grid is solved from a word list; Claude writes the clues.
+Published daily puzzles are rows in the `games` table. `lib/daily-games.ts` loads them and caches a window in AsyncStorage. Nightly AWS Lambdas insert those published rows directly (`lambda/generate-connections`, `lambda/generate-crossword`). The crossword grid is solved from a word list; Claude writes the clues.
+
+Bots can submit a payload to `puzzle_drafts` with a publish key. An admin reviews it, and the publish service marks an approved draft published. That status change does not write `games`.
 
 A puzzle can also be loaded by id from `custom_puzzles` (`lib/custom-puzzles.ts`). Custom sessions save a score on that puzzle and stay off the daily leaderboard.
 

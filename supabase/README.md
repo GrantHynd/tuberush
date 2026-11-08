@@ -11,15 +11,19 @@
 2. Click "New Project"
 3. Fill in project details and create
 
-### 2. Run Database Schema
-1. Go to SQL Editor in Supabase Dashboard
-2. Run migrations in order:
-   - `supabase/schema.sql` (base schema)
-   - `supabase/migrations/update_schema.sql` (borough, leaderboard)
-   - `supabase/migrations/20250314000000_apple_iap_schema.sql` (Apple IAP)
-   - `supabase/migrations/20250315000006_drop_subscription_fields.sql` (if applicable)
-   - `supabase/migrations/20250315000001_add_connections_game_type.sql` (if applicable)
-   - `supabase/migrations/20250315000002_city_borough_location.sql` (city/town support)
+### 2. Build the database
+
+Timestamped files in `supabase/migrations` are the change history. They alter tables created by `supabase/schema.sql` and `supabase/migrations/update_schema.sql`.
+
+The CLI applies only files named `<timestamp>_name.sql`. A fresh `supabase start` skips `update_schema.sql` and does not run `schema.sql`. `20250314000000_apple_iap_schema.sql` then fails with `relation "profiles" does not exist`. Applied after `schema.sql` and without `update_schema.sql`, `20250315000002_city_borough_location.sql` fails with `column "borough" does not exist`. That file also alters `leaderboard`. This repo has no `supabase/config.toml`. `supabase db reset` is documented to apply that same migrations directory, but on CLI 3.0.0 with the native stack already running it returned `LocalDbRunningError`, so that command was not confirmed here.
+
+Apply these in the SQL editor, in order:
+
+1. `supabase/schema.sql`
+2. `supabase/migrations/update_schema.sql`
+3. Every `supabase/migrations/<timestamp>_*.sql` file, in filename order
+
+That order completed on a local Supabase Postgres 17.11. `schema.sql` still installs `handle_new_user()` with an email-derived username, and `update_schema.sql` still creates a borough-only `leaderboard`. Later files replace that function (`20261024000001_stop_email_derived_usernames.sql`) and add city, a nullable borough, `result`, `mistakes`, and `leaderboard_user_game_date_key`. Stopping after step 2 leaves the old shape. Those two files stay in the repo because deleting them leaves no fresh setup. Turning them into an earlier timestamped migration would rewrite production migration history, which this repo does not do.
 
 ### 3. Get API Keys
 1. In Supabase Dashboard, go to Settings → API
@@ -49,13 +53,9 @@
 
 ## Seeding Test Data
 
-To populate a test environment with 50 leaderboard users across UK cities:
+`supabase/seed.sql` loads 50 leaderboard users (10 in London with boroughs, 40 across other UK cities) with Connections and Crossword scores for the current week.
 
-1. Make sure all migrations are applied (see step 2 above)
-2. Run `supabase/seed.sql` in the Supabase SQL Editor
-3. This creates 50 users (10 in London with boroughs, 40 across other UK cities) with Connections and Crossword scores for the current week
-
-To re-seed, first run the commented-out cleanup block at the bottom of `seed.sql`, then re-run the seed.
+`ON CONFLICT (user_id, game_date, game_type)` needs one unique index on those three columns. `leaderboard_user_game_date_key` from `20261025000001_leaderboard_unique_user_game_date.sql` is enough. The `UNIQUE (user_id, game_date, game_type)` constraint in `update_schema.sql` is enough on its own as well. The inserts also need `leaderboard.city` and a nullable `borough`. Run the seed only after the full order in step 2. Running the file again deletes existing `@tuberush.test` users first.
 
 ## Testing
 After setup, test by:
@@ -72,7 +72,3 @@ After setup, test by:
 - RLS (Row Level Security) is enabled - users can only access their own data
 - Profiles are automatically created on signup
 - Game states are automatically synced when online
-
-## Migrating from Stripe
-
-If you previously used Stripe, see [SUPABASE_STRIPE_CLEANUP.md](../docs/SUPABASE_STRIPE_CLEANUP.md) for steps to remove deployed functions and secrets.

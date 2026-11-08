@@ -17,9 +17,9 @@ A daily word game app for British commuters, built with React Native/Expo, offli
 - Personal rank, podium, and borough breakdown views
 
 ✅ **Automated Daily Games**
-- Daily puzzles generated nightly by two AWS Lambdas (`lambda/generate-connections`, `lambda/generate-crossword`)
+- Daily puzzles generated nightly by two AWS Lambdas (`lambda/generate-connections`, `lambda/generate-crossword`), which insert published rows directly into `games`
 - Crossword grids are filled by a seeded solver from a word bank + common British word list; Claude writes the clues
-- The Lambdas are the only generation path (see `docs/adr/0001-puzzle-generation.md`)
+- Bots can also submit `puzzle_drafts` with a publish key. Marking a draft published does not write `games` (see `docs/adr/0001-puzzle-generation.md`)
 
 ✅ **Premium Membership**
 - RevenueCat subscriptions (Monthly & Yearly)
@@ -83,7 +83,7 @@ tuberush-v2/
 ├── lambda/generate-connections/  # AWS Lambda (SAM): nightly Connections puzzle
 ├── lambda/generate-crossword/    # AWS Lambda (SAM): nightly crossword (grid solver + Claude clues)
 └── supabase/                 # Backend
-    ├── migrations/          # 12 migrations
+    ├── migrations/          # timestamped SQL migrations
     ├── functions/           # delete-account, legal
     ├── schema.sql / seed.sql
     └── README.md            # Setup guide
@@ -117,8 +117,7 @@ How the main product areas fit together:
 
 2. **Set up Supabase**
    - Create a project at https://supabase.com
-   - Run the SQL schema from `supabase/schema.sql`
-   - Follow the guide in `supabase/README.md`
+   - Follow `supabase/README.md` (timestamped migrations alone do not build a fresh database)
 
 3. **Configure environment variables**
    ```bash
@@ -197,9 +196,9 @@ if (game.isPremium && !user?.isPremium) {
 - Personal summary card and podium UI
 
 ### Daily Puzzle Generation
-- `lambda/generate-connections` and `lambda/generate-crossword` (AWS Lambda, SAM-deployed via `template.yaml`) run nightly at 02:00 / 02:30 UTC
+- `lambda/generate-connections` and `lambda/generate-crossword` (AWS Lambda, SAM-deployed via `template.yaml`) run nightly at 02:00 / 02:30 UTC and insert published rows directly into `games`
 - Crossword: a solver fills the day's template so every crossing is valid, then Claude writes the title and clues (see `lambda/generate-crossword/WORD_LIST.md`)
-- This is the only generation path; the former `schedule-daily-games` edge function was retired (`docs/adr/0001-puzzle-generation.md`)
+- `puzzle_drafts` is a second ingestion path (publish key, admin review, then `mark_puzzle_draft_published`). That path does not insert into `games`. The former `schedule-daily-games` edge function stays retired (`docs/adr/0001-puzzle-generation.md`)
 
 ### Subscriptions
 - RevenueCat-powered subscriptions (Monthly & Yearly)

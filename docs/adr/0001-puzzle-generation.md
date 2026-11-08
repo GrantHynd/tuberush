@@ -14,7 +14,9 @@ The two had drifted. The Lambda fills a 9x9 template with a solver and Claude wr
 
 ## Decision
 
-The AWS Lambdas are the only daily puzzle generation path. The `schedule-daily-games` edge function is removed from the repo and will be undeployed.
+The AWS Lambdas are the only scheduled generator that inserts published `games` rows. They still do that directly. The `schedule-daily-games` edge function is removed from the repo and will be undeployed.
+
+`puzzle_drafts` and publish keys are a second ingestion path. A bot submits a draft, an admin approves it, and the publish service marks it published. That update does not insert into `games`. A publish key cannot write `public.games`.
 
 ## Rationale
 
@@ -28,4 +30,5 @@ The AWS Lambdas are the only daily puzzle generation path. The `schedule-daily-g
 
 - Secrets live only in AWS Secrets Manager (`tuberush/daily-games`). The edge function's Supabase secrets get removed.
 - Manual backfills go through the Lambda (`sam remote invoke` or a future `workflow_dispatch` workflow), not the edge function.
-- New daily game types need a new Lambda and schedule in `template.yaml`.
+- New daily game types that publish straight into `games` need a new Lambda and schedule in `template.yaml`.
+- Draft ingestion is separate: submit with a publish key, review, then mark published. It does not replace the Lambda insert into `games`.
