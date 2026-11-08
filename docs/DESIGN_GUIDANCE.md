@@ -2,7 +2,7 @@
 
 > Daily London puzzle game (iOS/Android). **"Beat the commute."**
 
-Colour roles live in `constants/theme.ts`. Light chrome is Deep Teal. Dark chrome is Option A tonal teal. Crossword cells are the V3 subtle set in both schemes. This document does not authorise a roundel, tube-line colours, or Johnston-style type.
+Colour roles live in `constants/theme.ts`. Light chrome is Deep Teal. Dark chrome is Option A tonal teal. Dark crossword cells stay on V3. Light crossword cells are the approved light-tuned V3 (option C). This document does not authorise a roundel, tube-line colours, or Johnston-style type.
 
 ---
 
@@ -225,6 +225,15 @@ Light background (`#FFFFFF`) — this game uses the light theme.
 - Clean black-bordered cells on white
 - Black squares: solid black
 - White squares: light grey (`#F9FAFB`) background, entered letters in black (H3)
+Light grid (option C):
+
+- Playable cells: `#FFFFFF` with a 1px `#9DB3AC` outline. Blocked cells: `#1E3A35`
+- Idle and word ink: `#10201E`. Word fill: `#D5EBE6`
+- Selected cell: `#B4DDD3` fill, `#10201E` ink, 1px `#0D5C55` ring inset 2px, plus a 2px `#10201E` cursor
+- Text on idle is 16.84:1, text on the word fill is 13.51:1, text on the selected fill is 11.40:1, and the ring against the selected fill is 5.31:1. The outline against white is 2.22:1, which the approved sheet keeps.
+
+Dark grid (V3, unchanged):
+
 - Currently selected cell: `#C3EADF` fill, 1px `#527E70` ring inset 2px, plus a 2px `#0C1614` cursor
 - Currently selected word: `#A8E8DC` fill with `#0C1614` ink
 - Playable cells: `#526E64` with a 1px `#7E9B90` outline. Blocked cells: `#060B09` with no internal borders

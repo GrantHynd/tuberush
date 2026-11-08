@@ -2,16 +2,15 @@
  * Platform design tokens (TUB-293, rebranded in TUB-325).
  *
  * Light chrome is the Deep Teal foundation. Dark chrome is Option A tonal teal.
- * Crossword cells use the V3 subtle treatment in both schemes.
- * Token names are internal only.
+ * Dark crossword cells stay on V3. Light cells are the approved light-tuned V3
+ * (option C). Token names are internal only.
  */
 
 export type Scheme = 'light' | 'dark';
 
 /**
- * V3 crossword cells, applied in both schemes as the handoff specified.
- * A later note suggested dark only. Light cells stay on this treatment
- * until that is confirmed directly. Distinct from surface and border.
+ * Dark V3 crossword cells. Unchanged by the light-tuned decision.
+ * Distinct from surface and border.
  */
 export const crosswordCells = {
     cellIdleFill: '#526E64',
@@ -25,6 +24,26 @@ export const crosswordCells = {
     cellSelectedRing: '#527E70',
     cellCursor: '#0C1614',
 } as const;
+
+/**
+ * Light-tuned V3 (option C), light mode only.
+ * Ring and cursor are both drawn: the ring separates the selected cell from
+ * the word fill, and the cursor marks the insertion point.
+ * The playable outline on white is below 3:1; that pair is part of the
+ * approved sheet. Text, the blocked fill, and the ring stay above their bars.
+ */
+export const lightCrosswordCells = {
+    cellIdleFill: '#FFFFFF',
+    cellBlockedFill: '#1E3A35',
+    cellOutline: '#9DB3AC',
+    cellIdleText: '#10201E',
+    cellWordFill: '#D5EBE6',
+    cellWordText: '#10201E',
+    cellSelectedFill: '#B4DDD3',
+    cellSelectedText: '#10201E',
+    cellSelectedRing: '#0D5C55',
+    cellCursor: '#10201E',
+} as const satisfies { [K in keyof typeof crosswordCells]: string };
 
 /**
  * Solved Interchange groups. Tone is decorative; each group also has a number,
@@ -115,7 +134,7 @@ const darkChrome = {
 } as const;
 
 export const palette = {
-    light: { ...lightChrome, ...crosswordCells },
+    light: { ...lightChrome, ...lightCrosswordCells },
     dark: { ...darkChrome, ...crosswordCells },
 } as const;
 
