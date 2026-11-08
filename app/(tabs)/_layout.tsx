@@ -3,7 +3,7 @@ import { DisplayNamePrompt } from '@/components/profile/DisplayNamePrompt';
 import { Tabs } from 'expo-router';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import React from 'react';
-import { Text } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 
 import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -32,7 +32,13 @@ export default function TabLayout() {
         tabBarButton: HapticTab,
         tabBarActiveTintColor: colors.tabActive,
         tabBarInactiveTintColor: colors.tabInactive,
-        tabBarStyle: { backgroundColor: colors.surface },
+        tabBarStyle: {
+          backgroundColor: colors.surface,
+          borderTopWidth: StyleSheet.hairlineWidth,
+          // Web keeps border-color and drops borderTopColor, so the shorthand is set too.
+          borderColor: colors.border,
+          borderTopColor: colors.border,
+        },
         tabBarLabel: ({ focused, color, children }) => (
           <TabLabel focused={focused} color={tabIconColor(color, colors.tabInactive)}>
             {children}
