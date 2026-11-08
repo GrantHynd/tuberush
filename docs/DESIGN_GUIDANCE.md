@@ -1,33 +1,33 @@
 # TubeRush Design Guidance
 
-> A London Underground-themed daily puzzle game (iOS/Android). **"Beat the commute."**
+> Daily London puzzle game (iOS/Android). **"Beat the commute."**
+
+Colour roles live in `constants/theme.ts`. Light chrome is Deep Teal. Dark chrome is Option A tonal teal. Crossword cells are the V3 subtle set in both schemes. This document does not authorise a roundel, tube-line colours, or Johnston-style type.
 
 ---
 
 ## Design Principles
 
-- **Light mode only.** White (`#FFFFFF`) backgrounds, near-black (`#111111`) text.
+- **Light and dark.** Follow the system scheme. Do not force a white canvas in dark mode.
 - **Minimal and breathable.** Generous whitespace, clean hierarchy.
-- **Colour is used sparingly** — white canvas with rare, deliberate punches of brand colour that feel premium and intentional, not decorative.
-- **Inspired by the TfL design language:** the roundel, bold type, strong grid, functional elegance.
-- **Modern mobile-native feel.** Rounded cards (12px radius), subtle shadows, clean list rows.
+- **Colour is not the only cue.** Selection, groups, and errors also use a tick, a number, a label, or an X.
+- **Crossbar Train mark.** The v01 symbol sits in the Home header, game header, and auth screens. Fira Sans for type.
+- **Modern mobile-native feel.** Rounded cards (12px radius), a 1px border, no drop shadow on cards.
 
 ---
 
 ## Brand Colours
 
-> Use sparingly — colour should feel intentional, not decorative.
+Use the named roles in `palette.light` and `palette.dark`. Do not introduce a compatibility alias for a retired name.
 
-| Name         | Hex       | Usage                                   |
-| ------------ | --------- | --------------------------------------- |
-| TfL Red      | `#E32017` | Primary accent, danger, Central Line    |
-| TfL Blue     | `#003688` | Interactive elements, CTAs, Piccadilly  |
-| TfL Yellow   | `#FFD300` | Premium/upgrade moments, Circle Line    |
-| TfL Green    | `#00782A` | Success states, District Line           |
-| TfL Black    | `#111111` | Body text                               |
-| Grey Light   | `#F9FAFB` | Card/surface backgrounds                |
-| Grey Medium  | `#E5E7EB` | Borders, dividers                       |
-| Grey Dark    | `#4B5563` | Secondary labels, captions              |
+| Role | Light | Dark | Usage |
+| ---- | ----- | ---- | ----- |
+| background | `#FAF7F2` | `#0C1614` | Screen |
+| surface | `#FFFFFF` | `#15201D` | Cards, tab bar |
+| text | `#10201E` | `#F0F5F3` | Body |
+| primary / onPrimary | `#0D5C55` / `#FAF7F2` | `#A8E8DC` / `#0C1614` | Buttons and the mark |
+| game crossword | `#8B3A2F` | `#A8E8DC` | Crossword chrome, not the grid |
+| premium / premiumText | `#C4922E` / `#10201E` | `#A8E8DC` / `#0C1614` | Premium chip |
 
 ---
 
@@ -44,9 +44,9 @@
 
 ---
 
-## Roundel Logo Component
+## Brand mark
 
-A small TfL-style roundel: red circle (`#E32017`), white inner ring, horizontal blue (`#003688`) bar cutting through the centre. Used in the top-left of the header.
+Crossbar Train symbol (`BrandMark`), 40px on Home and 32px in the game header. Auth, forgot-password, and reset-password use the same symbol at 64px plus the "TubeRush" title. No ring-and-bar mark.
 
 ---
 
@@ -61,13 +61,13 @@ All screens designed as a single mobile frame (390 x 844, iPhone 14 Pro size).
 **Header (top):**
 
 - Left: Roundel logo + "TubeRush" (H2, black) + "Beat the commute" (caption, Grey Dark)
-- Right: Circular avatar button (40px, TfL Blue background, white initial letter)
+- Right: Circular avatar button (40px, primary background, white initial letter)
 
 **Main content:** Two side-by-side game cards filling the width with a 12px gap.
 
 #### Connections Card (left half)
 
-- Background: TfL Blue (`#003688`)
+- Background: primary
 - Hub/network icon (white, 36px) at top-left of card
 - "Connections" label (16px, 700, white)
 - Live indicator: small green dot + "12.4k live" (12px, white 90% opacity)
@@ -75,7 +75,7 @@ All screens designed as a single mobile frame (390 x 844, iPhone 14 Pro size).
 
 #### Crossword Card (right half)
 
-- Background: TfL Red (`#E32017`)
+- Background: error
 - Star icon badge (top-right corner, gold `#FFD700`)
 - Grid/crossword icon (white, 36px)
 - "Crossword" label (16px, 700, white)
@@ -90,11 +90,11 @@ All screens designed as a single mobile frame (390 x 844, iPhone 14 Pro size).
 
 Centred layout, vertically centred on screen.
 
-- **Top:** TubeRush roundel icon (large, ~60px) centred. Below: "TubeRush" wordmark (H1, black). Then "Welcome back!" (H2, Grey Dark).
+- **Top:** Crossbar Train symbol (~64px) centred. Below: "TubeRush" title. Then "Welcome back!".
 - **Email input:** White background, 1px Grey Medium border, 12px radius, 16px text, "Email" placeholder.
 - **Password input:** Same style, "Password" placeholder.
-- **Primary CTA:** Full-width, TfL Blue (`#003688`) background, white "Sign In" text, 14px radius, 54px height — bold and confident.
-- **Secondary link:** "Don't have an account? Sign Up" — TfL Blue text, no underline, small, centred.
+- **Primary CTA:** Full-width, primary background, white "Sign In" text, 14px radius, 54px height — bold and confident.
+- **Secondary link:** "Don't have an account? Sign Up" — primary text, no underline, small, centred.
 
 > Overall feel: clean, calm, trustworthy. The blue CTA is the only colour moment.
 
@@ -104,7 +104,7 @@ Centred layout, vertically centred on screen.
 
 - **Hero area (~35% of screen):** Upward-gradient (white to very subtle warm grey). Centred: large Star icon with yellow (`#FFD300`) accent glow beneath it. "TubeRush Pro" in H1, black. "Unlock the full experience" caption in Grey Dark.
 
-**Feature list (full-width):** Each row has a thin grey border bottom, 16px padding, checkmark icon in TfL Green (`#00782A`) on the left, feature text in body black on the right.
+**Feature list (full-width):** Each row has a thin grey border bottom, 16px padding, checkmark icon in success on the left, feature text in body black on the right.
 
 - Access to Crossword Puzzles
 - More games coming soon
@@ -113,7 +113,7 @@ Centred layout, vertically centred on screen.
 
 **Pricing block:** Lightly bordered card (`#F9FAFB` background, Grey Medium border) showing "£X.XX / month" in H2 black, "or £XX.XX / year — save 40%" in caption grey.
 
-**CTA:** Full-width, TfL Blue (`#003688`), white "Subscribe Now" text, bold, 54px height. Below: "Cancel anytime." in 12px grey caption centred.
+**CTA:** Full-width, primary, white "Subscribe Now" text, bold, 54px height. Below: "Cancel anytime." in 12px grey caption centred.
 
 ---
 
@@ -123,7 +123,7 @@ Centred layout, vertically centred on screen.
 
 **Profile header section (`#F9FAFB` background):**
 
-- Large avatar circle (80px, TfL Blue, white initial letter)
+- Large avatar circle (80px, primary, white initial letter)
 - Email address below (H3, black)
 - Premium badge (if applicable): small pill with yellow (`#FFD300`) background, "PRO" text in black, 500 weight
 
@@ -134,9 +134,9 @@ Centred layout, vertically centred on screen.
 **Section: "ACCOUNT"** (all-caps label, Grey Dark)
 
 - Membership row: "Membership" label + "TubeRush Pro" value. If free: small "Upgrade" pill button on right — yellow (`#FFD300`) background, black text.
-- Sync Status row: label + status text. Sync icon (TfL Blue) on right.
+- Sync Status row: label + status text. Sync icon (primary) on right.
 
-**Danger zone:** Full-width outlined button — "Sign Out" in TfL Red (`#E32017`) text, TfL Red border, no fill. Bottom of screen.
+**Danger zone:** Full-width outlined button — "Sign Out" in error text, error border, no fill. Bottom of screen.
 
 **Footer:** "TubeRush v2.0.0" centred, 12px, grey.
 
@@ -150,7 +150,7 @@ Tab screen. Header: "Stats" (H1, black).
 
 **Section: "Game History"** — a list of past game rows. Each row:
 
-- Game type icon (coloured pill: blue for Connections, red for Crossword)
+- Game type icon (tonal fill: Interchange or Crossword, with the game name as text)
 - Date
 - Result (Win/Loss in green/red text)
 - Score
@@ -158,15 +158,15 @@ Tab screen. Header: "Stats" (H1, black).
 
 **Bottom:** "More stats coming soon" caption in Grey Dark.
 
-> Colour use: the game type pills use TfL Blue / TfL Red for identity — everything else is monochrome.
+> Colour use: the game type pills use primary / error for identity — everything else is monochrome.
 
 ---
 
 ### 6. Leaderboard Screen
 
-**Header:** "Leaderboard" (H1, black). Below: two filter pills — "Global" and "London" — horizontally scrollable. Active pill: TfL Blue background, white text. Inactive: grey border, grey text.
+**Header:** "Leaderboard" (H1, black). Below: two filter pills — "Global" and "London" — horizontally scrollable. Active pill: primary background, white text. Inactive: grey border, grey text.
 
-**Top 3 podium area:** Subtle flat podium graphic. 1st place in centre (slightly elevated), 2nd left, 3rd right. Each position: circular avatar (TfL Blue), username, score, position badge (1st = gold, 2nd = silver, 3rd = bronze — subtle colour fills).
+**Top 3 podium area:** Subtle flat podium graphic. 1st place in centre (slightly elevated), 2nd left, 3rd right. Each position: circular avatar (primary), username, score, position badge (1st = gold, 2nd = silver, 3rd = bronze — subtle colour fills).
 
 **Ranked list (positions 4–10):** Each row:
 
@@ -176,7 +176,7 @@ Tab screen. Header: "Stats" (H1, black).
 - Borough (caption grey)
 - Score (H3 black, right-aligned)
 
-Your own row is lightly highlighted with a TfL Blue left border accent.
+Your own row is lightly highlighted with a primary left border accent.
 
 ---
 
@@ -189,7 +189,7 @@ Your own row is lightly highlighted with a TfL Blue left border accent.
 **Game board:** 4x4 grid of word tiles. Each tile:
 
 - **Default:** `#2C2C30` dark card, white text (16px, 600), 8px radius, subtle border
-- **Selected:** TfL Blue (`#003688`) background, white text
+- **Selected:** primary background, white text
 - **Solved:** Tiles disappear and stack as a coloured banner row above the grid
 
 **Solved group banners (stacked at top of grid):**
@@ -207,7 +207,7 @@ Each banner: full-width pill with category name + 4 words listed below in a comp
 
 - "Shuffle" outline button
 - "Deselect All" outline button
-- "Submit" filled button (TfL Blue)
+- "Submit" filled button (primary)
 - All white outlined style on dark background
 
 **Lives remaining:** 4 small filled circles (white) = remaining guesses.
@@ -225,14 +225,15 @@ Light background (`#FFFFFF`) — this game uses the light theme.
 - Clean black-bordered cells on white
 - Black squares: solid black
 - White squares: light grey (`#F9FAFB`) background, entered letters in black (H3)
-- Currently selected cell: TfL Blue highlight
-- Currently selected word: light TfL Blue tint (`#E8EEFF`) across all cells
+- Currently selected cell: `#C3EADF` fill, 1px `#527E70` ring inset 2px, plus a 2px `#0C1614` cursor
+- Currently selected word: `#A8E8DC` fill with `#0C1614` ink
+- Playable cells: `#526E64` with a 1px `#7E9B90` outline. Blocked cells: `#060B09` with no internal borders
 
-**Clue strip (below grid):** Full-width pill showing current clue number + direction + clue text. TfL Blue left accent bar.
+**Clue strip (below grid):** Full-width pill showing current clue number + direction + clue text. primary left accent bar.
 
 **Clue list (scrollable, below the grid strip):**
 
-- Two-column tabs: "Across" | "Down" — active tab underlined in TfL Blue
+- Two-column tabs: "Across" | "Down" — active tab underlined in primary
 - Each clue: number (bold, small), clue text (body)
 - Completed clues: grey text with strikethrough
 
@@ -246,6 +247,6 @@ Light background (`#FFFFFF`) — this game uses the light theme.
 - Colour moments are intentional: game cards on Home, CTA buttons, status/game identity indicators, and the Connections dark game surface.
 - No decorative gradients, no noise textures, no complex illustrations.
 - **Icons:** SF Symbols style (clean, line-based, consistent weight).
-- **Bottom tab bar:** White background, grey inactive icons, TfL Blue active icon, no labels (icon-only or with small labels below).
+- **Bottom tab bar:** White background, grey inactive icons, primary active icon, no labels (icon-only or with small labels below).
 - All tap targets minimum **44 x 44pt**.
 - Consistent **20px** horizontal page margins, **24px** section spacing.

@@ -1,12 +1,14 @@
-import { Colors, Spacing, TFL } from '@/constants/theme';
+import { BrandMark } from '@/components/ui/BrandMark';
+import { Spacing } from '@/constants/theme';
+import { useTheme } from '@/hooks/useTheme';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 export interface GameHeaderProps {
     title: string;
     subtitle?: string;
-    /** Game line colour: ring badge + 4px strip. */
+    /** Tonal accent for the 4px strip under the header. */
     lineColor: string;
     onBack: () => void;
     /** Right slot: help / timer / share. */
@@ -15,10 +17,12 @@ export interface GameHeaderProps {
 }
 
 /**
- * Shared game header ("Mind the Gap"): 44pt back, plain ring badge (no bar),
- * title + subtitle, right slot, and a 4px line strip underneath.
+ * Shared game header (Platform): 44pt back, Crossbar Train symbol,
+ * title + subtitle, right slot, and a 4px tonal strip underneath.
  */
 export function GameHeader({ title, subtitle, lineColor, onBack, right, testID }: GameHeaderProps) {
+    const { colors } = useTheme();
+    const styles = useMemo(() => makeStyles(colors.text, colors.textSecondary), [colors.text, colors.textSecondary]);
     return (
         <View testID={testID}>
             <View style={styles.row}>
@@ -29,13 +33,9 @@ export function GameHeader({ title, subtitle, lineColor, onBack, right, testID }
                     accessibilityLabel="Go back"
                     testID={testID ? `${testID}-back` : 'game-header-back'}
                 >
-                    <MaterialIcons name="arrow-back" size={24} color={Colors.light.text} />
+                    <MaterialIcons name="arrow-back" size={24} color={colors.text} />
                 </Pressable>
-                <View
-                    style={[styles.ring, { borderColor: lineColor }]}
-                    accessibilityElementsHidden
-                    importantForAccessibility="no-hide-descendants"
-                />
+                <BrandMark size={32} testID={testID ? `${testID}-mark` : 'game-header-mark'} />
                 <View style={styles.titles}>
                     <Text style={styles.title} accessibilityRole="header" maxFontSizeMultiplier={2}>
                         {title}
@@ -53,27 +53,28 @@ export function GameHeader({ title, subtitle, lineColor, onBack, right, testID }
     );
 }
 
-const styles = StyleSheet.create({
-    row: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: Spacing.sm,
-        paddingLeft: Spacing.sm,
-        paddingRight: Spacing.md,
-        paddingVertical: Spacing.xs,
-    },
-    back: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    pressed: { opacity: 0.6 },
-    ring: { width: 28, height: 28, borderRadius: 14, borderWidth: 5 },
-    titles: { flex: 1 },
-    title: { fontSize: 20, fontWeight: '700', color: Colors.light.text, letterSpacing: -0.2 },
-    subtitle: { fontSize: 13, color: TFL.grey.dark },
-    right: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
-    strip: { height: 4 },
-});
+function makeStyles(text: string, secondary: string) {
+    return StyleSheet.create({
+        row: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: Spacing.sm,
+            paddingLeft: Spacing.sm,
+            paddingRight: Spacing.md,
+            paddingVertical: Spacing.xs,
+        },
+        back: {
+            width: 44,
+            height: 44,
+            borderRadius: 22,
+            alignItems: 'center',
+            justifyContent: 'center',
+        },
+        pressed: { opacity: 0.6 },
+        titles: { flex: 1 },
+        title: { fontSize: 20, fontWeight: '700', color: text, letterSpacing: -0.2 },
+        subtitle: { fontSize: 13, color: secondary },
+        right: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
+        strip: { height: 4 },
+    });
+}

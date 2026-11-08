@@ -1,4 +1,6 @@
-import { TFL } from '@/constants/theme';
+import { useTheme } from '@/hooks/useTheme';
+import { BrandMark } from '@/components/ui/BrandMark';
+import { type Palette } from '@/constants/theme';
 import { PRIVACY_POLICY_ROUTE, TERMS_OF_USE_ROUTE } from '@/lib/legal';
 import { DisplayNameField } from '@/components/profile/DisplayNameField';
 import { validateDisplayName } from '@/lib/display-name';
@@ -18,6 +20,8 @@ import {
 } from 'react-native';
 
 export default function AuthScreen() {
+    const { colors } = useTheme();
+    const styles = React.useMemo(() => makeStyles(colors), [colors]);
     const router = useRouter();
     const { signIn, signUp } = useAuthStore();
 
@@ -67,10 +71,7 @@ export default function AuthScreen() {
             <View style={styles.content}>
                 {/* Logo */}
                 <View style={styles.logoContainer}>
-                    <View style={styles.roundel}>
-                        <View style={styles.roundelInner} />
-                        <View style={styles.roundelBar} />
-                    </View>
+                    <BrandMark size={64} testID="auth-brand-mark" />
                 </View>
 
                 <Text style={styles.title}>TubeRush</Text>
@@ -95,7 +96,7 @@ export default function AuthScreen() {
                         testID="auth-email-input"
                         style={styles.input}
                         placeholder="Email"
-                        placeholderTextColor="#9CA3AF"
+                        placeholderTextColor={colors.textDisabled}
                         value={email}
                         onChangeText={setEmail}
                         autoCapitalize="none"
@@ -107,7 +108,7 @@ export default function AuthScreen() {
                         testID="auth-password-input"
                         style={styles.input}
                         placeholder="Password"
-                        placeholderTextColor="#9CA3AF"
+                        placeholderTextColor={colors.textDisabled}
                         value={password}
                         onChangeText={setPassword}
                         secureTextEntry
@@ -131,7 +132,7 @@ export default function AuthScreen() {
                         disabled={loading}
                     >
                         {loading ? (
-                            <ActivityIndicator color="#fff" />
+                            <ActivityIndicator color={colors.onPrimary} />
                         ) : (
                             <Text style={styles.buttonText}>
                                 {isSignUp ? 'Sign Up' : 'Sign In'}
@@ -181,10 +182,11 @@ export default function AuthScreen() {
     );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Palette) {
+    return StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: colors.background,
     },
     content: {
         flex: 1,
@@ -195,68 +197,47 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginBottom: 16,
     },
-    roundel: {
-        width: 64,
-        height: 64,
-        borderRadius: 32,
-        backgroundColor: TFL.red,
-        justifyContent: 'center',
-        alignItems: 'center',
-        position: 'relative',
-    },
-    roundelInner: {
-        width: 42,
-        height: 42,
-        borderRadius: 21,
-        backgroundColor: '#FFFFFF',
-    },
-    roundelBar: {
-        position: 'absolute',
-        width: 64,
-        height: 10,
-        backgroundColor: TFL.blue,
-    },
     title: {
         fontSize: 32,
         fontWeight: '700',
         textAlign: 'center',
-        color: '#111111',
+        color: colors.text,
         marginBottom: 8,
     },
     subtitle: {
         fontSize: 22,
         textAlign: 'center',
         marginBottom: 32,
-        color: TFL.blue,
+        color: colors.primary,
         fontWeight: '500',
     },
     form: {
         gap: 14,
     },
     input: {
-        backgroundColor: '#FFFFFF',
+        backgroundColor: colors.surface,
         paddingHorizontal: 20,
         paddingVertical: 16,
         borderRadius: 12,
         fontSize: 16,
         borderWidth: 1,
-        borderColor: '#E5E7EB',
-        color: '#111111',
+        borderColor: colors.border,
+        color: colors.text,
     },
     forgotPasswordText: {
-        color: TFL.blue,
+        color: colors.primary,
         fontSize: 14,
         textAlign: 'right',
     },
     button: {
-        backgroundColor: TFL.blue,
+        backgroundColor: colors.primary,
         paddingVertical: 16,
         borderRadius: 12,
         alignItems: 'center',
         marginTop: 4,
     },
     buttonText: {
-        color: '#FFFFFF',
+        color: colors.onPrimary,
         fontSize: 18,
         fontWeight: '600',
     },
@@ -265,18 +246,20 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     switchText: {
-        color: TFL.blue,
+        color: colors.primary,
         fontSize: 14,
     },
     legalText: {
-        color: '#4B5563',
+        color: colors.textSecondary,
         fontSize: 14,
         lineHeight: 20,
         textAlign: 'center',
     },
     legalLink: {
-        color: TFL.blue,
+        color: colors.primary,
         fontSize: 14,
         fontWeight: '600',
     },
 });
+}
+

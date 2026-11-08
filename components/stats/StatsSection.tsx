@@ -1,7 +1,8 @@
+import { useTheme } from '@/hooks/useTheme';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Card } from '@/components/ui/Card';
-import { Colors, Spacing, TFL, Typography } from '@/constants/theme';
+import { type Palette, Spacing, Typography } from '@/constants/theme';
 
 export function StatsSection({
     title,
@@ -16,6 +17,8 @@ export function StatsSection({
     children: React.ReactNode;
     testID?: string;
 }) {
+    const { colors } = useTheme();
+    const styles = React.useMemo(() => makeStyles(colors), [colors]);
     return (
         <Card variant="outlined" style={styles.card} testID={testID}>
             <View style={styles.header}>
@@ -30,16 +33,26 @@ export function StatsSection({
     );
 }
 
-export const sectionStyles = StyleSheet.create({
-    empty: { ...Typography.caption, color: TFL.grey.dark },
-    listRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4 },
-    listText: { ...Typography.caption, color: Colors.light.text },
-});
+export function useSectionStyles() {
+    const { colors } = useTheme();
+    return React.useMemo(
+        () =>
+            StyleSheet.create({
+                empty: { ...Typography.caption, color: colors.textSecondary },
+                listRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4 },
+                listText: { ...Typography.caption, color: colors.text },
+            }),
+        [colors],
+    );
+}
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Palette) {
+    return StyleSheet.create({
     card: { marginTop: Spacing.lg },
     header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-    title: { ...Typography.h3, color: Colors.light.text },
-    caption: { ...Typography.caption, color: TFL.grey.dark, marginTop: 2 },
+    title: { ...Typography.h3, color: colors.text },
+    caption: { ...Typography.caption, color: colors.textSecondary, marginTop: 2 },
     body: { marginTop: Spacing.s12 },
 });
+}
+

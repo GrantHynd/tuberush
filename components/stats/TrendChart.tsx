@@ -1,19 +1,20 @@
+import { useTheme } from '@/hooks/useTheme';
 import React, { useState } from 'react';
 import { LayoutChangeEvent, Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Line, Polyline, Rect, Text as SvgText } from 'react-native-svg';
-import { Colors, GameColors, Spacing, TFL } from '@/constants/theme';
+import { type Palette, Spacing } from '@/constants/theme';
 import { formatScore } from '@/lib/display-utils';
 import { lastNDays, rollingAverage, TREND_DAYS, trendSeries, trendSummary, type StatsSegment, type TrendPoint } from '@/lib/stats';
 import type { GameHistoryEntry } from '@/lib/game-history';
 import type { GameType } from '@/types/game';
 import { ListToggle } from './ListToggle';
-import { StatsSection, sectionStyles } from './StatsSection';
+import { StatsSection, useSectionStyles } from './StatsSection';
 
 const HEIGHT = 160;
 const PAD = { left: 40, right: 8, top: 8, bottom: 20 };
-const SERIES: { game: GameType; color: string; label: string; shape: 'circle' | 'square' }[] = [
-    { game: 'connections', color: GameColors.connections, label: 'Interchange', shape: 'circle' },
-    { game: 'crossword', color: GameColors.crossword, label: 'Crossword', shape: 'square' },
+const SERIES_META = [
+    { game: 'connections' as const, label: 'Interchange', shape: 'circle' as const, role: 'gameInterchange' as const },
+    { game: 'crossword' as const, label: 'Crossword', shape: 'square' as const, role: 'gameCrossword' as const },
 ];
 
 function formatDay(date: string): string {
@@ -33,6 +34,10 @@ function runs(points: TrendPoint[], dayIndex: Map<string, number>): TrendPoint[]
 }
 
 export function TrendChart({ history, segment, now }: { history: GameHistoryEntry[]; segment: StatsSegment; now?: Date }) {
+    const { colors } = useTheme();
+    const styles = React.useMemo(() => makeStyles(colors), [colors]);
+    const sectionStyles = useSectionStyles();
+    const SERIES = SERIES_META.map((s) => ({ ...s, color: colors[s.role] }));
     const [width, setWidth] = useState(0);
     const [asList, setAsList] = useState(false);
     const [selected, setSelected] = useState<{ game: GameType; point: TrendPoint } | null>(null);
@@ -82,14 +87,14 @@ export function TrendChart({ history, segment, now }: { history: GameHistoryEntr
                         <Svg width={width} height={HEIGHT}>
                             {[0, 0.5, 1].map((f) => (
                                 <React.Fragment key={f}>
-                                    <Line x1={PAD.left} x2={width - PAD.right} y1={PAD.top + f * plotH} y2={PAD.top + f * plotH} stroke={Colors.light.border} strokeWidth={1} />
-                                    <SvgText x={PAD.left - 6} y={PAD.top + f * plotH + 4} fontSize={12} fill={TFL.grey.dark} textAnchor="end">
+                                    <Line x1={PAD.left} x2={width - PAD.right} y1={PAD.top + f * plotH} y2={PAD.top + f * plotH} stroke={colors.border} strokeWidth={1} />
+                                    <SvgText x={PAD.left - 6} y={PAD.top + f * plotH + 4} fontSize={12} fill={colors.textSecondary} textAnchor="end">
                                         {formatScore(Math.round((1 - f) * maxS))}
                                     </SvgText>
                                 </React.Fragment>
                             ))}
                             {avg.length >= 2 && (
-                                <Polyline points={avg.map((p) => `${x(p.date)},${y(p.seconds)}`).join(' ')} fill="none" stroke={TFL.grey.dark} strokeWidth={1.5} strokeDasharray="4,4" />
+                                <Polyline points={avg.map((p) => `${x(p.date)},${y(p.seconds)}`).join(' ')} fill="none" stroke={colors.textSecondary} strokeWidth={1.5} strokeDasharray="4,4" />
                             )}
                             {series.map((s) =>
                                 runs(s.points, dayIndex).map((run, i) =>
@@ -134,9 +139,12 @@ export function TrendChart({ history, segment, now }: { history: GameHistoryEntr
     );
 }
 
-const styles = StyleSheet.create({
-    tooltip: { fontSize: 12, fontWeight: '600', color: Colors.light.text, marginTop: Spacing.xs },
+function makeStyles(colors: Palette) {
+    return StyleSheet.create({
+    tooltip: { fontSize: 12, fontWeight: '600', color: colors.text, marginTop: Spacing.xs },
     legend: { flexDirection: 'row', gap: Spacing.md, marginTop: Spacing.sm },
     legendItem: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
     swatch: { width: 10, height: 10 },
 });
+}
+

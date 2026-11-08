@@ -1,4 +1,5 @@
-import { Colors, Layout, Spacing, TFL } from '@/constants/theme';
+import { useTheme } from '@/hooks/useTheme';
+import { type Palette, Layout, Spacing } from '@/constants/theme';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { formatMaybe } from '@/lib/display-utils';
 import React from 'react';
@@ -14,11 +15,11 @@ export interface GamePuzzleListItemProps {
     completionTime?: string;
     score?: string;
     isWon?: boolean;
-    /** Accent color for today/completed badges (e.g. TFL.blue, TFL.red) */
+    /** Accent color for today/completed badges (e.g. colors.primary, colors.error) */
     accentColor: string;
     /** If true, show win (check) vs loss (X). If false, only show check for completed */
     hasWinLoss: boolean;
-    /** Badge color when completed (e.g. TFL.blue for crossword). Falls back to accentColor if not set. */
+    /** Badge color when completed (e.g. colors.primary for crossword). Falls back to accentColor if not set. */
     completedBadgeColor?: string;
     /** Optional accessory rendered after the content, before completion info */
     renderAccessory?: React.ReactNode;
@@ -44,13 +45,15 @@ export function GamePuzzleListItem({
     isLocked,
     onPress,
 }: GamePuzzleListItemProps) {
+    const { colors } = useTheme();
+    const styles = React.useMemo(() => makeStyles(colors), [colors]);
     const badgeColor = isCompleted
         ? hasWinLoss && !isWon
-            ? TFL.red
+            ? colors.error
             : (completedBadgeColor ?? accentColor)
         : isToday
             ? accentColor
-            : TFL.grey.light;
+            : colors.background;
 
     return (
         <TouchableOpacity
@@ -64,7 +67,7 @@ export function GamePuzzleListItem({
                     <MaterialIcons
                         name={hasWinLoss && !isWon ? 'close' : 'check'}
                         size={20}
-                        color={TFL.white}
+                        color={colors.onPrimary}
                     />
                 ) : (
                     <Text
@@ -108,7 +111,7 @@ export function GamePuzzleListItem({
                 </View>
             ) : isLocked ? (
                 <View style={styles.lockedBadge} testID="puzzle-locked">
-                    <MaterialIcons name="lock" size={14} color="#111111" />
+                    <MaterialIcons name="lock" size={14} color={colors.premiumText} />
                     <Text style={styles.lockedText}>1st Class</Text>
                 </View>
             ) : (
@@ -116,7 +119,7 @@ export function GamePuzzleListItem({
                     <MaterialIcons
                         name="person-outline"
                         size={16}
-                        color={TFL.grey.dark}
+                        color={colors.textSecondary}
                     />
                     <Text style={styles.playText}>Play</Text>
                 </View>
@@ -125,23 +128,24 @@ export function GamePuzzleListItem({
     );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Palette) {
+    return StyleSheet.create({
     lockedBadge: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 4,
-        backgroundColor: TFL.yellow,
+        backgroundColor: colors.premium,
         borderRadius: 999,
         paddingHorizontal: 10,
         paddingVertical: 4,
     },
-    lockedText: { fontSize: 12, fontWeight: '700', color: '#111111' },
+    lockedText: { fontSize: 12, fontWeight: '700', color: colors.premiumText },
     container: {
         flexDirection: 'row',
         alignItems: 'center',
         paddingVertical: Spacing.md,
         paddingHorizontal: Spacing.md,
-        backgroundColor: Colors.light.background,
+        backgroundColor: colors.background,
     },
     dateBadge: {
         width: 48,
@@ -156,10 +160,10 @@ const styles = StyleSheet.create({
         fontWeight: '600',
     },
     dayNumberLight: {
-        color: TFL.white,
+        color: colors.onPrimary,
     },
     dayNumberDefault: {
-        color: Colors.light.text,
+        color: colors.text,
     },
     content: {
         flex: 1,
@@ -173,7 +177,7 @@ const styles = StyleSheet.create({
     label: {
         fontSize: 17,
         fontWeight: '600',
-        color: Colors.light.text,
+        color: colors.text,
     },
     liveBadge: {
         paddingHorizontal: 8,
@@ -183,12 +187,12 @@ const styles = StyleSheet.create({
     liveText: {
         fontSize: 11,
         fontWeight: '700',
-        color: TFL.white,
+        color: colors.onPrimary,
         letterSpacing: 0.5,
     },
     sublabel: {
         fontSize: 14,
-        color: TFL.grey.dark,
+        color: colors.textSecondary,
     },
     playButton: {
         flexDirection: 'row',
@@ -197,7 +201,7 @@ const styles = StyleSheet.create({
     },
     playText: {
         fontSize: 15,
-        color: TFL.grey.dark,
+        color: colors.textSecondary,
     },
     completedInfo: {
         alignItems: 'flex-end',
@@ -208,13 +212,15 @@ const styles = StyleSheet.create({
         marginBottom: 2,
     },
     timeWon: {
-        color: TFL.green,
+        color: colors.success,
     },
     timeLost: {
-        color: TFL.red,
+        color: colors.error,
     },
     score: {
         fontSize: 14,
-        color: TFL.grey.dark,
+        color: colors.textSecondary,
     },
 });
+}
+

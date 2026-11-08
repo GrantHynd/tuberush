@@ -1,15 +1,17 @@
+import { useTheme } from '@/hooks/useTheme';
 import { openPaywall } from '@/lib/paywall';
 import { CrosswordListGridPreview } from '@/components/games/CrosswordListGridPreview';
 import { GameHistoryListScreen } from '@/components/games/GameHistoryListScreen';
 import { crosswordGameHistoryConfig } from '@/config/gameHistoryConfigs';
 import { useGameHistoryList } from '@/hooks/useGameHistoryList';
 import { useAuthStore } from '@/stores/auth-store';
-import { GameColors, TFL } from '@/constants/theme';
+
 import type { GameHistoryListItem } from '@/types/game-history';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback } from 'react';
 
 export default function CrosswordListScreen() {
+    const { colors } = useTheme();
     const router = useRouter();
     const { user } = useAuthStore();
     const { sections, stats, refresh, hasMore, loadMore, loadingMore } = useGameHistoryList(
@@ -45,9 +47,9 @@ export default function CrosswordListScreen() {
         <GameHistoryListScreen
             title="Crossword"
             icon="grid-on"
-            accentColor={GameColors.crossword}
+            accentColor={colors.gameCrossword}
             hasWinLoss={false}
-            completedBadgeColor={TFL.blue}
+            completedBadgeColor={colors.primary}
             sections={sections}
             stats={stats}
             hasMore={hasMore}

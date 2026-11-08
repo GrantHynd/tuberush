@@ -36,17 +36,17 @@ describe('shared game components (TUB-294)', () => {
         expect(el.props.accessibilityState.disabled).toBe(state === 'disabled' || state === 'solved');
     });
 
-    it('selected Tile shows a station dot', async () => {
+    it('selected Tile shows a tick', async () => {
         const { getByTestId } = await render(<Tile testID="t" label="HYDE" state="selected" onPress={jest.fn()} />);
-        expect(getByTestId('t-dot')).toBeTruthy();
+        expect(getByTestId('t-tick')).toBeTruthy();
     });
 
     it('FeedbackToast announces and auto-hides after 2.5s', async () => {
         jest.useFakeTimers();
         const onHide = jest.fn();
         const { getByText } = await render(<FeedbackToast message="Not a line. 3 tries left." onHide={onHide} />);
-        expect(getByText('MIND THE GAP')).toBeTruthy();
-        expect(AccessibilityInfo.announceForAccessibility).toHaveBeenCalledWith('Mind the gap. Not a line. 3 tries left.');
+        expect(getByText('NOT QUITE')).toBeTruthy();
+        expect(AccessibilityInfo.announceForAccessibility).toHaveBeenCalledWith('Not quite. Not a line. 3 tries left.');
         await act(async () => { jest.advanceTimersByTime(3000); });
         expect(onHide).toHaveBeenCalled();
         jest.useRealTimers();

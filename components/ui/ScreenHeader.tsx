@@ -1,5 +1,7 @@
-import { Colors, Spacing, TFL, Typography } from '@/constants/theme';
-import React from 'react';
+import { BrandMark } from '@/components/ui/BrandMark';
+import { Spacing, Typography } from '@/constants/theme';
+import { useTheme } from '@/hooks/useTheme';
+import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 export interface ScreenHeaderProps {
@@ -7,23 +9,9 @@ export interface ScreenHeaderProps {
     subtitle?: string;
     /** Optional trailing action, e.g. an avatar button (provide a 44×44 hit area). */
     trailing?: React.ReactNode;
-    /** 'large' (default) for tab roots; 'brand' adds the roundel (Home only). */
+    /** 'large' (default) for tab roots; 'brand' adds the Crossbar Train symbol (Home only). */
     variant?: 'large' | 'brand';
     testID?: string;
-}
-
-/** Decorative TfL-style roundel used by the brand header. */
-function Roundel() {
-    return (
-        <View
-            style={styles.roundel}
-            accessibilityElementsHidden
-            importantForAccessibility="no-hide-descendants"
-        >
-            <View style={styles.roundelInner} />
-            <View style={styles.roundelBar} />
-        </View>
-    );
 }
 
 /**
@@ -32,10 +20,12 @@ function Roundel() {
  * comes from the parent screen container (Layout.screenPadding).
  */
 export function ScreenHeader({ title, subtitle, trailing, variant = 'large', testID }: ScreenHeaderProps) {
+    const { colors } = useTheme();
+    const styles = useMemo(() => makeStyles(colors.text, colors.textSecondary), [colors.text, colors.textSecondary]);
     return (
         <View style={styles.container} testID={testID}>
             <View style={styles.titleRow}>
-                {variant === 'brand' && <Roundel />}
+                {variant === 'brand' ? <BrandMark size={40} style={styles.mark} testID="brand-mark" /> : null}
                 <View style={styles.titles}>
                     <Text style={styles.title} accessibilityRole="header" numberOfLines={1} ellipsizeMode="tail">
                         {title}
@@ -48,57 +38,40 @@ export function ScreenHeader({ title, subtitle, trailing, variant = 'large', tes
     );
 }
 
-const styles = StyleSheet.create({
-    container: {
-        flexDirection: 'row',
-        alignItems: 'flex-start',
-        justifyContent: 'space-between',
-        paddingTop: Spacing.sm,
-        marginBottom: Spacing.lg,
-    },
-    titleRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        flex: 1,
-        minWidth: 0,
-    },
-    titles: {
-        flex: 1,
-        minWidth: 0,
-    },
-    title: {
-        ...Typography.h1,
-        color: Colors.light.text,
-    },
-    subtitle: {
-        ...Typography.caption,
-        marginTop: Spacing.xs,
-    },
-    trailing: {
-        minWidth: 44,
-        minHeight: 44,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    roundel: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: TFL.red,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginRight: Spacing.sm,
-    },
-    roundelInner: {
-        width: 26,
-        height: 26,
-        borderRadius: 13,
-        backgroundColor: 'white',
-    },
-    roundelBar: {
-        position: 'absolute',
-        width: 40,
-        height: 6,
-        backgroundColor: TFL.blue,
-    },
-});
+function makeStyles(text: string, secondary: string) {
+    return StyleSheet.create({
+        container: {
+            flexDirection: 'row',
+            alignItems: 'flex-start',
+            justifyContent: 'space-between',
+            paddingTop: Spacing.sm,
+            marginBottom: Spacing.lg,
+        },
+        titleRow: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            flex: 1,
+            minWidth: 0,
+        },
+        mark: { marginRight: Spacing.sm },
+        titles: {
+            flex: 1,
+            minWidth: 0,
+        },
+        title: {
+            ...Typography.h1,
+            color: text,
+        },
+        subtitle: {
+            ...Typography.caption,
+            color: secondary,
+            marginTop: Spacing.xs,
+        },
+        trailing: {
+            minWidth: 44,
+            minHeight: 44,
+            alignItems: 'center',
+            justifyContent: 'center',
+        },
+    });
+}

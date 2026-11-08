@@ -1,4 +1,5 @@
-import { Colors, Spacing, Typography } from '@/constants/theme';
+import { useTheme } from '@/hooks/useTheme';
+import { type Palette, Spacing, Typography } from '@/constants/theme';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
 import React from 'react';
@@ -11,6 +12,8 @@ interface HeaderBackButtonProps {
 
 /** Back header matching the settings page style — chevron-left + centered title */
 export function HeaderBackButton({ title, icon }: HeaderBackButtonProps) {
+    const { colors } = useTheme();
+    const styles = React.useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
 
   return (
@@ -21,7 +24,7 @@ export function HeaderBackButton({ title, icon }: HeaderBackButtonProps) {
         accessibilityRole="button"
         accessibilityLabel="Go back"
       >
-        <MaterialIcons name="chevron-left" size={28} color={Colors.light.text} />
+        <MaterialIcons name="chevron-left" size={28} color={colors.text} />
       </TouchableOpacity>
       <View style={styles.titleContainer}>
         {icon}
@@ -32,7 +35,8 @@ export function HeaderBackButton({ title, icon }: HeaderBackButtonProps) {
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Palette) {
+    return StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -40,8 +44,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.sm,
     paddingVertical: Spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.light.border,
-    backgroundColor: Colors.light.background,
+    borderBottomColor: colors.border,
+    backgroundColor: colors.background,
   },
   button: {
     padding: Spacing.xs,
@@ -53,9 +57,10 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
   },
   title: {
-    ...Typography.h3,
-  },
+    ...Typography.h3, color: colors.text },
   spacer: {
     width: 44,
   },
 });
+}
+

@@ -1,8 +1,9 @@
+import { useTheme } from '@/hooks/useTheme';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Card } from '@/components/ui/Card';
-import { Colors, Layout, Radius, Spacing, TFL, Typography } from '@/constants/theme';
+import { type Palette, Layout, Radius, Spacing, Typography } from '@/constants/theme';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 
 interface GameCardProps {
@@ -23,9 +24,12 @@ export function GameCard({
     icon,
     isPremium,
     isLocked,
-    color = TFL.black,
+    color,
     onPress
 }: GameCardProps) {
+    const { colors } = useTheme();
+    const accent = color ?? colors.text;
+    const styles = React.useMemo(() => makeStyles(colors), [colors]);
     const router = useRouter();
 
     const handlePress = () => {
@@ -55,14 +59,14 @@ export function GameCard({
             accessibilityLabel={a11yLabel}
             accessibilityHint={a11yHint}
         >
-            <View style={[styles.accent, { backgroundColor: color }]} />
+            <View style={[styles.accent, { backgroundColor: accent }]} />
 
             <View style={styles.contentContainer}>
                 <View style={styles.header}>
                     <Text style={styles.title}>{title}</Text>
                     {isLocked && (
                         <View style={styles.lockedIcon}>
-                             <IconSymbol name="lock.fill" size={16} color={Colors.light.icon} />
+                             <IconSymbol name="lock.fill" size={16} color={colors.textSecondary} />
                         </View>
                     )}
                 </View>
@@ -71,7 +75,7 @@ export function GameCard({
 
                 {isPremium && (
                     <View style={styles.premiumTag}>
-                        <Text style={[styles.premiumText, { color: color }]}>PREMIUM</Text>
+                        <Text style={[styles.premiumText, { color: colors.premiumText }]}>PREMIUM</Text>
                     </View>
                 )}
             </View>
@@ -83,7 +87,8 @@ export function GameCard({
     );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Palette) {
+    return StyleSheet.create({
     card: {
         flexDirection: 'row',
         marginBottom: Layout.cardGap,
@@ -92,7 +97,7 @@ const styles = StyleSheet.create({
     },
     cardLocked: {
         opacity: 0.8,
-        backgroundColor: TFL.grey.light,
+        backgroundColor: colors.background,
     },
     accent: {
         width: 6,
@@ -114,21 +119,18 @@ const styles = StyleSheet.create({
     },
     title: {
         ...Typography.h3,
-        fontSize: 20,
-    },
+        fontSize: 20, color: colors.text },
     description: {
         ...Typography.body,
         fontSize: 14,
-        color: Colors.light.icon,
+        color: colors.textSecondary,
     },
     premiumTag: {
         marginTop: Spacing.sm,
         alignSelf: 'flex-start',
         paddingHorizontal: 6,
         paddingVertical: 2,
-        backgroundColor: Colors.light.background,
-        borderWidth: 1,
-        borderColor: Colors.light.border,
+        backgroundColor: colors.premium,
         borderRadius: Radius.sm,
     },
     premiumText: {
@@ -146,3 +148,5 @@ const styles = StyleSheet.create({
         fontSize: 32,
     }
 });
+}
+

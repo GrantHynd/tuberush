@@ -1,6 +1,6 @@
 import type MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
-import { GameColors } from './theme';
+import { palette } from './theme';
 
 type MaterialIconName = keyof typeof MaterialIcons.glyphMap;
 
@@ -12,11 +12,11 @@ export const GAMES = {
         id: 'connections',
         // TUB-304: user-facing name is "Interchange"; the id / stored game_type stays 'connections'.
         name: 'Interchange',
-        description: 'Find four lines of four stops',
+        description: 'Find four groups of four.',
         isPremium: false,
         /** MaterialIcons glyph, shared by Home section headers and leaderboards. */
         icon: 'hub' as MaterialIconName,
-        color: GameColors.connections,
+        color: palette.light.gameInterchange,
     },
     crossword: {
         id: 'crossword',
@@ -24,7 +24,7 @@ export const GAMES = {
         description: 'Daily premium crossword',
         isPremium: true,
         icon: 'grid-on' as MaterialIconName,
-        color: GameColors.crossword,
+        color: palette.light.gameCrossword,
     },
 } as const;
 

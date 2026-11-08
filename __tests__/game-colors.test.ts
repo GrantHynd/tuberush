@@ -1,5 +1,5 @@
 import { GAMES } from '@/constants/Games';
-import { Colors, GameColors, TFL } from '@/constants/theme';
+import { Colors, GameColors, palette } from '@/constants/theme';
 
 function luminance(hex: string): number {
     const [r, g, b] = [1, 3, 5].map((i) => {
@@ -8,21 +8,28 @@ function luminance(hex: string): number {
     });
     return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
-const contrastOnWhite = (hex: string) => 1.05 / (luminance(hex) + 0.05);
+function contrast(a: string, b: string) {
+    const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+    return (hi + 0.05) / (lo + 0.05);
+}
 
-describe('game colours (TUB-254)', () => {
-    it('uses a muted crossword red that is not the error red', () => {
-        expect(GameColors.crossword).toBe('#A4161A');
-        expect(GameColors.crossword).not.toBe(TFL.red);
-        expect(GameColors.crossword).not.toBe(Colors.light.error);
+describe('game colours (TUB-325)', () => {
+    it('uses the light crossword fill, distinct from the error colour', () => {
+        expect(GameColors.crossword).toBe('#8B3A2F');
+        expect(GameColors.crossword).not.toBe(palette.light.error);
+        expect(GameColors.interchange).toBe(palette.light.gameInterchange);
     });
 
-    it('white card text meets AA against the crossword fill', () => {
-        expect(contrastOnWhite(GameColors.crossword)).toBeGreaterThanOrEqual(7.5);
+    it('on-colour text meets AA against each game fill', () => {
+        expect(contrast(palette.light.onGameCrossword, GameColors.crossword)).toBeGreaterThanOrEqual(4.5);
+        expect(contrast(palette.light.onGameInterchange, GameColors.interchange)).toBeGreaterThanOrEqual(4.5);
+        expect(contrast(palette.dark.onGameCrossword, palette.dark.gameCrossword)).toBeGreaterThanOrEqual(4.5);
     });
 
-    it('GAMES colours match what Home renders (connections blue, crossword red)', () => {
-        expect(GAMES.connections.color).toBe(GameColors.connections);
+    it('GAMES colours match the light fills Home can fall back to', () => {
+        expect(GAMES.connections.color).toBe(GameColors.interchange);
         expect(GAMES.crossword.color).toBe(GameColors.crossword);
+        expect(Colors.light.tabBarBackground).toBe(palette.light.surface);
+        expect(Colors.dark.tabBarBackground).toBe(palette.dark.surface);
     });
 });

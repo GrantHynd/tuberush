@@ -1,4 +1,5 @@
-import { GameColors, TFL, Spacing, Typography } from '@/constants/theme';
+import { useTheme } from '@/hooks/useTheme';
+import { type Palette, Spacing, Typography } from '@/constants/theme';
 import { GameType } from '@/types/game';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -8,9 +9,11 @@ export interface GameTypeBadgeProps {
 }
 
 export function GameTypeBadge({ gameType }: GameTypeBadgeProps) {
+    const { colors } = useTheme();
+    const styles = React.useMemo(() => makeStyles(colors), [colors]);
     const isConnections = gameType === 'connections';
     const label = isConnections ? 'INT' : 'CRO';
-    const backgroundColor = isConnections ? GameColors.connections : GameColors.crossword;
+    const backgroundColor = isConnections ? colors.gameInterchange : colors.gameCrossword;
 
     return (
         <View style={[styles.badge, { backgroundColor }]}>
@@ -19,7 +22,8 @@ export function GameTypeBadge({ gameType }: GameTypeBadgeProps) {
     );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Palette) {
+    return StyleSheet.create({
     badge: {
         paddingHorizontal: Spacing.sm,
         paddingVertical: Spacing.xs,
@@ -32,7 +36,9 @@ const styles = StyleSheet.create({
         ...Typography.label,
         fontSize: 11,
         fontWeight: '700',
-        color: TFL.white,
+        color: colors.onPrimary,
         letterSpacing: 0.5,
     },
 });
+}
+

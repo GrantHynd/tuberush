@@ -1,4 +1,5 @@
-import { Colors, Radius, Spacing, Typography } from '@/constants/theme';
+import { useTheme } from '@/hooks/useTheme';
+import { type Palette, Radius, Spacing, Typography } from '@/constants/theme';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import React from 'react';
 import {
@@ -21,13 +22,15 @@ export function SectionHeader({
     onSeeAllPress,
     badge,
 }: SectionHeaderProps) {
+    const { colors } = useTheme();
+    const styles = React.useMemo(() => makeStyles(colors), [colors]);
     return (
         <View style={styles.container}>
             <View style={styles.left}>
                 <MaterialIcons
                     name={icon}
                     size={22}
-                    color={Colors.light.text}
+                    color={colors.text}
                     style={styles.icon}
                 />
                 <Text style={styles.title}>{title}</Text>
@@ -51,7 +54,8 @@ export function SectionHeader({
     );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Palette) {
+    return StyleSheet.create({
     container: {
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -68,11 +72,10 @@ const styles = StyleSheet.create({
     },
     title: {
         ...Typography.h3,
-        fontSize: 18,
-    },
+        fontSize: 18, color: colors.text },
     badge: {
         marginLeft: Spacing.sm,
-        backgroundColor: Colors.light.border,
+        backgroundColor: colors.border,
         paddingHorizontal: 8,
         paddingVertical: 2,
         borderRadius: Radius.sm,
@@ -80,11 +83,13 @@ const styles = StyleSheet.create({
     badgeText: {
         fontSize: 11,
         fontWeight: '600',
-        color: Colors.light.text,
+        color: colors.text,
     },
     seeAll: {
         fontSize: 14,
-        color: Colors.light.tint,
+        color: colors.primary,
         fontWeight: '500',
     },
 });
+}
+

@@ -1,4 +1,5 @@
-import { Colors, GameColors, Radius, Spacing, TFL } from '@/constants/theme';
+import { useTheme } from '@/hooks/useTheme';
+import { type Palette, Radius, Spacing } from '@/constants/theme';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -33,6 +34,8 @@ export function CrosswordUpsell({
     onPlayFree,
     freeLabel = "Play today's Interchange instead",
 }: CrosswordUpsellProps) {
+    const { colors } = useTheme();
+    const styles = React.useMemo(() => makeStyles(colors), [colors]);
     return (
         <View style={styles.card} testID="crossword-upsell">
             <View style={styles.top}>
@@ -90,52 +93,53 @@ export function CrosswordUpsell({
     );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Palette) {
+    return StyleSheet.create({
     card: {
         margin: Spacing.md,
         borderWidth: 1,
-        borderColor: Colors.light.border,
+        borderColor: colors.border,
         borderRadius: Radius.lg,
         overflow: 'hidden',
     },
-    top: { backgroundColor: GameColors.crossword, padding: Spacing.md, paddingVertical: Spacing.lg },
+    top: { backgroundColor: colors.gameCrossword, padding: Spacing.md, paddingVertical: Spacing.lg },
     ticket: {
         position: 'absolute',
         right: Spacing.md,
         top: Spacing.md,
-        backgroundColor: TFL.yellow,
+        backgroundColor: colors.premium,
         borderRadius: Radius.pill,
         paddingHorizontal: 10,
         paddingVertical: 3,
     },
-    ticketText: { fontSize: 12, fontWeight: '700', color: '#111111' },
-    title: { fontSize: 24, fontWeight: '700', color: '#FFFFFF', marginRight: 80 },
-    sub: { fontSize: 15, color: '#FFFFFF', marginTop: Spacing.xs },
+    ticketText: { fontSize: 12, fontWeight: '700', color: colors.premiumText },
+    title: { fontSize: 24, fontWeight: '700', color: colors.onGameCrossword, marginRight: 80 },
+    sub: { fontSize: 15, color: colors.onGameCrossword, marginTop: Spacing.xs },
     preview: {
         marginTop: Spacing.md,
         alignSelf: 'flex-start',
-        backgroundColor: '#FFFFFF',
-        padding: 2,
+        backgroundColor: colors.cellBlockedFill,
+        padding: 0,
         borderRadius: 6,
-        gap: 2,
+        gap: 0,
     },
-    previewRow: { flexDirection: 'row', gap: 2 },
-    previewCell: { width: 28, height: 28, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#6B7280' },
-    previewBlack: { backgroundColor: '#1C1C1F' },
+    previewRow: { flexDirection: 'row', gap: 0 },
+    previewCell: { width: 28, height: 28, backgroundColor: colors.cellIdleFill },
+    previewBlack: { backgroundColor: colors.cellBlockedFill },
     list: { padding: Spacing.md },
     benefit: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6 },
-    dot: { width: 12, height: 12, borderRadius: 6, borderWidth: 3, borderColor: GameColors.crossword },
-    benefitText: { fontSize: 16, color: Colors.light.text, flexShrink: 1 },
+    dot: { width: 12, height: 12, borderRadius: 6, borderWidth: 3, borderColor: colors.gameCrossword },
+    benefitText: { fontSize: 16, color: colors.text, flexShrink: 1 },
     actions: { paddingHorizontal: Spacing.md, paddingBottom: Spacing.md, gap: Spacing.sm },
     primary: {
         minHeight: 48,
         borderRadius: Radius.lg,
-        backgroundColor: TFL.blue,
+        backgroundColor: colors.primary,
         alignItems: 'center',
         justifyContent: 'center',
         paddingHorizontal: Spacing.md,
     },
-    primaryText: { fontSize: 16, fontWeight: '600', color: '#FFFFFF' },
+    primaryText: { fontSize: 16, fontWeight: '600', color: colors.onPrimary },
     secondary: {
         minHeight: 48,
         borderRadius: Radius.lg,
@@ -143,6 +147,8 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         paddingHorizontal: Spacing.md,
     },
-    secondaryText: { fontSize: 16, fontWeight: '600', color: TFL.blue, textAlign: 'center' },
+    secondaryText: { fontSize: 16, fontWeight: '600', color: colors.primary, textAlign: 'center' },
     pressed: { opacity: 0.85 },
 });
+}
+

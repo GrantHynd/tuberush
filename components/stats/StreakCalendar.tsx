@@ -1,6 +1,7 @@
+import { useTheme } from '@/hooks/useTheme';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { Colors, Radius, Spacing, TFL } from '@/constants/theme';
+import { type Palette, Radius, Spacing } from '@/constants/theme';
 import { bestStreak, calendarWeeks, currentStreak, streakDates, type StatsSegment } from '@/lib/stats';
 import type { GameHistoryEntry } from '@/lib/game-history';
 import { StatsSection } from './StatsSection';
@@ -9,6 +10,8 @@ const CELL = 14;
 const GAP = 3;
 
 export function StreakCalendar({ history, segment, now }: { history: GameHistoryEntry[]; segment: StatsSegment; now?: Date }) {
+    const { colors } = useTheme();
+    const styles = React.useMemo(() => makeStyles(colors), [colors]);
     const weeks = calendarWeeks(history, segment, now);
     const dates = streakDates(history, segment);
     const current = currentStreak(dates, now);
@@ -59,16 +62,19 @@ export function StreakCalendar({ history, segment, now }: { history: GameHistory
     );
 }
 
-const styles = StyleSheet.create({
-    summary: { fontSize: 14, fontWeight: '600', color: Colors.light.text, marginBottom: Spacing.sm },
+function makeStyles(colors: Palette) {
+    return StyleSheet.create({
+    summary: { fontSize: 14, fontWeight: '600', color: colors.text, marginBottom: Spacing.sm },
     months: { flexDirection: 'row', gap: GAP, marginBottom: 2 },
-    month: { width: CELL, fontSize: 12, color: TFL.grey.dark, overflow: 'visible' },
+    month: { width: CELL, fontSize: 12, color: colors.textSecondary, overflow: 'visible' },
     grid: { flexDirection: 'row', gap: GAP },
     column: { gap: GAP },
     cell: { width: CELL, height: CELL, borderRadius: Radius.sm, alignItems: 'center', justifyContent: 'center' },
-    unplayed: { backgroundColor: Colors.light.card, borderWidth: 1, borderColor: Colors.light.border },
-    played: { backgroundColor: TFL.blue },
-    today: { borderWidth: 2, borderColor: TFL.blue },
+    unplayed: { backgroundColor: colors.elevated, borderWidth: 1, borderColor: colors.border },
+    played: { backgroundColor: colors.primary },
+    today: { borderWidth: 2, borderColor: colors.primary },
     future: { opacity: 0 },
-    dot: { width: 4, height: 4, borderRadius: 2, backgroundColor: '#FFFFFF' },
+    dot: { width: 4, height: 4, borderRadius: 2, backgroundColor: colors.onPrimary },
 });
+}
+

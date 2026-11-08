@@ -1,3 +1,4 @@
+import { useTheme } from '@/hooks/useTheme';
 import { openPaywall } from '@/lib/paywall';
 import { DistributionChart } from '@/components/stats/DistributionChart';
 import { GameBreakdown } from '@/components/stats/GameBreakdown';
@@ -9,13 +10,12 @@ import { GameTypeBadge } from '@/components/ui/GameTypeBadge';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { UpsellCard } from '@/components/ui/UpsellCard';
-import { Colors, Layout, Spacing, TFL, Typography } from '@/constants/theme';
+import { type Palette, Layout, Spacing, Typography } from '@/constants/theme';
 import { useGameHistory } from '@/hooks/useGameHistory';
 import { useTodaysNextGame } from '@/hooks/useTodaysNextGame';
 import { formatMaybe, formatScore } from '@/lib/display-utils';
 import { bestTime, currentStreak, filterHistory, streakDates, type StatsSegment } from '@/lib/stats';
 import { useAuthStore } from '@/stores/auth-store';
-import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { AccessibilityInfo, ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -63,7 +63,8 @@ export function buildTiles(history: ReturnType<typeof filterHistory>, segment: S
 }
 
 export default function StatsScreen() {
-    const router = useRouter();
+    const { colors } = useTheme();
+    const styles = React.useMemo(() => makeStyles(colors), [colors]);
     const { user } = useAuthStore();
     const { history, loading } = useGameHistory();
     const [segment, setSegment] = useState<StatsSegment>('all');
@@ -130,7 +131,7 @@ export default function StatsScreen() {
 
                         {loading ? (
                             <View style={styles.loadingContainer}>
-                                <ActivityIndicator size="large" color={TFL.blue} />
+                                <ActivityIndicator size="large" color={colors.primary} />
                             </View>
                         ) : rows.length === 0 ? (
                             renderSegmentEmpty()
@@ -212,29 +213,32 @@ export default function StatsScreen() {
     );
 }
 
-const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: Colors.light.background },
+function makeStyles(colors: Palette) {
+    return StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.background },
     scrollView: { flex: 1 },
     scrollContent: { paddingHorizontal: Layout.screenPadding, paddingBottom: Spacing.md },
     control: { marginBottom: Spacing.lg },
     loadingContainer: { paddingVertical: Spacing.xxl, alignItems: 'center' },
     summary: { flexDirection: 'row', alignItems: 'center' },
     summaryItem: { flex: 1, alignItems: 'center' },
-    summaryDivider: { width: StyleSheet.hairlineWidth, alignSelf: 'stretch', backgroundColor: Colors.light.border },
-    summaryValue: { fontSize: 20, fontWeight: '700', color: Colors.light.text },
-    summaryLabel: { ...Typography.caption, fontSize: 12, textAlign: 'center', color: TFL.grey.dark },
+    summaryDivider: { width: StyleSheet.hairlineWidth, alignSelf: 'stretch', backgroundColor: colors.border },
+    summaryValue: { fontSize: 20, fontWeight: '700', color: colors.text },
+    summaryLabel: { ...Typography.caption, fontSize: 12, textAlign: 'center', color: colors.textSecondary },
     historySection: { marginTop: Spacing.lg },
-    sectionHeader: { ...Typography.label, marginBottom: Spacing.sm },
+    sectionHeader: { ...Typography.label, marginBottom: Spacing.sm, color: colors.text },
     historyRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: Spacing.sm, gap: Spacing.sm },
     historyMiddle: { flex: 1 },
-    historyDate: { ...Typography.body, fontWeight: '600', marginBottom: 2 },
-    historyTime: { ...Typography.caption, fontSize: 13 },
+    historyDate: { ...Typography.body, fontWeight: '600', marginBottom: 2, color: colors.text },
+    historyTime: { ...Typography.caption, fontSize: 13, color: colors.text },
     historyRight: { alignItems: 'flex-end' },
-    historyResult: { ...Typography.body, fontWeight: '700', marginBottom: 2 },
-    resultWin: { color: TFL.green },
-    resultLoss: { color: TFL.red },
-    historyPoints: { ...Typography.caption, fontSize: 13 },
-    divider: { height: 1, backgroundColor: Colors.light.border, marginVertical: Spacing.xs },
+    historyResult: { ...Typography.body, fontWeight: '700', marginBottom: 2, color: colors.text },
+    resultWin: { color: colors.success },
+    resultLoss: { color: colors.error },
+    historyPoints: { ...Typography.caption, fontSize: 13, color: colors.text },
+    divider: { height: 1, backgroundColor: colors.border, marginVertical: Spacing.xs },
     showAll: { paddingTop: Spacing.md, alignItems: 'center', minHeight: 44, justifyContent: 'center' },
-    showAllText: { fontSize: 14, fontWeight: '600', color: TFL.blue },
+    showAllText: { fontSize: 14, fontWeight: '600', color: colors.primary },
 });
+}
+

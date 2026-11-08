@@ -1,5 +1,6 @@
+import { useTheme } from '@/hooks/useTheme';
 import { HeaderBackButton } from '@/components/ui/HeaderBackButton';
-import { Colors, Spacing, TFL, Typography } from '@/constants/theme';
+import { type Palette, Spacing, Typography } from '@/constants/theme';
 import type { InlinePart, LegalDocument } from '@/lib/legal-copy';
 import { useRouter } from 'expo-router';
 import React from 'react';
@@ -7,6 +8,8 @@ import { Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 function InlineContent({ content }: { content: InlinePart[] }) {
+    const { colors } = useTheme();
+    const styles = React.useMemo(() => makeStyles(colors), [colors]);
     const router = useRouter();
 
     return (
@@ -43,6 +46,8 @@ function InlineContent({ content }: { content: InlinePart[] }) {
 }
 
 export function LegalDocumentView({ document }: { document: LegalDocument }) {
+    const { colors } = useTheme();
+    const styles = React.useMemo(() => makeStyles(colors), [colors]);
     return (
         <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
             <HeaderBackButton title={document.title} />
@@ -76,10 +81,11 @@ export function LegalDocumentView({ document }: { document: LegalDocument }) {
     );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Palette) {
+    return StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: Colors.light.background,
+        backgroundColor: colors.background,
     },
     content: {
         paddingHorizontal: Spacing.lg,
@@ -88,23 +94,22 @@ const styles = StyleSheet.create({
     },
     updated: {
         ...Typography.caption,
-        marginBottom: Spacing.md,
-    },
+        marginBottom: Spacing.md, color: colors.text },
     heading: {
         ...Typography.h3,
         marginTop: Spacing.lg,
-        marginBottom: Spacing.sm,
-    },
+        marginBottom: Spacing.sm, color: colors.text },
     paragraph: {
         ...Typography.body,
-        marginBottom: Spacing.sm,
-    },
+        marginBottom: Spacing.sm, color: colors.text },
     list: {
         gap: Spacing.xs,
         marginBottom: Spacing.sm,
     },
     link: {
-        color: TFL.blue,
+        color: colors.primary,
         fontWeight: '600',
     },
 });
+}
+

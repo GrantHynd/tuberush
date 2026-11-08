@@ -1,4 +1,5 @@
-import { Colors, Spacing, TFL } from '@/constants/theme';
+import { useTheme } from '@/hooks/useTheme';
+import { type Palette, Spacing } from '@/constants/theme';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -9,6 +10,8 @@ interface GameHistoryStatsBarProps {
 }
 
 export function GameHistoryStatsBar({ completed, total, currentStreak }: GameHistoryStatsBarProps) {
+    const { colors } = useTheme();
+    const styles = React.useMemo(() => makeStyles(colors), [colors]);
     return (
         <View style={styles.container}>
             <View style={styles.stat}>
@@ -26,12 +29,13 @@ export function GameHistoryStatsBar({ completed, total, currentStreak }: GameHis
     );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Palette) {
+    return StyleSheet.create({
     container: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-around',
-        backgroundColor: TFL.grey.light,
+        backgroundColor: colors.background,
         paddingVertical: Spacing.md,
         paddingHorizontal: Spacing.md,
     },
@@ -41,17 +45,19 @@ const styles = StyleSheet.create({
     },
     label: {
         fontSize: 13,
-        color: TFL.grey.dark,
+        color: colors.textSecondary,
         marginBottom: 4,
     },
     value: {
         fontSize: 24,
         fontWeight: '700',
-        color: Colors.light.text,
+        color: colors.text,
     },
     divider: {
         width: 1,
         height: 40,
-        backgroundColor: Colors.light.border,
+        backgroundColor: colors.border,
     },
 });
+}
+

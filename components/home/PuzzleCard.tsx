@@ -23,6 +23,8 @@ export interface PuzzleCardProps {
     /** Extra a11y detail for the completed state, e.g. "completed in 2 minutes 14 seconds, 3 of 4 lives left". */
     completionLabel?: string;
     backgroundColor: string;
+    /** Ink on the filled card. Required so mint fills do not use white text. */
+    contentColor: string;
     onPress: () => void;
     /** 'carousel' for horizontal scroll (fixed width), 'list' for vertical list (full width) */
     variant?: 'carousel' | 'list';
@@ -64,6 +66,7 @@ export function PuzzleCard({
     completionText,
     completionLabel,
     backgroundColor,
+    contentColor,
     onPress,
     variant = 'carousel',
     accessibilityGame,
@@ -73,21 +76,21 @@ export function PuzzleCard({
     if (status === 'completed') {
         statusContent = (
             <>
-                <MaterialIcons name="check-circle" size={18} color="white" />
-                {completionText ? <Text style={styles.statusText}>{completionText}</Text> : null}
+                <MaterialIcons name="check-circle" size={18} color={contentColor} />
+                {completionText ? <Text style={[styles.statusText, { color: contentColor }]}>{completionText}</Text> : null}
             </>
         );
         a11ySuffix = `, ${completionLabel ?? 'completed'}`;
     } else if (status === 'inProgress') {
         statusContent = (
             <>
-                <MaterialIcons name="play-circle-outline" size={18} color="white" />
-                <Text style={styles.statusText}>In progress</Text>
+                <MaterialIcons name="play-circle-outline" size={18} color={contentColor} />
+                <Text style={[styles.statusText, { color: contentColor }]}>In progress</Text>
             </>
         );
         a11ySuffix = ', in progress';
     } else if (commuteCount) {
-        statusContent = <Text style={styles.statusText}>{commuteCount.toLocaleString('en-GB')} commuters played</Text>;
+        statusContent = <Text style={[styles.statusText, { color: contentColor }]}>{commuteCount.toLocaleString('en-GB')} commuters played</Text>;
     }
     const showNew = isNew && status === 'unplayed';
 
@@ -100,10 +103,10 @@ export function PuzzleCard({
             accessibilityLabel={`${label}${accessibilityGame ? `, ${accessibilityGame}` : ''}${a11ySuffix}`}
         >
             <View style={styles.header}>
-                <Text style={styles.label} numberOfLines={1}>{label}</Text>
+                <Text style={[styles.label, { color: contentColor }]} numberOfLines={1}>{label}</Text>
                 {showNew && (
-                    <View style={styles.newBadge}>
-                        <Text style={styles.newBadgeText}>NEW</Text>
+                    <View style={[styles.newBadge, { borderColor: contentColor }]}>
+                        <Text style={[styles.newBadgeText, { color: contentColor }]}>NEW</Text>
                     </View>
                 )}
             </View>
@@ -128,21 +131,19 @@ const styles = StyleSheet.create({
         gap: Spacing.xs,
     },
     newBadge: {
-        backgroundColor: 'rgba(255,255,255,0.25)',
         paddingHorizontal: 6,
         paddingVertical: 2,
         borderRadius: Radius.sm,
+        borderWidth: 1,
     },
     newBadgeText: {
         fontSize: 10,
         fontWeight: '700',
-        color: 'white',
         letterSpacing: 0.5,
     },
     label: {
         fontSize: 14,
         fontWeight: '600',
-        color: 'white',
     },
     status: {
         flexDirection: 'row',

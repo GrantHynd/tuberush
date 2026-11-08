@@ -4,6 +4,7 @@ import { configureRevenueCat } from '@/lib/revenuecat';
 import { initSentry } from '@/lib/sentry';
 import { supabase } from '@/lib/supabase-client';
 import { useAuthStore } from '@/stores/auth-store';
+import { palette } from '@/constants/theme';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import * as Sentry from '@sentry/react-native';
 import * as Linking from 'expo-linking';
@@ -105,8 +106,24 @@ function RootLayout() {
 
   if (!fontsLoaded && !fontError) return null;
 
+  const scheme = colorScheme === 'dark' ? 'dark' : 'light';
+  const colors = palette[scheme];
+  const base = scheme === 'dark' ? DarkTheme : DefaultTheme;
+  const navTheme = {
+    ...base,
+    colors: {
+      ...base.colors,
+      primary: colors.primary,
+      background: colors.background,
+      card: colors.surface,
+      text: colors.text,
+      border: colors.border,
+      notification: colors.primary,
+    },
+  };
+
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+    <ThemeProvider value={navTheme}>
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="auth" options={{ presentation: 'modal', title: 'Sign In' }} />
@@ -122,7 +139,7 @@ function RootLayout() {
         <Stack.Screen name="leaderboard/game" options={{ headerShown: false }} />
         <Stack.Screen name="leaderboard/boroughs" options={{ headerShown: false }} />
       </Stack>
-      <StatusBar style="auto" />
+      <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
     </ThemeProvider>
   );
 }

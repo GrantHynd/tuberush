@@ -1,6 +1,7 @@
-import { FontScaleCap, FontFamily, Size, StateColors } from '@/constants/theme';
+import { FontFamily, FontScaleCap, Size } from '@/constants/theme';
+import { useTheme } from '@/hooks/useTheme';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 export interface ClueBarProps {
@@ -29,6 +30,11 @@ export function ClueBar({
     minHeight = 64,
     testID = 'clue-bar',
 }: ClueBarProps) {
+    const { colors } = useTheme();
+    const styles = useMemo(
+        () => makeStyles(colors.surface, colors.border, colors.text, colors.onPrimary),
+        [colors.surface, colors.border, colors.text, colors.onPrimary],
+    );
     return (
         <View style={[styles.bar, { minHeight }]} testID={testID}>
             <Pressable
@@ -38,11 +44,11 @@ export function ClueBar({
                 style={styles.nav}
                 testID="clue-prev"
             >
-                <MaterialIcons name="chevron-left" size={24} color={StateColors.inactiveText} />
+                <MaterialIcons name="chevron-left" size={24} color={colors.text} />
             </Pressable>
             <View style={styles.body} accessible accessibilityLabel={`${label}. ${clue}${length ? `, ${length} letters` : ''}`}>
                 <Text style={styles.text} maxFontSizeMultiplier={FontScaleCap.chrome} numberOfLines={3}>
-                    <Text style={[styles.dir, { backgroundColor: lineColor }]}> {label.toUpperCase()} </Text>
+                    <Text style={[styles.dir, { backgroundColor: lineColor, color: colors.onPrimary }]}> {label.toUpperCase()} </Text>
                     {'  '}
                     {clue}
                     {length ? <Text style={[styles.len, { color: lineColor }]}> ({length})</Text> : null}
@@ -55,7 +61,7 @@ export function ClueBar({
                 style={styles.nav}
                 testID="clue-toggle"
             >
-                <MaterialIcons name="swap-horiz" size={22} color={StateColors.inactiveText} />
+                <MaterialIcons name="swap-horiz" size={22} color={colors.text} />
             </Pressable>
             <Pressable
                 onPress={onNext}
@@ -64,24 +70,26 @@ export function ClueBar({
                 style={styles.nav}
                 testID="clue-next"
             >
-                <MaterialIcons name="chevron-right" size={24} color={StateColors.inactiveText} />
+                <MaterialIcons name="chevron-right" size={24} color={colors.text} />
             </Pressable>
         </View>
     );
 }
 
-const styles = StyleSheet.create({
-    bar: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: StateColors.surface,
-        borderWidth: 1,
-        borderColor: StateColors.hairline,
-        borderRadius: Size.radius,
-    },
-    nav: { width: Size.minTarget, height: Size.minTarget, alignItems: 'center', justifyContent: 'center' },
-    body: { flex: 1, paddingVertical: 6 },
-    text: { fontFamily: FontFamily.regular, fontSize: 16, lineHeight: 22, color: StateColors.ink },
-    dir: { fontFamily: FontFamily.bold, fontSize: 12, fontWeight: '700', color: '#FFFFFF' },
-    len: { fontFamily: FontFamily.bold, fontWeight: '700' },
-});
+function makeStyles(surface: string, border: string, text: string, onPrimary: string) {
+    return StyleSheet.create({
+        bar: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            backgroundColor: surface,
+            borderWidth: 1,
+            borderColor: border,
+            borderRadius: Size.radius,
+        },
+        nav: { width: Size.minTarget, height: Size.minTarget, alignItems: 'center', justifyContent: 'center' },
+        body: { flex: 1, paddingVertical: 6 },
+        text: { fontFamily: FontFamily.regular, fontSize: 16, lineHeight: 22, color: text },
+        dir: { fontFamily: FontFamily.bold, fontSize: 12, fontWeight: '700', color: onPrimary },
+        len: { fontFamily: FontFamily.bold, fontWeight: '700' },
+    });
+}

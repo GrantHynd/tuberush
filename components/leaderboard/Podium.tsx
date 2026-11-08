@@ -1,6 +1,7 @@
+import { useTheme } from '@/hooks/useTheme';
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { Colors, TFL, Spacing } from '@/constants/theme';
+import { type Palette, Spacing } from '@/constants/theme';
 import { WeeklyLeaderboardEntry } from '@/types/game';
 import { getDisplayName, getAvatarInitial, formatScore } from '@/lib/display-utils';
 import { Avatar } from './Avatar';
@@ -14,6 +15,8 @@ type RingColor = 'gold' | 'silver' | 'bronze';
 const RING: RingColor[] = ['gold', 'silver', 'bronze'];
 
 export function Podium({ entries, currentUserId }: PodiumProps) {
+    const { colors } = useTheme();
+    const styles = React.useMemo(() => makeStyles(colors), [colors]);
     const top3 = entries.slice(0, 3);
     if (top3.length === 0) return null;
 
@@ -57,7 +60,8 @@ export function Podium({ entries, currentUserId }: PodiumProps) {
     );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Palette) {
+    return StyleSheet.create({
     container: {
         flexDirection: 'row',
         justifyContent: 'center',
@@ -75,16 +79,18 @@ const styles = StyleSheet.create({
     name: {
         fontSize: 13,
         fontWeight: '600',
-        color: Colors.light.text,
+        color: colors.text,
         marginTop: 6,
         textAlign: 'center',
     },
     nameMe: {
-        color: TFL.blue,
+        color: colors.primary,
     },
     score: {
         fontSize: 12,
-        color: TFL.grey.dark,
+        color: colors.textSecondary,
         marginTop: 2,
     },
 });
+}
+

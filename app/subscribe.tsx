@@ -1,3 +1,5 @@
+import { type Palette } from '@/constants/theme';
+import { useTheme } from '@/hooks/useTheme';
 import { openPaywall } from '@/lib/paywall';
 import { PRIVACY_POLICY_ROUTE, TERMS_OF_USE_ROUTE } from '@/lib/legal';
 import { capture } from '@/lib/posthog';
@@ -24,6 +26,8 @@ const PREMIUM_BENEFITS = [
 ];
 
 export default function SubscribeScreen() {
+    const { colors } = useTheme();
+    const styles = React.useMemo(() => makeStyles(colors), [colors]);
     const router = useRouter();
     const { user } = useAuthStore();
     const [loading, setLoading] = useState(false);
@@ -85,9 +89,11 @@ export default function SubscribeScreen() {
                     testID="subscribe-button"
                 >
                     {loading ? (
-                        <ActivityIndicator color="#fff" />
+                        <ActivityIndicator color={colors.onPrimary} />
                     ) : (
-                        <Text style={styles.subscribeButtonText}>Subscribe Now</Text>
+                        <Text style={[styles.subscribeButtonText, user?.isPremium && styles.subscribeButtonTextDisabled]}>
+                            Subscribe Now
+                        </Text>
                     )}
                 </TouchableOpacity>
 
@@ -121,10 +127,11 @@ export default function SubscribeScreen() {
     );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Palette) {
+    return StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#fff',
+        backgroundColor: colors.background,
     },
     content: {
         padding: 30,
@@ -140,12 +147,12 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 32,
         fontWeight: 'bold',
-        color: '#2c3e50',
+        color: colors.text,
         marginBottom: 10,
     },
     subtitle: {
         fontSize: 18,
-        color: '#7f8c8d',
+        color: colors.textSecondary,
         marginBottom: 40,
     },
     featuresContainer: {
@@ -157,19 +164,19 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingVertical: 12,
         borderBottomWidth: 1,
-        borderBottomColor: '#ecf0f1',
+        borderBottomColor: colors.border,
     },
     featureIcon: {
         fontSize: 24,
-        color: '#27ae60',
+        color: colors.success,
         marginRight: 15,
     },
     featureText: {
         fontSize: 16,
-        color: '#2c3e50',
+        color: colors.text,
     },
     subscribeButton: {
-        backgroundColor: '#3498db',
+        backgroundColor: colors.primary,
         paddingVertical: 18,
         paddingHorizontal: 60,
         borderRadius: 10,
@@ -178,17 +185,23 @@ const styles = StyleSheet.create({
         marginBottom: 15,
     },
     subscribeButtonDisabled: {
-        backgroundColor: '#bdc3c7',
+        backgroundColor: colors.elevated,
+        borderWidth: 1,
+        borderStyle: 'dashed',
+        borderColor: colors.border,
     },
     subscribeButtonText: {
-        color: '#fff',
+        color: colors.onPrimary,
         fontSize: 18,
         fontWeight: 'bold',
+    },
+    subscribeButtonTextDisabled: {
+        color: colors.textSecondary,
     },
     disclaimer: {
         fontSize: 13,
         lineHeight: 18,
-        color: '#7f8c8d',
+        color: colors.textSecondary,
         textAlign: 'center',
     },
     legalRow: {
@@ -199,12 +212,13 @@ const styles = StyleSheet.create({
         marginTop: 16,
     },
     legalLink: {
-        color: '#3498db',
+        color: colors.primary,
         fontSize: 15,
         fontWeight: '600',
     },
     legalSeparator: {
-        color: '#95a5a6',
+        color: colors.textSecondary,
         fontSize: 15,
     },
 });
+}

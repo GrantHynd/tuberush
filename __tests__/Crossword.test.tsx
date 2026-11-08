@@ -62,7 +62,6 @@ describe('Crossword Component', () => {
     jest.clearAllMocks();
   });
 
-
   const renderCw = (props: Partial<React.ComponentProps<typeof Crossword>> = {}, state: CrosswordState = baseGameState) =>
     render(<Crossword puzzle={testPuzzle} gameState={state} onCellChange={mockOnCellChange} onCheck={jest.fn()} {...props} />);
 

@@ -1,6 +1,7 @@
+import { useTheme } from '@/hooks/useTheme';
 import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
-import { Colors, Typography, Spacing, Layout } from '@/constants/theme';
+import { type Palette, Typography, Spacing, Layout } from '@/constants/theme';
 import { formatScore, getDisplayName } from '@/lib/display-utils';
 import { leaderboard, getLocationDisplay, LeaderboardFilter } from '@/lib/leaderboard';
 import { useAuthStore } from '@/stores/auth-store';
@@ -12,6 +13,8 @@ interface LeaderboardProps {
 }
 
 export function Leaderboard({ gameType, date, onClose }: LeaderboardProps) {
+    const { colors } = useTheme();
+    const styles = React.useMemo(() => makeStyles(colors), [colors]);
     const { user } = useAuthStore();
     const [entries, setEntries] = useState<any[]>([]);
     const [filter, setFilter] = useState<LeaderboardFilter>('all');
@@ -91,7 +94,7 @@ export function Leaderboard({ gameType, date, onClose }: LeaderboardProps) {
 
             {loading ? (
                 <View style={styles.loadingContainer}>
-                    <ActivityIndicator color={Colors.light.tint} />
+                    <ActivityIndicator color={colors.primary} />
                 </View>
             ) : (
                 <FlatList
@@ -125,9 +128,10 @@ export function Leaderboard({ gameType, date, onClose }: LeaderboardProps) {
     );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Palette) {
+    return StyleSheet.create({
     container: {
-        backgroundColor: Colors.light.background,
+        backgroundColor: colors.background,
         borderRadius: Layout.borderRadius.lg,
         padding: Spacing.md,
         flex: 1,
@@ -139,16 +143,15 @@ const styles = StyleSheet.create({
         marginBottom: Spacing.md,
     },
     title: {
-        ...Typography.h3,
-    },
+        ...Typography.h3, color: colors.text },
     closeButton: {
-        color: Colors.light.tint,
+        color: colors.primary,
         fontWeight: '600',
     },
     filterContainer: {
         flexDirection: 'row',
         marginBottom: Spacing.md,
-        backgroundColor: Colors.light.card,
+        backgroundColor: colors.elevated,
         borderRadius: Layout.borderRadius.md,
         padding: 4,
     },
@@ -159,15 +162,15 @@ const styles = StyleSheet.create({
         borderRadius: Layout.borderRadius.sm,
     },
     filterActive: {
-        backgroundColor: Colors.light.background,
+        backgroundColor: colors.background,
         ...Layout.shadow.sm,
     },
     filterText: {
         ...Typography.label,
-        color: Colors.light.icon,
+        color: colors.textSecondary,
     },
     filterTextActive: {
-        color: Colors.light.text,
+        color: colors.text,
     },
     loadingContainer: {
         padding: Spacing.xl,
@@ -178,10 +181,10 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingVertical: Spacing.sm,
         borderBottomWidth: 1,
-        borderBottomColor: Colors.light.border,
+        borderBottomColor: colors.border,
     },
     entryHighlight: {
-        backgroundColor: Colors.light.warning + '20', // transparent yellow
+        backgroundColor: colors.warning + '20', // transparent yellow
     },
     rank: {
         width: 30,
@@ -189,7 +192,7 @@ const styles = StyleSheet.create({
     },
     rankText: {
         fontWeight: 'bold',
-        color: Colors.light.text,
+        color: colors.text,
     },
     info: {
         flex: 1,
@@ -197,19 +200,21 @@ const styles = StyleSheet.create({
     },
     email: {
         fontWeight: '600',
-        color: Colors.light.text,
+        color: colors.text,
     },
     location: {
         fontSize: 12,
-        color: Colors.light.icon,
+        color: colors.textSecondary,
     },
     score: {
         fontWeight: 'bold',
-        color: Colors.light.tint,
+        color: colors.primary,
     },
     emptyText: {
         textAlign: 'center',
-        color: Colors.light.icon,
+        color: colors.textSecondary,
         padding: Spacing.lg,
     },
 });
+}
+

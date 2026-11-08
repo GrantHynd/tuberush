@@ -1,13 +1,15 @@
+import { useTheme } from '@/hooks/useTheme';
 import { GameHistoryListScreen } from '@/components/games/GameHistoryListScreen';
 import { GAMES } from '@/constants/Games';
 import { connectionsGameHistoryConfig } from '@/config/gameHistoryConfigs';
 import { useGameHistoryList } from '@/hooks/useGameHistoryList';
 import { useAuthStore } from '@/stores/auth-store';
-import { TFL } from '@/constants/theme';
+
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback } from 'react';
 
 export default function ConnectionsListScreen() {
+    const { colors } = useTheme();
     const router = useRouter();
     const { user } = useAuthStore();
     const { sections, stats, refresh, hasMore, loadMore, loadingMore } = useGameHistoryList(
@@ -32,7 +34,7 @@ export default function ConnectionsListScreen() {
         <GameHistoryListScreen
             title={GAMES.connections.name}
             icon="hub"
-            accentColor={TFL.blue}
+            accentColor={colors.primary}
             hasWinLoss={true}
             sections={sections}
             stats={stats}

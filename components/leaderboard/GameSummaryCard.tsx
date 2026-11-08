@@ -1,8 +1,9 @@
+import { useTheme } from '@/hooks/useTheme';
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Card } from '@/components/ui/Card';
-import { Colors, TFL, Spacing } from '@/constants/theme';
+import { type Palette, Spacing } from '@/constants/theme';
 import { GAMES, GameId } from '@/constants/Games';
 import { GameOverviewData } from '@/types/game';
 import { EMPTY_VALUE, formatPlayerCount } from '@/lib/display-utils';
@@ -19,6 +20,8 @@ export function GameSummaryCard({
     currentUserId,
     onFullBoard,
 }: GameSummaryCardProps) {
+    const { colors } = useTheme();
+    const styles = React.useMemo(() => makeStyles(colors), [colors]);
     const game = GAMES[data.gameType as GameId];
 
     return (
@@ -28,7 +31,7 @@ export function GameSummaryCard({
                     <MaterialIcons
                         name={game.icon}
                         size={20}
-                        color={Colors.light.text}
+                        color={colors.text}
                         accessibilityElementsHidden
                         importantForAccessibility="no"
                     />
@@ -45,7 +48,7 @@ export function GameSummaryCard({
                         <MaterialIcons
                             name="chevron-right"
                             size={14}
-                            color={TFL.blue}
+                            color={colors.primary}
                         />
                     </Text>
                 </TouchableOpacity>
@@ -71,7 +74,8 @@ export function GameSummaryCard({
     );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Palette) {
+    return StyleSheet.create({
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -86,12 +90,12 @@ const styles = StyleSheet.create({
     gameName: {
         fontSize: 16,
         fontWeight: '700',
-        color: Colors.light.text,
+        color: colors.text,
     },
     fullBoardLink: {
         fontSize: 14,
         fontWeight: '600',
-        color: TFL.blue,
+        color: colors.primary,
     },
     rankRow: {
         flexDirection: 'row',
@@ -102,11 +106,13 @@ const styles = StyleSheet.create({
     },
     rankLabel: {
         fontSize: 13,
-        color: TFL.grey.dark,
+        color: colors.textSecondary,
     },
     rankValue: {
         fontSize: 14,
         fontWeight: '600',
-        color: Colors.light.text,
+        color: colors.text,
     },
 });
+}
+

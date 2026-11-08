@@ -23,7 +23,7 @@ describe('getCompletionPresentation', () => {
 });
 
 describe('PuzzleCard states', () => {
-    const base = { label: 'Today', backgroundColor: '#003688', onPress: jest.fn(), accessibilityGame: 'Connections' };
+    const base = { label: 'Today', backgroundColor: '#0D5C55', contentColor: '#FAF7F2', onPress: jest.fn(), accessibilityGame: 'Connections' };
     it('unplayed: count + NEW, hides 0 count', async () => {
         const r = await render(<PuzzleCard {...base} isNew status="unplayed" commuteCount={312} />);
         expect(r.getByText('312 commuters played')).toBeTruthy();

@@ -1,4 +1,4 @@
-import { DifficultyLines, difficultyLine, LineColors, StateColors } from '@/constants/theme';
+import { crosswordCells, interchangeGroup, interchangeGroups, palette } from '@/constants/theme';
 
 function lum(hex: string) {
     const n = hex.replace('#', '');
@@ -13,29 +13,59 @@ function ratio(a: string, b: string) {
     return (x + 0.05) / (y + 0.05);
 }
 
-describe('Mind the Gap tokens (TUB-293)', () => {
-    it('game line colours carry white text at AA', () => {
-        for (const c of Object.values(LineColors)) expect(ratio(c, '#FFFFFF')).toBeGreaterThanOrEqual(4.5);
+const TFL = ['#E32017', '#003688', '#FFD300', '#00782A', '#DC241F', '#0019A8', '#EE7C0E', '#00A4A7', '#6950A1', '#9B0056'];
+
+describe('Platform tokens (TUB-325)', () => {
+    it('names no TfL or NAVY alias', () => {
+        const theme = require('@/constants/theme') as Record<string, unknown>;
+        expect(theme.TFL).toBeUndefined();
+        expect(theme.NAVY).toBeUndefined();
+        expect(theme.LineColors).toBeUndefined();
+        expect(theme.DifficultyLines).toBeUndefined();
+        expect(theme.StateColors).toBeUndefined();
     });
-    it('difficulty lines meet AA with their text colour', () => {
-        for (const d of DifficultyLines) expect(ratio(d.color, d.text)).toBeGreaterThanOrEqual(4.5);
-        expect(DifficultyLines.map((d) => d.color)).toEqual(['#EE7C0E', '#00A4A7', '#6950A1', '#9B0056']);
+
+    it('keeps Option A group fills and V3 cell hexes', () => {
+        expect(interchangeGroups.map((g) => g.fill)).toEqual(['#18332D', '#1E3D35', '#24463D', '#2A4F45']);
+        expect(crosswordCells.cellIdleFill).toBe('#526E64');
+        expect(crosswordCells.cellBlockedFill).toBe('#060B09');
+        expect(crosswordCells.cellOutline).toBe('#7E9B90');
+        expect(crosswordCells.cellSelectedFill).toBe('#C3EADF');
+        expect(crosswordCells.cellSelectedRing).toBe('#527E70');
+        expect(crosswordCells.cellCursor).toBe('#0C1614');
+        expect(crosswordCells.cellWordFill).toBe('#A8E8DC');
     });
-    it('state pairs meet contrast table', () => {
-        expect(ratio(StateColors.inactiveText, '#FFFFFF')).toBeGreaterThanOrEqual(4.5);
-        expect(ratio(StateColors.inactiveBorder, '#FFFFFF')).toBeGreaterThanOrEqual(3);
-        expect(ratio(StateColors.gridLine, '#FFFFFF')).toBeGreaterThanOrEqual(3);
-        expect(ratio(StateColors.premiumText, StateColors.premium)).toBeGreaterThanOrEqual(4.5);
-        expect(ratio('#FFFFFF', StateColors.toast)).toBeGreaterThanOrEqual(4.5);
-        expect(ratio(StateColors.found, '#FFFFFF')).toBeGreaterThanOrEqual(4.5);
-        expect(ratio(StateColors.error, '#FFFFFF')).toBeGreaterThanOrEqual(4.5);
-        expect(ratio(StateColors.selectedText, StateColors.selected)).toBeGreaterThanOrEqual(4.5);
+
+    it('interchangeGroup clamps to 1..4', () => {
+        expect(interchangeGroup(0).level).toBe(1);
+        expect(interchangeGroup(9).level).toBe(4);
     });
-    it('difficultyLine clamps to 1..4', () => {
-        expect(difficultyLine(0).level).toBe(1);
-        expect(difficultyLine(9).level).toBe(4);
+
+    it('text and group pairs meet WCAG AA', () => {
+        for (const g of interchangeGroups) expect(ratio(g.text, g.fill)).toBeGreaterThanOrEqual(4.5);
+        expect(ratio(palette.light.text, palette.light.background)).toBeGreaterThanOrEqual(4.5);
+        expect(ratio(palette.dark.text, palette.dark.background)).toBeGreaterThanOrEqual(4.5);
+        expect(ratio(palette.light.onPrimary, palette.light.primary)).toBeGreaterThanOrEqual(4.5);
+        expect(ratio(palette.dark.onPrimary, palette.dark.primary)).toBeGreaterThanOrEqual(4.5);
+        expect(ratio(palette.light.onGameCrossword, palette.light.gameCrossword)).toBeGreaterThanOrEqual(4.5);
+        expect(ratio(palette.dark.onGameCrossword, palette.dark.gameCrossword)).toBeGreaterThanOrEqual(4.5);
+        expect(ratio(palette.light.premiumText, palette.light.premium)).toBeGreaterThanOrEqual(4.5);
+        expect(ratio(palette.dark.premiumText, palette.dark.premium)).toBeGreaterThanOrEqual(4.5);
+        expect(ratio(palette.light.tabInactive, palette.light.surface)).toBeGreaterThanOrEqual(4.5);
+        expect(ratio(palette.dark.tabInactive, palette.dark.surface)).toBeGreaterThanOrEqual(4.5);
+        expect(ratio(crosswordCells.cellIdleText, crosswordCells.cellIdleFill)).toBeGreaterThanOrEqual(4.5);
+        expect(ratio(crosswordCells.cellSelectedText, crosswordCells.cellSelectedFill)).toBeGreaterThanOrEqual(4.5);
+        expect(ratio(crosswordCells.cellCursor, crosswordCells.cellSelectedFill)).toBeGreaterThanOrEqual(4.5);
+        expect(ratio(crosswordCells.cellSelectedRing, crosswordCells.cellSelectedFill)).toBeGreaterThanOrEqual(3);
+        expect(ratio(palette.light.toastText, palette.light.toast)).toBeGreaterThanOrEqual(4.5);
     });
-    it('no state colour uses #D1D5DB', () => {
-        expect(Object.values(StateColors)).not.toContain('#D1D5DB');
+
+    it('does not use the retired tube-line colour set', () => {
+        const values = [
+            ...Object.values(palette.light),
+            ...Object.values(palette.dark),
+            ...interchangeGroups.flatMap((g) => [g.fill, g.text]),
+        ];
+        for (const hex of TFL) expect(values).not.toContain(hex);
     });
 });

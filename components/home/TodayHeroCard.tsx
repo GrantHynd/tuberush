@@ -1,5 +1,6 @@
+import { useTheme } from '@/hooks/useTheme';
 import { Card } from '@/components/ui/Card';
-import { Colors, GameColors, Radius, Spacing, TFL, Typography } from '@/constants/theme';
+import { type Palette, Radius, Spacing, Typography } from '@/constants/theme';
 import { formatCountdown, type TodayGameRow, type TodayRowState } from '@/lib/today-puzzles';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import React, { useEffect, useState } from 'react';
@@ -13,9 +14,9 @@ export interface TodayHeroCardProps {
 }
 
 const GAME_META = {
-    connections: { name: 'Interchange', icon: 'hub', color: GameColors.connections },
-    crossword: { name: 'Crossword', icon: 'grid-on', color: GameColors.crossword },
-} as const;
+    connections: { name: 'Interchange', icon: 'hub' as const, fill: 'gameInterchange' as const, ink: 'onGameInterchange' as const },
+    crossword: { name: 'Crossword', icon: 'grid-on' as const, fill: 'gameCrossword' as const, ink: 'onGameCrossword' as const },
+};
 
 const CTA: Partial<Record<TodayRowState, { label: string; outlined?: boolean }>> = {
     unplayed: { label: 'Play' },
@@ -39,6 +40,8 @@ function todayCaption(now: Date): string {
 }
 
 export function TodayHeroCard({ rows, nextPuzzleAt, loading }: TodayHeroCardProps) {
+    const { colors } = useTheme();
+    const styles = React.useMemo(() => makeStyles(colors), [colors]);
     const allDone = !loading && rows.length > 0 && rows.every((r) => r.state === 'completed');
     const anyDone = rows.some((r) => r.state === 'completed');
     const now = useMinuteTick(!!nextPuzzleAt && anyDone);
@@ -89,8 +92,8 @@ export function TodayHeroCard({ rows, nextPuzzleAt, loading }: TodayHeroCardProp
                               accessibilityState={{ disabled: !row.onPress }}
                               style={({ pressed }) => [styles.row, i > 0 && styles.divider, pressed && { opacity: 0.85 }]}
                           >
-                              <View style={[styles.swatch, { backgroundColor: meta.color }]}>
-                                  <MaterialIcons name={meta.icon} size={22} color="white" />
+                              <View style={[styles.swatch, { backgroundColor: colors[meta.fill] }]}>
+                                  <MaterialIcons name={meta.icon} size={22} color={colors[meta.ink]} />
                               </View>
                               <View style={styles.rowText}>
                                   <Text style={styles.gameName}>{meta.name}</Text>
@@ -108,7 +111,7 @@ export function TodayHeroCard({ rows, nextPuzzleAt, loading }: TodayHeroCardProp
                                       </Text>
                                   </View>
                               ) : row.state === 'completed' ? (
-                                  <MaterialIcons name="check-circle" size={28} color={TFL.green} testID="today-hero-tick" />
+                                  <MaterialIcons name="check-circle" size={28} color={colors.success} testID="today-hero-tick" />
                               ) : null}
                           </Pressable>
                       );
@@ -117,28 +120,31 @@ export function TodayHeroCard({ rows, nextPuzzleAt, loading }: TodayHeroCardProp
     );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Palette) {
+    return StyleSheet.create({
     card: { marginTop: Spacing.lg },
     titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
-    title: { ...Typography.h3 },
-    caption: { fontSize: 13, color: TFL.grey.dark },
+    title: { ...Typography.h3, color: colors.text },
+    caption: { fontSize: 13, color: colors.textSecondary },
     row: { flexDirection: 'row', alignItems: 'center', paddingVertical: Spacing.s12, gap: Spacing.s12, minHeight: 64 },
-    divider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: Colors.light.border },
+    divider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
     swatch: { width: 40, height: 40, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },
     rowText: { flex: 1, minWidth: 0 },
-    gameName: { ...Typography.body, fontWeight: '600' },
+    gameName: { ...Typography.body, fontWeight: '600', color: colors.text },
     cta: {
         minWidth: 88,
         minHeight: 44,
         paddingHorizontal: Spacing.md,
         borderRadius: Radius.md,
-        backgroundColor: TFL.blue,
+        backgroundColor: colors.primary,
         alignItems: 'center',
         justifyContent: 'center',
     },
-    ctaOutlined: { backgroundColor: 'transparent', borderWidth: 1.5, borderColor: TFL.blue },
-    ctaText: { color: 'white', fontWeight: '600', fontSize: 16 },
-    ctaTextOutlined: { color: TFL.blue },
-    skeleton: { backgroundColor: '#E5E7EB' },
-    skeletonLine: { height: 12, borderRadius: Radius.sm, backgroundColor: '#E5E7EB' },
+    ctaOutlined: { backgroundColor: 'transparent', borderWidth: 1.5, borderColor: colors.primary },
+    ctaText: { color: colors.onPrimary, fontWeight: '600', fontSize: 16 },
+    ctaTextOutlined: { color: colors.primary },
+    skeleton: { backgroundColor: colors.border },
+    skeletonLine: { height: 12, borderRadius: Radius.sm, backgroundColor: colors.border },
 });
+}
+

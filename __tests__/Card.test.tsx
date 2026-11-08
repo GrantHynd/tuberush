@@ -10,7 +10,7 @@ describe('design tokens (TUB-272)', () => {
         expect([Spacing.xs, Spacing.sm, Spacing.s12, Spacing.md, Spacing.lg]).toEqual([4, 8, 12, 16, 24]);
         expect(Radius).toMatchObject({ sm: 4, md: 8, lg: 12 });
         expect(Layout).toMatchObject({ screenPadding: 16, cardGap: 12, cardPadding: 16 });
-        expect(CardSurface).toEqual({ borderWidth: 1, borderColor: '#E5E7EB' });
+        expect(CardSurface).toEqual({ borderWidth: 1, borderColor: '#7A8B85' });
     });
 });
 

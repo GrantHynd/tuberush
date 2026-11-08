@@ -1,3 +1,4 @@
+import { useTheme } from '@/hooks/useTheme';
 import React from 'react';
 import {
     View,
@@ -7,7 +8,7 @@ import {
     StyleSheet,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { Colors, TFL, Spacing } from '@/constants/theme';
+import { type Palette, Spacing } from '@/constants/theme';
 
 interface LocationFilterTabsProps {
     cities: string[];
@@ -31,6 +32,8 @@ export function LocationFilterTabs({
     showBackToLondon,
     onBackToLondon,
 }: LocationFilterTabsProps) {
+    const { colors } = useTheme();
+    const styles = React.useMemo(() => makeStyles(colors), [colors]);
     return (
         <View>
             <ScrollView
@@ -84,13 +87,13 @@ export function LocationFilterTabs({
                     <MaterialIcons
                         name="location-on"
                         size={16}
-                        color={TFL.blue}
+                        color={colors.primary}
                     />
                     <Text style={styles.boroughText}>View by Borough</Text>
                     <MaterialIcons
                         name="chevron-right"
                         size={18}
-                        color={TFL.blue}
+                        color={colors.primary}
                     />
                 </TouchableOpacity>
             )}
@@ -109,7 +112,8 @@ export function LocationFilterTabs({
     );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Palette) {
+    return StyleSheet.create({
     tabRow: {
         flexDirection: 'row',
         gap: 8,
@@ -121,20 +125,20 @@ const styles = StyleSheet.create({
         paddingVertical: 8,
         borderRadius: 20,
         borderWidth: 1,
-        borderColor: Colors.light.border,
-        backgroundColor: Colors.light.background,
+        borderColor: colors.border,
+        backgroundColor: colors.background,
     },
     tabActive: {
-        backgroundColor: TFL.blue,
-        borderColor: TFL.blue,
+        backgroundColor: colors.primary,
+        borderColor: colors.primary,
     },
     tabText: {
         fontSize: 14,
         fontWeight: '600',
-        color: Colors.light.text,
+        color: colors.text,
     },
     tabTextActive: {
-        color: TFL.white,
+        color: colors.onPrimary,
     },
     boroughButton: {
         flexDirection: 'row',
@@ -146,7 +150,7 @@ const styles = StyleSheet.create({
     boroughText: {
         fontSize: 14,
         fontWeight: '600',
-        color: TFL.blue,
+        color: colors.primary,
     },
     backLink: {
         paddingVertical: Spacing.sm,
@@ -155,6 +159,8 @@ const styles = StyleSheet.create({
     backLinkText: {
         fontSize: 14,
         fontWeight: '600',
-        color: TFL.blue,
+        color: colors.primary,
     },
 });
+}
+

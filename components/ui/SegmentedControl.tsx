@@ -1,6 +1,7 @@
+import { useTheme } from '@/hooks/useTheme';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { Colors, Radius, TFL } from '@/constants/theme';
+import { type Palette, Radius } from '@/constants/theme';
 
 export interface Segment<T extends string> {
     value: T;
@@ -17,6 +18,8 @@ export interface SegmentedControlProps<T extends string> {
 
 /** Shared tab-style control (TUB-260, TUB-265). Selection = fill + weight + colour, never colour alone. */
 export function SegmentedControl<T extends string>({ segments, value, onChange, testID }: SegmentedControlProps<T>) {
+    const { colors } = useTheme();
+    const styles = React.useMemo(() => makeStyles(colors), [colors]);
     return (
         <View style={styles.track} accessibilityRole="tablist" testID={testID}>
             {segments.map((s) => {
@@ -42,15 +45,16 @@ export function SegmentedControl<T extends string>({ segments, value, onChange, 
     );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Palette) {
+    return StyleSheet.create({
     track: {
         flexDirection: 'row',
         height: 36,
         padding: 2,
         borderRadius: Radius.md,
         borderWidth: 1,
-        borderColor: Colors.light.border,
-        backgroundColor: Colors.light.card,
+        borderColor: colors.border,
+        backgroundColor: colors.background,
     },
     segment: {
         flex: 1,
@@ -61,7 +65,9 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: 'transparent',
     },
-    selected: { backgroundColor: '#FFFFFF', borderColor: Colors.light.border },
-    label: { fontSize: 14, fontWeight: '500', color: TFL.grey.dark },
-    labelSelected: { fontWeight: '600', color: TFL.blue },
+    selected: { backgroundColor: colors.surface, borderColor: colors.border },
+    label: { fontSize: 14, fontWeight: '500', color: colors.textSecondary },
+    labelSelected: { fontWeight: '600', color: colors.primary },
 });
+}
+

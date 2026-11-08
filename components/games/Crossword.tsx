@@ -1,11 +1,11 @@
 import { ClueBar } from '@/components/game-ui/ClueBar';
 import { GameKeyboard } from '@/components/game-ui/GameKeyboard';
-import { FontScaleCap, GameColors, StateColors, TFL } from '@/constants/theme';
+import { FontScaleCap } from '@/constants/theme';
+import { useTheme } from '@/hooks/useTheme';
 import {
     MIN_TARGET_CELL,
     MIN_CELL,
     cellSize as computeCellSize,
-    gridExtent,
     letterSize,
     numberSize,
     rawCellSize,
@@ -53,19 +53,28 @@ interface GridCellProps {
     accessibilityLabel: string;
     onPress: (row: number, col: number) => void;
     onAdjust: (delta: 1 | -1) => void;
+    /** 1pt playable outline. Omitted sides are shared with a neighbour. */
+    outline: { borderTopWidth: number; borderRightWidth: number; borderBottomWidth: number; borderLeftWidth: number };
 }
 
 const GridCell = React.memo(function GridCell({
     cell, rowIndex, colIndex, size, isSelected, isActiveWord, isError,
-    userAnswer, disabled, pressable, accessibilityLabel, onPress, onAdjust,
+    userAnswer, disabled, pressable, accessibilityLabel, onPress, onAdjust, outline,
 }: GridCellProps) {
+    const { colors } = useTheme();
+    const fill = cell.isBlack
+        ? colors.cellBlockedFill
+        : isSelected
+            ? colors.cellSelectedFill
+            : isActiveWord
+                ? colors.cellWordFill
+                : colors.cellIdleFill;
+    const ink = isSelected ? colors.cellSelectedText : isActiveWord ? colors.cellWordText : colors.cellIdleText;
     const style = [
         styles.cell,
-        { width: size, height: size },
-        cell.isBlack && styles.blackCell,
-        isActiveWord && !isSelected && styles.activeWordCell,
-        isSelected && styles.selectedCell,
-        isError && styles.errorCell,
+        { width: size, height: size, backgroundColor: fill },
+        !cell.isBlack && outline,
+        !cell.isBlack && { borderColor: isError ? colors.error : colors.cellOutline },
     ];
     if (cell.isBlack) {
         return <View style={style} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />;
@@ -74,7 +83,7 @@ const GridCell = React.memo(function GridCell({
         <>
             {cell.number != null && (
                 <Text
-                    style={[styles.cellNumber, { fontSize: numberSize(size) }, isSelected && styles.onSelected]}
+                    style={[styles.cellNumber, { fontSize: numberSize(size), color: ink }]}
                     maxFontSizeMultiplier={FontScaleCap.gridLetter}
                     importantForAccessibility="no"
                 >
@@ -82,14 +91,23 @@ const GridCell = React.memo(function GridCell({
                 </Text>
             )}
             <Text
-                style={[styles.cellLetter, { fontSize: letterSize(size) }, isSelected && styles.onSelected]}
+                style={[styles.cellLetter, { fontSize: letterSize(size), color: ink }]}
                 maxFontSizeMultiplier={FontScaleCap.gridLetter}
             >
                 {userAnswer}
             </Text>
+            {isSelected ? (
+                <>
+                    <View
+                        pointerEvents="none"
+                        style={[styles.selectedRing, { borderColor: colors.cellSelectedRing }]}
+                    />
+                    <View pointerEvents="none" style={[styles.cursor, { backgroundColor: colors.cellCursor }]} />
+                </>
+            ) : null}
             {isError && (
-                <View style={styles.errIcon} accessibilityElementsHidden importantForAccessibility="no">
-                    <MaterialIcons name="close" size={10} color="#FFFFFF" />
+                <View style={[styles.errIcon, { backgroundColor: colors.error }]} accessibilityElementsHidden importantForAccessibility="no">
+                    <MaterialIcons name="close" size={10} color={colors.onError} />
                 </View>
             )}
         </>
@@ -377,10 +395,10 @@ export function Crossword({
         if (cellToClue[keyOf(selectedCell.row, selectedCell.col)]?.[other]) setDirection(other);
     };
 
-    const width = gridExtent(size, cols);
+    const { colors } = useTheme();
     const gridNode = (
         <View
-            style={[styles.gridContainer, { width: width + 4 }]}
+            style={[styles.gridContainer, { backgroundColor: colors.cellBlockedFill }]}
             accessibilityLabel={`Crossword grid, ${rows} rows by ${cols} columns`}
             testID="crossword-grid"
         >
@@ -405,6 +423,7 @@ export function Crossword({
                                 accessibilityLabel={getCellLabel(r, c, ans)}
                                 onPress={selectCell}
                                 onAdjust={moveWithinWord}
+                                outline={playableOutline(grid, r, c)}
                             />
                         );
                     })}
@@ -436,7 +455,7 @@ export function Crossword({
                         label={`${active.clue.number} ${active.dir === 'across' ? 'Across' : 'Down'}`}
                         clue={active.clue.clue}
                         length={active.clue.length}
-                        lineColor={GameColors.crossword}
+                        lineColor={colors.gameCrossword}
                         onPrev={() => goToClue(-1)}
                         onNext={() => goToClue(1)}
                         onToggleDirection={toggleDirection}
@@ -460,8 +479,19 @@ export function Crossword({
     );
 }
 
-const NAVY = TFL.blue; // #003688
-const ACTIVE_WORD_BG = '#D6DFFB';
+/** 1pt outline on the outer edges of a playable cell. Shared edges are drawn once. */
+export function playableOutline(grid: { isBlack: boolean }[][], r: number, c: number) {
+    const open = (rr: number, cc: number) => !!grid[rr]?.[cc] && !grid[rr][cc].isBlack;
+    if (!open(r, c)) {
+        return { borderTopWidth: 0, borderRightWidth: 0, borderBottomWidth: 0, borderLeftWidth: 0 };
+    }
+    return {
+        borderTopWidth: open(r - 1, c) ? 0 : 1,
+        borderLeftWidth: open(r, c - 1) ? 0 : 1,
+        borderBottomWidth: 1,
+        borderRightWidth: 1,
+    };
+}
 
 const styles = StyleSheet.create({
     container: { flex: 1 },
@@ -474,29 +504,33 @@ const styles = StyleSheet.create({
     },
     gridAreaStatic: { alignItems: 'center', paddingHorizontal: SIDE_MARGIN, paddingTop: 8 },
     gridContainer: {
-        borderWidth: 2,
-        borderColor: StateColors.gridLine,
-        backgroundColor: StateColors.gridLine,
-        borderRadius: 12,
+        borderRadius: 4,
         overflow: 'hidden',
-        padding: 1,
-        gap: 1,
     },
-    row: { flexDirection: 'row', gap: 1 },
+    row: { flexDirection: 'row' },
     cell: {
-        backgroundColor: '#FFFFFF',
         position: 'relative',
         alignItems: 'center',
         justifyContent: 'center',
     },
-    blackCell: { backgroundColor: '#1C1C1F' },
-    // TUB-295/298: tint alone is 1.33:1, so the active word also gets a 2px navy outline (11:1).
-    activeWordCell: { backgroundColor: ACTIVE_WORD_BG, borderWidth: 2, borderColor: NAVY },
-    selectedCell: { backgroundColor: NAVY, borderWidth: 3, borderColor: StateColors.cursorRing },
-    errorCell: { borderWidth: 3, borderColor: StateColors.error },
-    cellNumber: { position: 'absolute', top: 1, left: 3, color: '#374151', fontWeight: '600' },
-    cellLetter: { fontWeight: '700', color: StateColors.ink },
-    onSelected: { color: '#FFFFFF' },
+    selectedRing: {
+        position: 'absolute',
+        top: 2,
+        left: 2,
+        right: 2,
+        bottom: 2,
+        borderWidth: 1,
+        borderRadius: 2,
+    },
+    cursor: {
+        position: 'absolute',
+        left: '18%',
+        right: '18%',
+        bottom: 6,
+        height: 2,
+    },
+    cellNumber: { position: 'absolute', top: 1, left: 3, fontWeight: '600' },
+    cellLetter: { fontWeight: '700' },
     errIcon: {
         position: 'absolute',
         top: 2,
@@ -504,7 +538,6 @@ const styles = StyleSheet.create({
         width: 14,
         height: 14,
         borderRadius: 7,
-        backgroundColor: StateColors.error,
         alignItems: 'center',
         justifyContent: 'center',
     },

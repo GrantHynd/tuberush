@@ -1,5 +1,6 @@
+import { useTheme } from '@/hooks/useTheme';
 import type { CrosswordCell } from '@/types/game';
-import { TFL } from '@/constants/theme';
+import { type Palette } from '@/constants/theme';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -16,6 +17,8 @@ export const CrosswordGridPreview = React.memo(function CrosswordGridPreview({
     grid,
     size = 36,
 }: CrosswordGridPreviewProps) {
+    const { colors } = useTheme();
+    const styles = React.useMemo(() => makeStyles(colors), [colors]);
     const rows = grid.length;
     const cols = grid[0]?.length ?? 0;
     if (rows === 0 || cols === 0) return null;
@@ -44,7 +47,8 @@ export const CrosswordGridPreview = React.memo(function CrosswordGridPreview({
     );
 });
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Palette) {
+    return StyleSheet.create({
     container: {
         borderRadius: 2,
         overflow: 'hidden',
@@ -53,13 +57,14 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
     },
     cell: {
-        borderWidth: 0.25,
-        borderColor: TFL.grey.medium,
+        borderWidth: 0,
     },
     blackCell: {
-        backgroundColor: '#333',
+        backgroundColor: colors.cellBlockedFill,
     },
     whiteCell: {
-        backgroundColor: TFL.grey.light,
+        backgroundColor: colors.cellIdleFill,
     },
 });
+}
+

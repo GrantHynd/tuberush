@@ -1,31 +1,41 @@
-import { difficultyLine, FontScaleCap, FontFamily, Size, StateColors } from '@/constants/theme';
-import React from 'react';
+import { FontFamily, FontScaleCap, interchangeGroup, Size } from '@/constants/theme';
+import { useTheme } from '@/hooks/useTheme';
+import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 export interface LineRailProps {
     level: number;
     category: string;
     items: string[];
-    /** found = "✓ FOUND", revealed = dashed rail + "REVEALED" chip, none = plain (in-play solved). */
+    /** found = "✓ FOUND", revealed = dashed border + "REVEALED" chip, none = plain (in-play solved). */
     marker?: 'found' | 'revealed' | 'none';
     testID?: string;
 }
 
-/** A Connections group drawn as a numbered tube line: badge, rail and four station dots. */
+/**
+ * A solved Interchange group: numbered square badge, category label, the four
+ * words, and a pip count equal to the group number. Fill tone is not the identifier.
+ */
 export function LineRail({ level, category, items, marker = 'none', testID }: LineRailProps) {
-    const line = difficultyLine(level);
+    const { colors } = useTheme();
+    const line = interchangeGroup(level);
     const revealed = marker === 'revealed';
     const stateText = marker === 'found' ? ', found' : revealed ? ', revealed' : '';
+    const styles = useMemo(() => makeStyles(colors.border, line.text), [colors.border, line.text]);
     return (
         <View
             testID={testID}
             accessible
             accessibilityLabel={`Group ${line.level}, ${category}${stateText}: ${items.join(', ')}`}
-            style={styles.card}
+            style={[
+                styles.card,
+                { backgroundColor: line.fill, borderColor: colors.border },
+                revealed && styles.revealed,
+            ]}
         >
             <View style={styles.head}>
-                <View style={[styles.num, { backgroundColor: line.color }]}>
-                    <Text style={[styles.numText, { color: line.text }]} maxFontSizeMultiplier={1.4}>
+                <View style={[styles.num, { borderColor: line.text }]}>
+                    <Text style={styles.numText} maxFontSizeMultiplier={1.4}>
                         {line.level}
                     </Text>
                 </View>
@@ -38,77 +48,70 @@ export function LineRail({ level, category, items, marker = 'none', testID }: Li
                     </Text>
                 ) : null}
                 {revealed ? (
-                    <View style={styles.rv}>
+                    <View style={[styles.rv, { borderColor: line.text }]}>
                         <Text style={styles.rvText} maxFontSizeMultiplier={FontScaleCap.tile}>
                             REVEALED
                         </Text>
                     </View>
                 ) : null}
             </View>
-            <View style={styles.railWrap}>
-                {revealed ? (
-                    <View style={styles.dashedRail}>
-                        {Array.from({ length: 16 }).map((_, i) => (
-                            <View key={i} style={[styles.dash, { backgroundColor: line.color }]} />
-                        ))}
-                    </View>
-                ) : (
-                    <View style={[styles.rail, { backgroundColor: line.color }]} />
-                )}
-            </View>
-            <View style={styles.stops}>
-                {items.map((it) => (
-                    <View key={it} style={styles.stop}>
-                        <View style={[styles.dot, { borderColor: line.color }]} />
-                        <Text style={styles.stopText} maxFontSizeMultiplier={FontScaleCap.tile}>
-                            {it}
-                        </Text>
-                    </View>
+            <Text style={styles.words} maxFontSizeMultiplier={FontScaleCap.tile}>
+                {items.map((item, index) => (
+                    <Text key={item}>
+                        {index > 0 ? ' · ' : ''}
+                        {item}
+                    </Text>
+                ))}
+            </Text>
+            <View style={styles.pips} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+                {Array.from({ length: line.level }).map((_, i) => (
+                    <View key={i} style={[styles.pip, { backgroundColor: line.text }]} />
                 ))}
             </View>
         </View>
     );
 }
 
-const styles = StyleSheet.create({
-    card: {
-        borderWidth: 1,
-        borderColor: StateColors.hairline,
-        borderRadius: Size.radius,
-        paddingTop: 10,
-        paddingBottom: 8,
-        paddingHorizontal: 16,
-        backgroundColor: '#FFFFFF',
-    },
-    head: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-    num: { width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
-    numText: { fontFamily: FontFamily.bold, fontSize: 12, fontWeight: '700' },
-    name: { fontFamily: FontFamily.bold, fontSize: 14, fontWeight: '700', color: StateColors.ink, flexShrink: 1 },
-    ok: { marginLeft: 'auto', fontFamily: FontFamily.bold, fontSize: 11, fontWeight: '700', color: StateColors.found },
-    rv: {
-        marginLeft: 'auto',
-        borderWidth: 1.5,
-        borderStyle: 'dashed',
-        borderColor: StateColors.inactiveText,
-        borderRadius: 999,
-        paddingHorizontal: 8,
-        paddingVertical: 1,
-        backgroundColor: '#FFFFFF',
-    },
-    rvText: { fontFamily: FontFamily.bold, fontSize: 11, fontWeight: '700', color: '#111111' },
-    railWrap: { marginTop: 10, marginHorizontal: 6 },
-    rail: { height: 6, borderRadius: 3 },
-    dashedRail: { height: 6, flexDirection: 'row', justifyContent: 'space-between' },
-    dash: { width: '4.5%', height: 6, borderRadius: 1 },
-    stops: { flexDirection: 'row', justifyContent: 'space-between', marginTop: -10 },
-    stop: { width: '25%', alignItems: 'center' },
-    dot: { width: 14, height: 14, borderRadius: 7, backgroundColor: '#FFFFFF', borderWidth: 3 },
-    stopText: {
-        fontFamily: FontFamily.semibold,
-        fontSize: 12,
-        fontWeight: '600',
-        color: StateColors.ink,
-        marginTop: 3,
-        textAlign: 'center',
-    },
-});
+function makeStyles(border: string, ink: string) {
+    return StyleSheet.create({
+        card: {
+            borderWidth: 1,
+            borderColor: border,
+            borderRadius: Size.radius,
+            paddingTop: 10,
+            paddingBottom: 10,
+            paddingHorizontal: 16,
+        },
+        revealed: { borderStyle: 'dashed', borderWidth: 1.5 },
+        head: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+        num: {
+            width: 22,
+            height: 22,
+            borderRadius: 4,
+            borderWidth: 1.5,
+            alignItems: 'center',
+            justifyContent: 'center',
+        },
+        numText: { fontFamily: FontFamily.bold, fontSize: 12, fontWeight: '700', color: ink },
+        name: { fontFamily: FontFamily.bold, fontSize: 14, fontWeight: '700', color: ink, flexShrink: 1 },
+        ok: { marginLeft: 'auto', fontFamily: FontFamily.bold, fontSize: 11, fontWeight: '700', color: ink },
+        rv: {
+            marginLeft: 'auto',
+            borderWidth: 1.5,
+            borderStyle: 'dashed',
+            borderRadius: 999,
+            paddingHorizontal: 8,
+            paddingVertical: 1,
+        },
+        rvText: { fontFamily: FontFamily.bold, fontSize: 11, fontWeight: '700', color: ink },
+        words: {
+            fontFamily: FontFamily.semibold,
+            fontSize: 13,
+            fontWeight: '600',
+            color: ink,
+            marginTop: 8,
+        },
+        pips: { flexDirection: 'row', gap: 4, marginTop: 8 },
+        pip: { width: 8, height: 8, borderRadius: 2 },
+    });
+}
