@@ -1,4 +1,5 @@
 import { FontScaleCap, GameType, Size } from '@/constants/theme';
+import { decorativeIconProps } from '@/lib/a11y';
 import { useTheme } from '@/hooks/useTheme';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import React, { useMemo } from 'react';
@@ -63,13 +64,13 @@ export function Tile({ label, state = 'default', onPress, accessibilityHint, sty
                 {label}
             </Text>
             {selected ? (
-                <View style={styles.tick} testID={testID ? `${testID}-tick` : undefined}>
-                    <MaterialIcons name="check" size={14} color={colors.onPrimary} />
+                <View style={styles.tick} testID={testID ? `${testID}-tick` : undefined} {...decorativeIconProps}>
+                    <MaterialIcons name="check" size={14} color={colors.onPrimary} {...decorativeIconProps} />
                 </View>
             ) : null}
             {state === 'error' ? (
-                <View style={styles.errIcon} accessibilityElementsHidden importantForAccessibility="no">
-                    <MaterialIcons name="close" size={12} color={colors.onError} />
+                <View style={styles.errIcon} {...decorativeIconProps}>
+                    <MaterialIcons name="close" size={12} color={colors.onError} {...decorativeIconProps} />
                 </View>
             ) : null}
         </Pressable>

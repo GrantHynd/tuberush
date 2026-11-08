@@ -12,6 +12,7 @@ import {
     Alert,
     KeyboardAvoidingView,
     Platform,
+    ScrollView,
     StyleSheet,
     Text,
     TextInput,
@@ -68,14 +69,32 @@ export default function AuthScreen() {
             style={styles.container}
             testID="auth-screen"
         >
+            <ScrollView
+                testID="auth-scroll"
+                contentContainerStyle={styles.scrollContent}
+                keyboardShouldPersistTaps="handled"
+                bounces={false}
+            >
             <View style={styles.content}>
                 {/* Logo */}
                 <View style={styles.logoContainer}>
                     <BrandMark size={64} testID="auth-brand-mark" />
                 </View>
 
-                <Text style={styles.title}>TubeRush</Text>
-                <Text style={styles.subtitle}>
+                <Text
+                    style={styles.title}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.35}
+                >
+                    TubeRush
+                </Text>
+                <Text
+                    style={styles.subtitle}
+                    numberOfLines={2}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.35}
+                >
                     {isSignUp ? 'Create your account' : 'Welcome back!'}
                 </Text>
 
@@ -130,11 +149,19 @@ export default function AuthScreen() {
                         style={styles.button}
                         onPress={handleSubmit}
                         disabled={loading}
+                        accessibilityRole="button"
+                        accessibilityLabel={isSignUp ? 'Sign Up' : 'Sign In'}
+                        accessibilityState={{ disabled: loading, busy: loading }}
                     >
                         {loading ? (
                             <ActivityIndicator color={colors.onPrimary} />
                         ) : (
-                            <Text style={styles.buttonText}>
+                            <Text
+                                style={styles.buttonText}
+                                numberOfLines={1}
+                                adjustsFontSizeToFit
+                                minimumFontScale={0.5}
+                            >
                                 {isSignUp ? 'Sign Up' : 'Sign In'}
                             </Text>
                         )}
@@ -170,7 +197,12 @@ export default function AuthScreen() {
                         onPress={() => setIsSignUp(!isSignUp)}
                         disabled={loading}
                     >
-                        <Text style={styles.switchText}>
+                        <Text
+                            style={styles.switchText}
+                            numberOfLines={3}
+                            adjustsFontSizeToFit
+                            minimumFontScale={0.5}
+                        >
                             {isSignUp
                                 ? 'Already have an account? Sign In'
                                 : "Don't have an account? Sign Up"}
@@ -178,6 +210,7 @@ export default function AuthScreen() {
                     </TouchableOpacity>
                 </View>
             </View>
+            </ScrollView>
         </KeyboardAvoidingView>
     );
 }
@@ -188,10 +221,14 @@ function makeStyles(colors: Palette) {
         flex: 1,
         backgroundColor: colors.background,
     },
+    scrollContent: {
+        flexGrow: 1,
+    },
     content: {
-        flex: 1,
+        flexGrow: 1,
         justifyContent: 'center',
         paddingHorizontal: 30,
+        paddingVertical: 24,
     },
     logoContainer: {
         alignItems: 'center',
@@ -203,6 +240,7 @@ function makeStyles(colors: Palette) {
         textAlign: 'center',
         color: colors.text,
         marginBottom: 8,
+        width: '100%',
     },
     subtitle: {
         fontSize: 22,
@@ -210,6 +248,7 @@ function makeStyles(colors: Palette) {
         marginBottom: 32,
         color: colors.primary,
         fontWeight: '500',
+        width: '100%',
     },
     form: {
         gap: 14,
@@ -240,12 +279,16 @@ function makeStyles(colors: Palette) {
         color: colors.onPrimary,
         fontSize: 18,
         fontWeight: '600',
+        width: '100%',
+        textAlign: 'center',
     },
     switchButton: {
         paddingVertical: 10,
         alignItems: 'center',
     },
     switchText: {
+        width: '100%',
+        textAlign: 'center',
         color: colors.primary,
         fontSize: 14,
     },

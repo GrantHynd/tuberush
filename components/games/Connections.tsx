@@ -5,7 +5,7 @@ import { FeedbackToast } from "@/components/game-ui/FeedbackToast";
 import { LineRail } from "@/components/game-ui/LineRail";
 import { Tile, type TileState } from "@/components/game-ui/Tile";
 import { useReduceMotion } from "@/hooks/useReduceMotion";
-import { announce } from "@/lib/a11y";
+import { announce, decorativeIconProps } from "@/lib/a11y";
 import { ConnectionsState } from "@/types/game";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import * as Haptics from "expo-haptics";
@@ -349,7 +349,7 @@ export function Connections({
           accessibilityState={{ disabled: false }}
           testID="btn-shuffle"
         >
-          <MaterialIcons name="shuffle" size={18} color={colors.text} />
+          <MaterialIcons name="shuffle" size={18} color={colors.text} {...decorativeIconProps} />
           <Text style={styles.btnText} maxFontSizeMultiplier={FontScaleCap.chrome}>Shuffle</Text>
         </Pressable>
 

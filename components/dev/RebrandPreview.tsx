@@ -7,7 +7,7 @@ import { TodayHeroCard } from '@/components/home/TodayHeroCard';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { CROSSWORD_DATA } from '@/constants/CrosswordData';
 import { CROSSWORD_9X9_A } from '@/constants/fixtures/crossword-9x9-a';
-import { interchangeGroups } from '@/constants/theme';
+import { FontScaleCap, interchangeGroups } from '@/constants/theme';
 import { useTheme } from '@/hooks/useTheme';
 import type { ConnectionsPuzzle } from '@/constants/ConnectionsData';
 import type { ConnectionsState, CrosswordPuzzle, CrosswordState } from '@/types/game';
@@ -28,6 +28,7 @@ const VIEWS = [
     'crossword',
     'crossword-selected',
     'crossword-error',
+    'crossword-check-disabled',
     'crossword-9',
     'crossword-finished',
 ] as const;
@@ -175,7 +176,11 @@ export default function RebrandPreviewScreen() {
                     subtitle="1st Class · 25 Oct 2026"
                     lineColor={colors.gameCrossword}
                     onBack={() => {}}
-                    right={<Text style={{ color: colors.text }}>1:24</Text>}
+                    right={
+                        <Text style={{ color: colors.text, fontSize: 14, fontWeight: '600' }} maxFontSizeMultiplier={FontScaleCap.chrome}>
+                            1:24
+                        </Text>
+                    }
                 />
                 {finished ? (
                     <ScrollView contentContainerStyle={styles.pad}>
@@ -198,6 +203,7 @@ export default function RebrandPreviewScreen() {
                         disabled={view === 'crossword'}
                         errorCells={wrong?.errors}
                         onCheck={() => {}}
+                        checkDisabled={view === 'crossword-check-disabled'}
                     />
                 )}
             </View>

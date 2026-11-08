@@ -45,7 +45,7 @@ describe('TUB-295 accessibility', () => {
         expect(tile.props.accessibilityLabel).toBe('A1');
         await fireEvent.press(tile);
         expect(r.getByTestId('tile-A1').props.accessibilityState.selected).toBe(true);
-        expect(r.getByTestId('tile-A1-tick')).toBeTruthy();
+        expect(r.getByTestId('tile-A1-tick', { includeHiddenElements: true })).toBeTruthy();
         expect(spy).toHaveBeenCalledWith('1 of 4 selected');
         expect(r.getByText('Submit 1/4')).toBeTruthy();
     });

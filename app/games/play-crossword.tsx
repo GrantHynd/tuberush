@@ -8,10 +8,10 @@ import { FinishedGameView, type FinishedStat } from '@/components/game-ui/Finish
 import { useUserStats } from '@/hooks/useUserStats';
 import { GameHeader } from '@/components/game-ui/GameHeader';
 import { FeedbackToast } from '@/components/game-ui/FeedbackToast';
-import { announce } from '@/lib/a11y';
+import { announce, decorativeIconProps } from '@/lib/a11y';
 import { wrongLettersMessage } from '@/lib/crossword-feedback';
 import { Leaderboard } from '@/components/ui/Leaderboard';
-import { type Palette, Layout, Spacing, Typography } from '@/constants/theme';
+import { type Palette, FontScaleCap, Layout, Spacing, Typography } from '@/constants/theme';
 import { getCustomPuzzle, saveCustomPuzzleScore } from '@/lib/custom-puzzles';
 import { formatScore } from '@/lib/display-utils';
 import { capture } from '@/lib/posthog';
@@ -468,10 +468,14 @@ export default function PlayCrossword() {
                             accessibilityLabel="Share result"
                             testID="header-share"
                         >
-                            <MaterialIcons name="ios-share" size={22} color={colors.text} />
+                            <MaterialIcons name="ios-share" size={22} color={colors.text} {...decorativeIconProps} />
                         </TouchableOpacity>
                     ) : state.startTime ? (
-                        <Text style={styles.headerTimer} accessibilityLabel={`Time ${timer.formatted}`}>
+                        <Text
+                            style={styles.headerTimer}
+                            maxFontSizeMultiplier={FontScaleCap.chrome}
+                            accessibilityLabel={`Time ${timer.formatted}`}
+                        >
                             {timer.formatted}
                         </Text>
                     ) : undefined

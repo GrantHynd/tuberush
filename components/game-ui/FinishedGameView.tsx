@@ -1,7 +1,7 @@
 import { FontFamily, FontScaleCap, GameType, Size } from '@/constants/theme';
 import { useTheme } from '@/hooks/useTheme';
 import { useReduceMotion } from '@/hooks/useReduceMotion';
-import { announce } from '@/lib/a11y';
+import { announce, decorativeIconProps } from '@/lib/a11y';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AccessibilityInfo, Animated, findNodeHandle, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -147,7 +147,7 @@ export function FinishedGameView({
                             testID={`${testID}-leaderboard`}
                             style={({ pressed }) => [styles.btn, pressed && styles.pressed]}
                         >
-                            <MaterialIcons name="leaderboard" size={18} color={colors.text} />
+                            <MaterialIcons name="leaderboard" size={18} color={colors.text} {...decorativeIconProps} />
                             <Text style={styles.btnText} maxFontSizeMultiplier={FontScaleCap.chrome}>
                                 Leaderboard
                             </Text>
@@ -161,7 +161,7 @@ export function FinishedGameView({
                             testID={`${testID}-share`}
                             style={({ pressed }) => [styles.btn, pressed && styles.pressed]}
                         >
-                            <MaterialIcons name="ios-share" size={18} color={colors.text} />
+                            <MaterialIcons name="ios-share" size={18} color={colors.text} {...decorativeIconProps} />
                             <Text style={styles.btnText} maxFontSizeMultiplier={FontScaleCap.chrome}>
                                 Share
                             </Text>

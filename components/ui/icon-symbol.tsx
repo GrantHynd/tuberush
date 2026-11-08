@@ -1,5 +1,6 @@
 // Fallback for using MaterialIcons on Android and web.
 
+import { decorativeIconProps } from '@/lib/a11y';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { SymbolWeight } from 'expo-symbols';
 import { ComponentProps } from 'react';
@@ -45,5 +46,5 @@ export function IconSymbol({
   style?: StyleProp<TextStyle>;
   weight?: SymbolWeight;
 }) {
-  return <MaterialIcons color={color} size={size} name={MAPPING[name]} style={style} />;
+  return <MaterialIcons color={color} size={size} name={MAPPING[name]} style={style} {...decorativeIconProps} />;
 }

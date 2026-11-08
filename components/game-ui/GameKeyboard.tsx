@@ -1,5 +1,6 @@
 import { FontFamily, FontScaleCap, Size } from '@/constants/theme';
 import { useTheme } from '@/hooks/useTheme';
+import { decorativeIconProps } from '@/lib/a11y';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import React, { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -72,7 +73,7 @@ export function GameKeyboard({
                             testID="key-backspace"
                             style={({ pressed }) => [keyStyle, styles.wide, pressed && styles.pressed]}
                         >
-                            <MaterialIcons name="backspace" size={20} color={colors.text} />
+                            <MaterialIcons name="backspace" size={20} color={colors.text} {...decorativeIconProps} />
                         </Pressable>
                     ) : null}
                     {row.map((k) => (
@@ -84,7 +85,14 @@ export function GameKeyboard({
                             testID={`key-${k}`}
                             style={({ pressed }) => [keyStyle, pressed && styles.pressed]}
                         >
-                            <Text style={styles.keyText} maxFontSizeMultiplier={FontScaleCap.chrome}>
+                            <Text
+                                style={styles.keyText}
+                                maxFontSizeMultiplier={FontScaleCap.chrome}
+                                numberOfLines={1}
+                                adjustsFontSizeToFit
+                                minimumFontScale={0.55}
+                                {...decorativeIconProps}
+                            >
                                 {k}
                             </Text>
                         </Pressable>
@@ -108,6 +116,10 @@ export function GameKeyboard({
                             <Text
                                 style={[styles.checkText, checkDisabled && styles.checkTextDisabled]}
                                 maxFontSizeMultiplier={FontScaleCap.chrome}
+                                numberOfLines={1}
+                                adjustsFontSizeToFit
+                                minimumFontScale={0.65}
+                                {...decorativeIconProps}
                             >
                                 {checkLabel}
                             </Text>
@@ -142,7 +154,9 @@ function makeStyles(c: {
             borderColor: c.border,
         },
         wide: { maxWidth: 52, flex: 1.4 },
-        keyText: { fontFamily: FontFamily.medium, fontSize: 20, fontWeight: '500', color: c.ink },
+        keyText: { fontFamily: FontFamily.medium, fontSize: 20, fontWeight: '500', color: c.ink, width: '100%', textAlign: 'center' },
+        // Width stays 72 at the default size, where "Check" fits. Scaled text
+        // shrinks to that width so the word stays whole instead of clipping to "Chec".
         check: { maxWidth: 72, flex: 2, backgroundColor: c.primary, borderColor: c.primary },
         checkDisabled: {
             backgroundColor: 'transparent',
@@ -150,7 +164,14 @@ function makeStyles(c: {
             borderStyle: 'dashed',
             borderColor: c.border,
         },
-        checkText: { fontFamily: FontFamily.semibold, fontSize: 14, fontWeight: '600', color: c.onPrimary },
+        checkText: {
+            fontFamily: FontFamily.semibold,
+            fontSize: 14,
+            fontWeight: '600',
+            color: c.onPrimary,
+            width: '100%',
+            textAlign: 'center',
+        },
         checkTextDisabled: { color: c.disabled },
         pressed: { opacity: 0.7 },
     });

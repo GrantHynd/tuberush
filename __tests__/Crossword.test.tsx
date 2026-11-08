@@ -68,15 +68,15 @@ describe('Crossword Component', () => {
   describe('Rendering (TUB-298)', () => {
     it('selects the first across clue on load and shows it in the clue bar', async () => {
       const { getByTestId, getByText } = await renderCw();
-      expect(getByText(/First across clue/)).toBeTruthy();
+      expect(getByText(/First across clue/, { includeHiddenElements: true })).toBeTruthy();
       expect(getByTestId('cell-0-0').props.accessibilityState.selected).toBe(true);
     });
 
     it('renders cell numbers and user answers', async () => {
       const { getAllByText } = await renderCw({}, { ...baseGameState, userAnswers: { '0-0': 'A', '0-1': 'B' } });
-      expect(getAllByText('2').length).toBeGreaterThanOrEqual(1);
-      expect(getAllByText('3').length).toBeGreaterThanOrEqual(1);
-      expect(getAllByText('B').length).toBeGreaterThanOrEqual(1);
+      expect(getAllByText('2', { includeHiddenElements: true }).length).toBeGreaterThanOrEqual(1);
+      expect(getAllByText('3', { includeHiddenElements: true }).length).toBeGreaterThanOrEqual(1);
+      expect(getAllByText('B', { includeHiddenElements: true }).length).toBeGreaterThanOrEqual(1);
     });
 
     it('uses the in-app keyboard with Check on row 3 and no ScrollView/TextInput', async () => {
@@ -84,8 +84,8 @@ describe('Crossword Component', () => {
       expect(getByTestId('game-keyboard')).toBeTruthy();
       expect(getByTestId('key-check')).toBeTruthy();
       const tree = JSON.stringify(toJSON());
-      expect(tree).not.toContain('"type":"RCTScrollView"');
       expect(tree).not.toContain('"type":"TextInput"');
+      expect(getByTestId('clue-scroll')).toBeTruthy();
     });
 
     it('labels cells as "Row R, column C, N Across, letter X"', async () => {
@@ -94,7 +94,7 @@ describe('Crossword Component', () => {
       expect(getByTestId('cell-0-0').props.accessibilityLabel).toBe('Row 1, column 1, 1 Across, empty');
     });
 
-    it('sizes cells from the measured area and never below 36pt', async () => {
+    it('sizes cells from a roomy measured area up to 64pt', async () => {
       const { getByTestId } = await renderCw();
       await act(async () => {
         fireEvent(getByTestId('crossword-grid-area'), 'layout', { nativeEvent: { layout: { width: 390, height: 457 } } });
@@ -115,6 +115,25 @@ describe('Crossword Component', () => {
         fireEvent.press(touch, { nativeEvent: { locationX: 1 + 40 * 1 + 10, locationY: 1 + 40 * 2 + 10 } });
       });
       expect(getByTestId('cell-2-1').props.accessibilityState.selected).toBe(true);
+    });
+
+    it('shrinks below 36pt so a short area still holds every row', async () => {
+      const { getByTestId, queryByTestId } = await renderCw();
+      await act(async () => {
+        fireEvent(getByTestId('crossword-grid-area'), 'layout', { nativeEvent: { layout: { width: 126, height: 110 } } });
+      });
+      // avail 94×94, n=3 → raw 30, which used to clamp to 36 and clip.
+      expect(getByTestId('cell-0-0').props.style).toEqual(expect.arrayContaining([expect.objectContaining({ width: 30, height: 30 })]));
+      expect(queryByTestId('crossword-grid-scroll')).toBeNull();
+    });
+
+    it('scrolls the board when even the 18pt floor is taller than the area', async () => {
+      const { getByTestId } = await renderCw();
+      await act(async () => {
+        fireEvent(getByTestId('crossword-grid-area'), 'layout', { nativeEvent: { layout: { width: 72, height: 56 } } });
+      });
+      expect(getByTestId('cell-0-0').props.style).toEqual(expect.arrayContaining([expect.objectContaining({ width: 18, height: 18 })]));
+      expect(getByTestId('crossword-grid-scroll')).toBeTruthy();
     });
   });
 
@@ -144,16 +163,16 @@ describe('Crossword Component', () => {
     it('tapping the selected cell toggles direction', async () => {
       const { getByTestId, getByText } = await renderCw();
       await fireEvent.press(getByTestId('cell-0-0'));
-      expect(getByText(/First down clue/)).toBeTruthy();
+      expect(getByText(/First down clue/, { includeHiddenElements: true })).toBeTruthy();
     });
 
     it('clue bar next/prev and toggle move between clues', async () => {
       const { getByTestId, getByText } = await renderCw();
       await fireEvent.press(getByTestId('clue-next'));
-      expect(getByText(/Second across clue/)).toBeTruthy();
+      expect(getByText(/Second across clue/, { includeHiddenElements: true })).toBeTruthy();
       await fireEvent.press(getByTestId('clue-prev'));
       await fireEvent.press(getByTestId('clue-toggle'));
-      expect(getByText(/First down clue/)).toBeTruthy();
+      expect(getByText(/First down clue/, { includeHiddenElements: true })).toBeTruthy();
     });
   });
 
@@ -162,6 +181,7 @@ describe('Crossword Component', () => {
       const onCheck = jest.fn();
       const { getByTestId, rerender } = await renderCw({ onCheck, checkDisabled: true });
       expect(getByTestId('key-check').props.accessibilityState.disabled).toBe(true);
+      expect(getByTestId('key-check').props.accessibilityHint).toBe('Fill all squares to check');
       await rerender(<Crossword puzzle={testPuzzle} gameState={baseGameState} onCellChange={mockOnCellChange} onCheck={onCheck} />);
       await fireEvent.press(getByTestId('key-check'));
       expect(onCheck).toHaveBeenCalled();
@@ -171,6 +191,10 @@ describe('Crossword Component', () => {
       const { getByTestId } = await renderCw({ errorCells: new Set(['0-1']) }, { ...baseGameState, userAnswers: { '0-1': 'X' } });
       expect(getByTestId('cell-0-1').props.accessibilityValue).toEqual({ text: 'incorrect' });
       expect(getByTestId('cell-0-0').props.accessibilityValue?.text).toBeUndefined();
+      const mark = getByTestId('cell-error-mark', { includeHiddenElements: true });
+      expect(mark.props.accessible).toBe(false);
+      expect(mark.props.accessibilityElementsHidden).toBe(true);
+      expect(mark.props.importantForAccessibility).toBe('no-hide-descendants');
     });
   });
 

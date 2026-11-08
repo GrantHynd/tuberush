@@ -2,16 +2,17 @@ import { ClueBar } from '@/components/game-ui/ClueBar';
 import { GameKeyboard } from '@/components/game-ui/GameKeyboard';
 import { FontScaleCap } from '@/constants/theme';
 import { useTheme } from '@/hooks/useTheme';
+import { decorativeIconProps } from '@/lib/a11y';
 import {
     MIN_TARGET_CELL,
     MIN_CELL,
-    cellSize as computeCellSize,
+    cellSizeToFit,
+    gridExtent,
     letterSize,
     numberSize,
     rawCellSize,
 } from '@/lib/grid-sizing';
 import type { CrosswordCell as CrosswordCellType, CrosswordClue, CrosswordPuzzle, CrosswordState } from '@/types/game';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
     AccessibilityInfo,
@@ -19,6 +20,7 @@ import {
     type GestureResponderEvent,
     type LayoutChangeEvent,
     Pressable,
+    ScrollView,
     StyleSheet,
     Text,
     View,
@@ -103,7 +105,7 @@ const GridCell = React.memo(function GridCell({
                 <Text
                     style={[styles.cellNumber, { fontSize: numberSize(size), color: ink }]}
                     maxFontSizeMultiplier={FontScaleCap.gridLetter}
-                    importantForAccessibility="no"
+                    {...decorativeIconProps}
                 >
                     {cell.number}
                 </Text>
@@ -111,6 +113,7 @@ const GridCell = React.memo(function GridCell({
             <Text
                 style={[styles.cellLetter, { fontSize: letterSize(size), color: ink }]}
                 maxFontSizeMultiplier={FontScaleCap.gridLetter}
+                {...decorativeIconProps}
             >
                 {userAnswer}
             </Text>
@@ -125,11 +128,12 @@ const GridCell = React.memo(function GridCell({
             ) : null}
             {isError && (
                 <View
+                    testID="cell-error-mark"
                     style={[styles.errIcon, { backgroundColor: mark.disc, borderColor: mark.ink }]}
-                    accessibilityElementsHidden
-                    importantForAccessibility="no"
+                    {...decorativeIconProps}
                 >
-                    <MaterialIcons name="close" size={12} color={mark.ink} />
+                    <View style={[styles.markArm, { backgroundColor: mark.ink, transform: [{ rotate: '45deg' }] }]} />
+                    <View style={[styles.markArm, { backgroundColor: mark.ink, transform: [{ rotate: '-45deg' }] }]} />
                 </View>
             )}
         </>
@@ -216,11 +220,14 @@ export function Crossword({
     const n = Math.max(rows, cols, 1);
 
     // Measured grid area (Dynamic Type grows clue bar/keys → area shrinks → grid shrinks).
-    // Before first layout, estimate from the window.
+    // Before first layout, estimate from the window. The 36pt floor is lifted
+    // when that area cannot hold it, so the bottom rows stay reachable.
     const availW = (area?.w ?? screenW) - 2 * SIDE_MARGIN;
     const availH = area ? area.h - GRID_PAD_V : Math.max(0, screenH - 420);
-    const size = staticCellSize ?? computeCellSize(availW, availH, n);
+    const size = staticCellSize ?? cellSizeToFit(availW, availH, n);
     const pressableCells = size >= MIN_TARGET_CELL;
+    const extent = gridExtent(size, n);
+    const gridScrolls = !staticCellSize && area != null && (extent > availW + 1 || extent > availH + 1);
 
     const onGridAreaLayout = useCallback(
         (e: LayoutChangeEvent) => {
@@ -456,13 +463,27 @@ export function Crossword({
 
     return (
         <View style={styles.container} testID="crossword">
-            {/* TUB-298: no ScrollView — the grid is sized to fit this area. */}
+            {/* The grid is sized to this area. It scrolls only when even the 18pt floor cannot fit. */}
             <View
                 style={staticCellSize ? styles.gridAreaStatic : styles.gridArea}
                 onLayout={staticCellSize ? undefined : onGridAreaLayout}
                 testID="crossword-grid-area"
             >
-                {pressableCells || disabled ? (
+                {gridScrolls ? (
+                    <ScrollView
+                        testID="crossword-grid-scroll"
+                        style={styles.gridScroll}
+                        contentContainerStyle={styles.gridScrollContent}
+                    >
+                        {pressableCells || disabled ? (
+                            gridNode
+                        ) : (
+                            <Pressable onPress={onGridPress} testID="crossword-grid-touch" accessible={false}>
+                                {gridNode}
+                            </Pressable>
+                        )}
+                    </ScrollView>
+                ) : pressableCells || disabled ? (
                     gridNode
                 ) : (
                     <Pressable onPress={onGridPress} testID="crossword-grid-touch" accessible={false}>
@@ -525,6 +546,8 @@ const styles = StyleSheet.create({
         paddingVertical: GRID_PAD_V / 2,
     },
     gridAreaStatic: { alignItems: 'center', paddingHorizontal: SIDE_MARGIN, paddingTop: 8 },
+    gridScroll: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 },
+    gridScrollContent: { flexGrow: 1, alignItems: 'center', justifyContent: 'center' },
     gridContainer: {
         borderRadius: 4,
         overflow: 'hidden',
@@ -563,6 +586,12 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         alignItems: 'center',
         justifyContent: 'center',
+    },
+    markArm: {
+        position: 'absolute',
+        width: 10,
+        height: 1.5,
+        borderRadius: 1,
     },
     clueWrap: { marginHorizontal: SIDE_MARGIN, marginBottom: 8 },
 });
