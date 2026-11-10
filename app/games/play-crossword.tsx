@@ -11,7 +11,7 @@ import { FeedbackToast } from '@/components/game-ui/FeedbackToast';
 import { announce, decorativeIconProps } from '@/lib/a11y';
 import { wrongLettersMessage } from '@/lib/crossword-feedback';
 import { Leaderboard } from '@/components/ui/Leaderboard';
-import { type Palette, FontScaleCap, Layout, Spacing, Typography } from '@/constants/theme';
+import { type Palette, FontScaleCap, Spacing, Typography } from '@/constants/theme';
 import { getCustomPuzzle, saveCustomPuzzleScore } from '@/lib/custom-puzzles';
 import { formatScore } from '@/lib/display-utils';
 import { capture } from '@/lib/posthog';
@@ -569,26 +569,8 @@ function makeStyles(colors: Palette) {
         padding: Spacing.xs,
         marginLeft: Spacing.xs,
     },
-    headerCenter: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginLeft: Spacing.sm,
-        flex: 1,
-    },
     headerTitle: {
         ...Typography.h2, color: colors.text },
-    badge: {
-        backgroundColor: colors.premium,
-        paddingHorizontal: Spacing.sm,
-        paddingVertical: 2,
-        borderRadius: Layout.borderRadius.xl,
-        marginLeft: Spacing.sm,
-    },
-    badgeText: {
-        fontSize: 11,
-        fontWeight: '700',
-        color: colors.text,
-    },
     headerRight: {
         alignItems: 'flex-end' as const,
         marginRight: Spacing.sm,
@@ -599,10 +581,6 @@ function makeStyles(colors: Palette) {
         fontVariant: ['tabular-nums'] as const,
         color: colors.text,
     },
-    headerDate: {
-        ...Typography.caption,
-        color: colors.textSecondary,
-    },
     scroll: {
         flex: 1,
     },
@@ -610,64 +588,7 @@ function makeStyles(colors: Palette) {
         flexGrow: 1,
         paddingBottom: Spacing.xl,
     },
-    checkSection: {
-        paddingHorizontal: Spacing.md,
-        paddingTop: Spacing.lg,
-        alignItems: 'center',
-    },
-    checkButton: {
-        minHeight: 48,
-        justifyContent: 'center',
-        paddingVertical: 12,
-        paddingHorizontal: 32,
-        borderRadius: 24,
-        borderWidth: 1,
-        borderColor: colors.text,
-    },
-    checkButtonDisabled: {
-        borderColor: colors.textDisabled,
-        borderStyle: 'dashed',
-    },
-    checkHelper: {
-        marginTop: Spacing.xs,
-        fontSize: 14,
-        color: colors.textSecondary,
-    },
-    checkButtonPrimary: {
-        backgroundColor: colors.text,
-    },
-    checkButtonText: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: colors.text,
-    },
-    checkButtonTextDisabled: {
-        color: colors.textSecondary,
-    },
-    checkButtonTextPrimary: {
-        color: colors.background,
-    },
     backToPuzzles: { alignSelf: 'center', marginTop: Spacing.md },
-    gameOverContainer: {
-        paddingHorizontal: Spacing.md,
-        paddingVertical: Spacing.lg,
-        alignItems: 'center',
-    },
-    gameOverTitle: {
-        fontSize: 20,
-        fontWeight: '700',
-        color: colors.text,
-        marginBottom: 4,
-    },
-    gameOverTime: {
-        fontSize: 15,
-        color: colors.textSecondary,
-        marginBottom: Spacing.md,
-    },
-    gameOverActions: {
-        flexDirection: 'row',
-        gap: Spacing.sm,
-    },
     gameOverButton: {
         minHeight: 48,
         justifyContent: 'center',
@@ -677,16 +598,10 @@ function makeStyles(colors: Palette) {
         borderWidth: 1,
         borderColor: colors.text,
     },
-    gameOverButtonPrimary: {
-        backgroundColor: colors.text,
-    },
     gameOverButtonText: {
         fontSize: 14,
         fontWeight: '600',
         color: colors.text,
-    },
-    gameOverButtonTextPrimary: {
-        color: colors.background,
     },
 });
 }

@@ -1,17 +1,5 @@
+import type { ConnectionsPuzzle } from '@/types/game';
 import { interchangeGroups } from './theme';
-
-export interface ConnectionsGroup {
-    category: string;
-    items: string[];
-    color: string;
-    difficulty: 1 | 2 | 3 | 4;
-}
-
-export interface ConnectionsPuzzle {
-    id: string;
-    date: string; // YYYY-MM-DD
-    groups: ConnectionsGroup[];
-}
 
 // Generate puzzle data for the last 30 days
 function generatePuzzleData(): ConnectionsPuzzle[] {
@@ -68,31 +56,3 @@ function generatePuzzleData(): ConnectionsPuzzle[] {
 }
 
 export const CONNECTIONS_DATA: ConnectionsPuzzle[] = generatePuzzleData();
-
-export const getDailyPuzzle = (): ConnectionsPuzzle => {
-    const today = new Date().toISOString().split('T')[0];
-    const puzzle = CONNECTIONS_DATA.find(p => p.date === today);
-    return puzzle || CONNECTIONS_DATA[0]; // Fallback to first puzzle if none found for today
-};
-
-/** Returns a puzzle by date, or undefined if not found */
-export const getPuzzleByDate = (date: string): ConnectionsPuzzle | undefined => {
-    return CONNECTIONS_DATA.find(p => p.date === date);
-};
-
-/** Returns recent puzzles sorted by date (most recent first), for carousel display */
-export const getRecentPuzzles = (limit = 7): ConnectionsPuzzle[] => {
-    return [...CONNECTIONS_DATA]
-        .sort((a, b) => b.date.localeCompare(a.date))
-        .slice(0, limit);
-};
-
-/** Returns recent puzzles with offset for pagination (most recent first) */
-export const getRecentPuzzlesWithOffset = (limit: number, offset: number): ConnectionsPuzzle[] => {
-    return [...CONNECTIONS_DATA]
-        .sort((a, b) => b.date.localeCompare(a.date))
-        .slice(offset, offset + limit);
-};
-
-/** Total number of puzzles available (30 days) */
-export const CONNECTIONS_PUZZLE_COUNT = 30;

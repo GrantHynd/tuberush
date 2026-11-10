@@ -182,11 +182,6 @@ export const Colors = {
     dark: chromeColors(palette.dark),
 } as const;
 
-export const Fonts = {
-    rounded: 'System',
-    mono: 'System',
-};
-
 /** Fira Sans families registered in app/_layout.tsx (system fallback if loading fails). */
 export const FontFamily = {
     regular: 'FiraSans_400Regular',
@@ -298,13 +293,6 @@ export const Layout = {
             shadowOpacity: 0.05,
             shadowRadius: 2,
             elevation: 2,
-        },
-        md: {
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.1,
-            shadowRadius: 12,
-            elevation: 4,
         },
     },
 };

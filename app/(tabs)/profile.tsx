@@ -532,11 +532,6 @@ function makeStyles(colors: Palette) {
         fontWeight: '500',
         flexShrink: 0,
     },
-    rowValue: {
-        fontSize: 16,
-        color: colors.textSecondary,
-        fontWeight: '400',
-    },
     rowValueTruncatable: {
         fontSize: 16,
         color: colors.textSecondary,

@@ -5,12 +5,10 @@ import { FinishedGameView } from '@/components/game-ui/FinishedGameView';
 import { GameHeader } from '@/components/game-ui/GameHeader';
 import { TodayHeroCard } from '@/components/home/TodayHeroCard';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
-import { CROSSWORD_DATA } from '@/constants/CrosswordData';
 import { CROSSWORD_9X9_A } from '@/constants/fixtures/crossword-9x9-a';
 import { FontScaleCap, interchangeGroups } from '@/constants/theme';
 import { useTheme } from '@/hooks/useTheme';
-import type { ConnectionsPuzzle } from '@/constants/ConnectionsData';
-import type { ConnectionsState, CrosswordPuzzle, CrosswordState } from '@/types/game';
+import type { ConnectionsPuzzle, ConnectionsState, CrosswordPuzzle, CrosswordState } from '@/types/game';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -118,7 +116,6 @@ export default function RebrandPreviewScreen() {
     const params = useLocalSearchParams<{ view?: string; chrome?: string }>();
     const view = (VIEWS.includes(params.view as ViewName) ? params.view : 'home') as ViewName;
     const gameChrome = params.chrome === 'game';
-    const mini = CROSSWORD_DATA[0];
 
     const body = (() => {
         if (view === 'home') {
@@ -164,8 +161,7 @@ export default function RebrandPreviewScreen() {
                 </View>
             );
         }
-        const nine = view === 'crossword-9' || view === 'crossword-finished';
-        const puzzle = nine ? CROSSWORD_9X9_A : mini;
+        const puzzle = CROSSWORD_9X9_A;
         const finished = view === 'crossword-finished';
         const wrong = view === 'crossword-error' ? checkedWrong(puzzle) : null;
         const state = wrong?.state ?? crosswordState(puzzle, finished);
