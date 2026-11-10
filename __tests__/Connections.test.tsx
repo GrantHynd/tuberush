@@ -39,27 +39,27 @@ describe("Connections Component", () => {
     date: "2024-03-14",
     groups: [
       {
-        category: "TUBE LINES",
-        items: ["BAKERLOO", "CENTRAL", "DISTRICT", "NORTHERN"],
+        category: "TYPES OF BRITISH BISCUIT",
+        items: ["DIGESTIVE", "HOBNOB", "BOURBON", "SHORTBREAD"],
         color: "#DC241F",
         difficulty: 1,
       },
       {
-        category: "ROYAL PARKS",
-        items: ["HYDE", "REGENT", "GREEN", "ST JAMES"],
-        color: "#00A166",
+        category: "EMMERDALE CHARACTERS",
+        items: ["PADDY", "CHARITY", "MARLON", "CAIN"],
+        color: "#007D32",
         difficulty: 2,
       },
       {
-        category: "LONDON AIRPORTS",
-        items: ["HEATHROW", "GATWICK", "STANSTED", "LUTON"],
+        category: "___ PARK",
+        items: ["LINKIN", "JURASSIC", "SOUTH", "THEME"],
         color: "#0019A8",
         difficulty: 3,
       },
       {
-        category: "MONOPOLY STREETS",
-        items: ["VINE", "BOW", "FLEET", "STRAND"],
-        color: "#FFD300",
+        category: "LONG ___",
+        items: ["JOHNS", "JUMP", "RANGE", "SUFFERING"],
+        color: "#FFD329",
         difficulty: 4,
       },
     ],
@@ -96,17 +96,17 @@ describe("Connections Component", () => {
         />,
       );
 
-      expect(getByText("BAKERLOO")).toBeTruthy();
-      expect(getByText("CENTRAL")).toBeTruthy();
-      expect(getByText("HYDE")).toBeTruthy();
-      expect(getByText("HEATHROW")).toBeTruthy();
-      expect(getByText("VINE")).toBeTruthy();
+      expect(getByText("DIGESTIVE")).toBeTruthy();
+      expect(getByText("HOBNOB")).toBeTruthy();
+      expect(getByText("PADDY")).toBeTruthy();
+      expect(getByText("LINKIN")).toBeTruthy();
+      expect(getByText("JOHNS")).toBeTruthy();
     });
 
     it("renders completed groups correctly", async () => {
       const gameStateWithCompleted: ConnectionsState = {
         ...initialGameState,
-        completedGroups: ["TUBE LINES"],
+        completedGroups: ["TYPES OF BRITISH BISCUIT"],
       };
 
       const { getByText, queryByLabelText } = await render(
@@ -117,11 +117,10 @@ describe("Connections Component", () => {
         />,
       );
 
-      expect(getByText("TUBE LINES")).toBeTruthy();
-      expect(getByText("BAKERLOO")).toBeTruthy(); // station name on the line rail
-      expect(queryByLabelText("BAKERLOO")).toBeNull();
-      expect(queryByLabelText("BAKERLOO")).toBeNull();
-      expect(queryByLabelText("HYDE")).toBeTruthy();
+      expect(getByText("TYPES OF BRITISH BISCUIT")).toBeTruthy();
+      expect(getByText("DIGESTIVE")).toBeTruthy();
+      expect(queryByLabelText("DIGESTIVE")).toBeNull();
+      expect(queryByLabelText("PADDY")).toBeTruthy();
     });
 
     it("displays correct number of mistakes remaining", async () => {
@@ -165,8 +164,8 @@ describe("Connections Component", () => {
         />,
       );
 
-      await fireEvent.press(getByText("BAKERLOO"));
-      expect(getByLabelText("BAKERLOO").props.accessibilityState.selected).toBe(true);
+      await fireEvent.press(getByText("DIGESTIVE"));
+      expect(getByLabelText("DIGESTIVE").props.accessibilityState.selected).toBe(true);
     });
 
     it("deselects a card when pressed again", async () => {
@@ -178,10 +177,10 @@ describe("Connections Component", () => {
         />,
       );
 
-      await fireEvent.press(getByText("BAKERLOO"));
-      expect(getByLabelText("BAKERLOO").props.accessibilityState.selected).toBe(true);
-      await fireEvent.press(getByText("BAKERLOO"));
-      expect(getByLabelText("BAKERLOO").props.accessibilityState.selected).toBe(false);
+      await fireEvent.press(getByText("DIGESTIVE"));
+      expect(getByLabelText("DIGESTIVE").props.accessibilityState.selected).toBe(true);
+      await fireEvent.press(getByText("DIGESTIVE"));
+      expect(getByLabelText("DIGESTIVE").props.accessibilityState.selected).toBe(false);
     });
 
     it("allows selecting up to 4 cards", async () => {
@@ -193,15 +192,15 @@ describe("Connections Component", () => {
         />,
       );
 
-      await fireEvent.press(getByText("BAKERLOO"));
-      await fireEvent.press(getByText("CENTRAL"));
-      await fireEvent.press(getByText("DISTRICT"));
-      await fireEvent.press(getByText("NORTHERN"));
+      await fireEvent.press(getByText("DIGESTIVE"));
+      await fireEvent.press(getByText("HOBNOB"));
+      await fireEvent.press(getByText("BOURBON"));
+      await fireEvent.press(getByText("SHORTBREAD"));
 
-      expect(getByLabelText("BAKERLOO").props.accessibilityState.selected).toBe(true);
-      expect(getByLabelText("CENTRAL").props.accessibilityState.selected).toBe(true);
-      expect(getByLabelText("DISTRICT").props.accessibilityState.selected).toBe(true);
-      expect(getByLabelText("NORTHERN").props.accessibilityState.selected).toBe(true);
+      expect(getByLabelText("DIGESTIVE").props.accessibilityState.selected).toBe(true);
+      expect(getByLabelText("HOBNOB").props.accessibilityState.selected).toBe(true);
+      expect(getByLabelText("BOURBON").props.accessibilityState.selected).toBe(true);
+      expect(getByLabelText("SHORTBREAD").props.accessibilityState.selected).toBe(true);
     });
 
     it("does not allow selecting more than 4 cards", async () => {
@@ -213,13 +212,13 @@ describe("Connections Component", () => {
         />,
       );
 
-      await fireEvent.press(getByText("BAKERLOO"));
-      await fireEvent.press(getByText("CENTRAL"));
-      await fireEvent.press(getByText("DISTRICT"));
-      await fireEvent.press(getByText("NORTHERN"));
-      await fireEvent.press(getByText("HYDE"));
+      await fireEvent.press(getByText("DIGESTIVE"));
+      await fireEvent.press(getByText("HOBNOB"));
+      await fireEvent.press(getByText("BOURBON"));
+      await fireEvent.press(getByText("SHORTBREAD"));
+      await fireEvent.press(getByText("PADDY"));
 
-      expect(getByLabelText("HYDE").props.accessibilityState.selected).toBe(false);
+      expect(getByLabelText("PADDY").props.accessibilityState.selected).toBe(false);
     });
 
     it("triggers haptic feedback on selection", async () => {
@@ -231,7 +230,7 @@ describe("Connections Component", () => {
         />,
       );
 
-      await fireEvent.press(getByText("BAKERLOO"));
+      await fireEvent.press(getByText("DIGESTIVE"));
       expect(Haptics.impactAsync).toHaveBeenCalledWith(
         Haptics.ImpactFeedbackStyle.Light,
       );
@@ -252,7 +251,7 @@ describe("Connections Component", () => {
       );
 
       // Finished: no tiles or controls are rendered at all (TUB-297).
-      expect(queryByLabelText("BAKERLOO")).toBeNull();
+      expect(queryByLabelText("DIGESTIVE")).toBeNull();
       expect(queryByLabelText("Submit guess")).toBeNull();
       void getByText;
     });
@@ -268,22 +267,22 @@ describe("Connections Component", () => {
         />,
       );
 
-      await waitFor(() => expect(getByText("BAKERLOO")).toBeTruthy());
+      await waitFor(() => expect(getByText("DIGESTIVE")).toBeTruthy());
 
-      await fireEvent.press(getByText("BAKERLOO"));
-      await fireEvent.press(getByText("CENTRAL"));
-      await fireEvent.press(getByText("DISTRICT"));
-      await fireEvent.press(getByText("NORTHERN"));
+      await fireEvent.press(getByText("DIGESTIVE"));
+      await fireEvent.press(getByText("HOBNOB"));
+      await fireEvent.press(getByText("BOURBON"));
+      await fireEvent.press(getByText("SHORTBREAD"));
 
       expect(mockOnSubmitGuess).not.toHaveBeenCalled();
 
       await fireEvent.press(getByText(/^Submit/));
 
       expect(mockOnSubmitGuess).toHaveBeenCalledWith([
-        "BAKERLOO",
-        "CENTRAL",
-        "DISTRICT",
-        "NORTHERN",
+        "DIGESTIVE",
+        "HOBNOB",
+        "BOURBON",
+        "SHORTBREAD",
       ]);
     });
 
@@ -296,16 +295,16 @@ describe("Connections Component", () => {
         />,
       );
 
-      await waitFor(() => expect(getByText("BAKERLOO")).toBeTruthy());
+      await waitFor(() => expect(getByText("DIGESTIVE")).toBeTruthy());
 
-      await fireEvent.press(getByText("BAKERLOO"));
-      await fireEvent.press(getByText("CENTRAL"));
-      await fireEvent.press(getByText("DISTRICT"));
-      await fireEvent.press(getByText("NORTHERN"));
+      await fireEvent.press(getByText("DIGESTIVE"));
+      await fireEvent.press(getByText("HOBNOB"));
+      await fireEvent.press(getByText("BOURBON"));
+      await fireEvent.press(getByText("SHORTBREAD"));
 
       await fireEvent.press(getByText(/^Submit/));
 
-      expect(getByLabelText("BAKERLOO").props.accessibilityState.selected).toBe(true);
+      expect(getByLabelText("DIGESTIVE").props.accessibilityState.selected).toBe(true);
     });
 
     it("is disabled when fewer than 4 cards are selected", async () => {
@@ -320,8 +319,8 @@ describe("Connections Component", () => {
       const submitButton = getByLabelText("Submit guess");
       expect(submitButton.props.accessibilityState.disabled).toBe(true);
 
-      await fireEvent.press(getByText("BAKERLOO"));
-      await fireEvent.press(getByText("CENTRAL"));
+      await fireEvent.press(getByText("DIGESTIVE"));
+      await fireEvent.press(getByText("HOBNOB"));
       expect(getByLabelText("Submit guess").props.accessibilityState.disabled).toBe(true);
     });
 
@@ -354,14 +353,14 @@ describe("Connections Component", () => {
         />,
       );
 
-      await fireEvent.press(getByText("BAKERLOO"));
-      await fireEvent.press(getByText("CENTRAL"));
-      await fireEvent.press(getByText("DISTRICT"));
+      await fireEvent.press(getByText("DIGESTIVE"));
+      await fireEvent.press(getByText("HOBNOB"));
+      await fireEvent.press(getByText("BOURBON"));
       await fireEvent.press(getByText("Clear"));
 
-      expect(getByLabelText("BAKERLOO").props.accessibilityState.selected).toBe(false);
-      expect(getByLabelText("CENTRAL").props.accessibilityState.selected).toBe(false);
-      expect(getByLabelText("DISTRICT").props.accessibilityState.selected).toBe(false);
+      expect(getByLabelText("DIGESTIVE").props.accessibilityState.selected).toBe(false);
+      expect(getByLabelText("HOBNOB").props.accessibilityState.selected).toBe(false);
+      expect(getByLabelText("BOURBON").props.accessibilityState.selected).toBe(false);
     });
 
     it("is disabled when no cards are selected", async () => {
@@ -386,7 +385,7 @@ describe("Connections Component", () => {
         />,
       );
 
-      await fireEvent.press(getByText("BAKERLOO"));
+      await fireEvent.press(getByText("DIGESTIVE"));
       const deselectButton = getByLabelText("Deselect all items");
       expect(deselectButton.props.accessibilityState.disabled).toBe(false);
     });
@@ -509,7 +508,7 @@ describe("Connections Component", () => {
 
       const updatedState: ConnectionsState = {
         ...initialState,
-        completedGroups: ["TUBE LINES"],
+        completedGroups: ["TYPES OF BRITISH BISCUIT"],
       };
 
       await rerender(
@@ -536,7 +535,7 @@ describe("Connections Component", () => {
         />,
       );
 
-      const card = getByLabelText("BAKERLOO");
+      const card = getByLabelText("DIGESTIVE");
       expect(card.props.accessibilityRole).toBe("button");
       expect(card.props.accessibilityHint).toBe("Select 4 items");
     });
@@ -544,7 +543,7 @@ describe("Connections Component", () => {
     it("has proper accessibility labels on completed groups", async () => {
       const gameState: ConnectionsState = {
         ...initialGameState,
-        completedGroups: ["TUBE LINES"],
+        completedGroups: ["TYPES OF BRITISH BISCUIT"],
       };
 
       const { getByLabelText } = await render(
@@ -557,7 +556,7 @@ describe("Connections Component", () => {
 
       expect(
         getByLabelText(
-          /TUBE LINES: BAKERLOO, CENTRAL, DISTRICT, NORTHERN/,
+          /TYPES OF BRITISH BISCUIT: DIGESTIVE, HOBNOB, BOURBON, SHORTBREAD/,
         ),
       ).toBeTruthy();
     });
@@ -621,7 +620,7 @@ describe("Connections Component", () => {
         ...initialGameState,
         status: "lost",
         mistakesRemaining: 0,
-        completedGroups: ["TUBE LINES"],
+        completedGroups: ["TYPES OF BRITISH BISCUIT"],
       };
 
       const { getByLabelText } = await render(
@@ -633,12 +632,12 @@ describe("Connections Component", () => {
       );
 
       // Completed group should be present
-      expect(getByLabelText(/TUBE LINES, found/)).toBeTruthy();
+      expect(getByLabelText(/TYPES OF BRITISH BISCUIT, found/)).toBeTruthy();
 
       // Wait for first revealed group (400ms delay)
       await waitFor(
         () => {
-          expect(getByLabelText(/ROYAL PARKS, revealed/)).toBeTruthy();
+          expect(getByLabelText(/EMMERDALE CHARACTERS, revealed/)).toBeTruthy();
         },
         { timeout: 1000 },
       );
@@ -646,8 +645,8 @@ describe("Connections Component", () => {
       // Wait for all revealed groups
       await waitFor(
         () => {
-          expect(getByLabelText(/LONDON AIRPORTS, revealed/)).toBeTruthy();
-          expect(getByLabelText(/MONOPOLY STREETS, revealed/)).toBeTruthy();
+          expect(getByLabelText(/___ PARK, revealed/)).toBeTruthy();
+          expect(getByLabelText(/LONG ___, revealed/)).toBeTruthy();
         },
         { timeout: 2000 },
       );
@@ -658,7 +657,7 @@ describe("Connections Component", () => {
         ...initialGameState,
         status: "lost",
         mistakesRemaining: 0,
-        completedGroups: ["TUBE LINES", "ROYAL PARKS"],
+        completedGroups: ["TYPES OF BRITISH BISCUIT", "EMMERDALE CHARACTERS"],
       };
 
       const { getByLabelText } = await render(
@@ -670,10 +669,10 @@ describe("Connections Component", () => {
       );
 
       // All groups should be visible immediately
-      expect(getByLabelText(/TUBE LINES, found/)).toBeTruthy();
-      expect(getByLabelText(/ROYAL PARKS, found/)).toBeTruthy();
-      expect(getByLabelText(/LONDON AIRPORTS, revealed/)).toBeTruthy();
-      expect(getByLabelText(/MONOPOLY STREETS, revealed/)).toBeTruthy();
+      expect(getByLabelText(/TYPES OF BRITISH BISCUIT, found/)).toBeTruthy();
+      expect(getByLabelText(/EMMERDALE CHARACTERS, found/)).toBeTruthy();
+      expect(getByLabelText(/___ PARK, revealed/)).toBeTruthy();
+      expect(getByLabelText(/LONG ___, revealed/)).toBeTruthy();
     });
 
     it("reveals groups in difficulty order", async () => {
@@ -692,27 +691,24 @@ describe("Connections Component", () => {
         />,
       );
 
-      // Wait for difficulty 1 to appear (TUBE LINES)
       await waitFor(
         () => {
-          expect(getByLabelText(/TUBE LINES, revealed/)).toBeTruthy();
+          expect(getByLabelText(/TYPES OF BRITISH BISCUIT, revealed/)).toBeTruthy();
         },
         { timeout: 1000 },
       );
 
-      // Difficulty 2 (ROYAL PARKS) should appear next
       await waitFor(
         () => {
-          expect(getByLabelText(/ROYAL PARKS, revealed/)).toBeTruthy();
+          expect(getByLabelText(/EMMERDALE CHARACTERS, revealed/)).toBeTruthy();
         },
         { timeout: 1000 },
       );
 
-      // Wait for all groups
       await waitFor(
         () => {
-          expect(getByLabelText(/LONDON AIRPORTS, revealed/)).toBeTruthy();
-          expect(getByLabelText(/MONOPOLY STREETS, revealed/)).toBeTruthy();
+          expect(getByLabelText(/___ PARK, revealed/)).toBeTruthy();
+          expect(getByLabelText(/LONG ___, revealed/)).toBeTruthy();
         },
         { timeout: 2000 },
       );
@@ -724,7 +720,7 @@ describe("Connections Component", () => {
         ...initialGameState,
         status: "lost",
         mistakesRemaining: 0,
-        completedGroups: ["TUBE LINES"],
+        completedGroups: ["TYPES OF BRITISH BISCUIT"],
       };
 
       await render(
@@ -752,7 +748,7 @@ describe("Connections Component", () => {
         ...initialGameState,
         status: "playing",
         mistakesRemaining: 1,
-        completedGroups: ["TUBE LINES"],
+        completedGroups: ["TYPES OF BRITISH BISCUIT"],
       };
 
       const { getByLabelText, queryByLabelText, rerender } = await render(
@@ -763,11 +759,7 @@ describe("Connections Component", () => {
         />,
       );
 
-      // Items from ROYAL PARKS should be in grid initially
-      expect(
-        queryByLabelText("HYDE") ||
-          queryByLabelText("HYDE"),
-      ).toBeTruthy();
+      expect(queryByLabelText("PADDY")).toBeTruthy();
 
       // Transition to lost state
       const lostGameState: ConnectionsState = {
@@ -784,19 +776,16 @@ describe("Connections Component", () => {
         />,
       );
 
-      // Wait for ROYAL PARKS to be revealed
       await waitFor(
         () => {
-          expect(getByLabelText(/ROYAL PARKS, revealed/)).toBeTruthy();
+          expect(getByLabelText(/EMMERDALE CHARACTERS, revealed/)).toBeTruthy();
         },
         { timeout: 1000 },
       );
 
-      // After reveal, HYDE should not be in the grid anymore
       await waitFor(
         () => {
-          expect(queryByLabelText("HYDE")).toBeNull();
-          expect(queryByLabelText("HYDE")).toBeNull();
+          expect(queryByLabelText("PADDY")).toBeNull();
         },
         { timeout: 500 },
       );
@@ -821,10 +810,10 @@ describe("Connections Component", () => {
       // Wait for all 4 groups to be revealed
       await waitFor(
         () => {
-          expect(getByLabelText(/TUBE LINES, revealed/)).toBeTruthy();
-          expect(getByLabelText(/ROYAL PARKS, revealed/)).toBeTruthy();
-          expect(getByLabelText(/LONDON AIRPORTS, revealed/)).toBeTruthy();
-          expect(getByLabelText(/MONOPOLY STREETS, revealed/)).toBeTruthy();
+          expect(getByLabelText(/TYPES OF BRITISH BISCUIT, revealed/)).toBeTruthy();
+          expect(getByLabelText(/EMMERDALE CHARACTERS, revealed/)).toBeTruthy();
+          expect(getByLabelText(/___ PARK, revealed/)).toBeTruthy();
+          expect(getByLabelText(/LONG ___, revealed/)).toBeTruthy();
         },
         { timeout: 2500 },
       );
@@ -835,7 +824,7 @@ describe("Connections Component", () => {
         ...initialGameState,
         status: "lost",
         mistakesRemaining: 0,
-        completedGroups: ["TUBE LINES"],
+        completedGroups: ["TYPES OF BRITISH BISCUIT"],
       };
 
       const { unmount } = await render(

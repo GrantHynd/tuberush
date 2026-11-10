@@ -88,7 +88,6 @@ describe('HomeScreen', () => {
     expect(getAllByText('Interchange').length).toBeGreaterThan(0);
     expect(getAllByText('Crossword').length).toBeGreaterThan(0);
 
-    // Check "Sign In / Register" button is NOT present (no welcome section in new design)
     expect(queryByText('Sign In / Register')).toBeNull();
   });
 
@@ -120,7 +119,7 @@ describe('HomeScreen', () => {
     );
   });
 
-  it('navigates to subscribe when clicking crossword puzzle card if not premium', async () => {
+  it('opens the paywall when a non-premium player presses the crossword card', async () => {
     (useAuthStore as unknown as jest.Mock).mockReturnValue({
       user: { id: 'user1', email: 'test@example.com', isPremium: false },
     });
