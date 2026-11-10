@@ -10,7 +10,7 @@ import { GameTypeBadge } from '@/components/ui/GameTypeBadge';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { UpsellCard } from '@/components/ui/UpsellCard';
-import { type Palette, Layout, Spacing, Typography } from '@/constants/theme';
+import { type Palette, FontFamily, Layout, Spacing, Typography } from '@/constants/theme';
 import { useGameHistory } from '@/hooks/useGameHistory';
 import { useTodaysNextGame } from '@/hooks/useTodaysNextGame';
 import { formatMaybe, formatScore } from '@/lib/display-utils';
@@ -229,10 +229,10 @@ function makeStyles(colors: Palette) {
     sectionHeader: { ...Typography.label, marginBottom: Spacing.sm, color: colors.text },
     historyRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: Spacing.sm, gap: Spacing.sm },
     historyMiddle: { flex: 1 },
-    historyDate: { ...Typography.body, fontWeight: '600', marginBottom: 2, color: colors.text },
+    historyDate: { ...Typography.body, fontFamily: FontFamily.semibold, fontWeight: '600', marginBottom: 2, color: colors.text },
     historyTime: { ...Typography.caption, fontSize: 13, color: colors.text },
     historyRight: { alignItems: 'flex-end' },
-    historyResult: { ...Typography.body, fontWeight: '700', marginBottom: 2, color: colors.text },
+    historyResult: { ...Typography.body, fontFamily: FontFamily.bold, fontWeight: '700', marginBottom: 2, color: colors.text },
     resultWin: { color: colors.success },
     resultLoss: { color: colors.error },
     historyPoints: { ...Typography.caption, fontSize: 13, color: colors.text },

@@ -10,7 +10,7 @@ import {
     View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { type Palette, Typography, Spacing, Layout } from '@/constants/theme';
+import { type Palette, Radius, Typography, Spacing } from '@/constants/theme';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 
 export interface SearchSelectProps {
@@ -196,7 +196,7 @@ function makeStyles(colors: Palette) {
         backgroundColor: colors.elevated,
         borderWidth: 1,
         borderColor: colors.border,
-        borderRadius: Layout.borderRadius.md,
+        borderRadius: Radius.md,
         paddingHorizontal: Spacing.md,
         paddingVertical: Spacing.sm,
         fontSize: 16,

@@ -1,5 +1,5 @@
 import { errorMarkColors } from '@/components/games/Crossword';
-import { crosswordCells, interchangeGroup, interchangeGroups, lightCrosswordCells, palette } from '@/constants/theme';
+import { crosswordCells, FontFamily, interchangeGroup, interchangeGroups, lightCrosswordCells, palette, Typography } from '@/constants/theme';
 
 function lum(hex: string) {
     const n = hex.replace('#', '');
@@ -24,6 +24,10 @@ describe('Platform tokens (TUB-325)', () => {
         expect(theme.LineColors).toBeUndefined();
         expect(theme.DifficultyLines).toBeUndefined();
         expect(theme.StateColors).toBeUndefined();
+        expect(theme.Colors).toBeUndefined();
+        expect(theme.GameColors).toBeUndefined();
+        expect(theme.gameColors).toBeUndefined();
+        expect(theme.CardSurface).toBeUndefined();
     });
 
     it('keeps dark V3 cells and the approved light-tuned V3', () => {
@@ -74,8 +78,13 @@ describe('Platform tokens (TUB-325)', () => {
         expect(ratio(palette.dark.text, palette.dark.background)).toBeGreaterThanOrEqual(4.5);
         expect(ratio(palette.light.onPrimary, palette.light.primary)).toBeGreaterThanOrEqual(4.5);
         expect(ratio(palette.dark.onPrimary, palette.dark.primary)).toBeGreaterThanOrEqual(4.5);
+        expect(palette.light.gameCrossword).not.toBe(palette.light.error);
+        expect(palette.dark.gameCrossword).not.toBe(palette.light.gameCrossword);
+        expect(palette.dark.gameInterchange).not.toBe(palette.light.gameInterchange);
         expect(ratio(palette.light.onGameCrossword, palette.light.gameCrossword)).toBeGreaterThanOrEqual(4.5);
         expect(ratio(palette.dark.onGameCrossword, palette.dark.gameCrossword)).toBeGreaterThanOrEqual(4.5);
+        expect(ratio(palette.light.onGameInterchange, palette.light.gameInterchange)).toBeGreaterThanOrEqual(4.5);
+        expect(ratio(palette.dark.onGameInterchange, palette.dark.gameInterchange)).toBeGreaterThanOrEqual(4.5);
         expect(ratio(palette.light.premiumText, palette.light.premium)).toBeGreaterThanOrEqual(4.5);
         expect(ratio(palette.dark.premiumText, palette.dark.premium)).toBeGreaterThanOrEqual(4.5);
         expect(ratio(palette.light.tabInactive, palette.light.surface)).toBeGreaterThanOrEqual(4.5);
@@ -138,6 +147,16 @@ describe('Platform tokens (TUB-325)', () => {
         expect(ratio(light.ink, light.disc)).toBeGreaterThanOrEqual(4.5);
         expect(ratio(light.disc, palette.light.cellIdleFill)).toBeGreaterThanOrEqual(3);
         expect(ratio(light.disc, palette.light.cellSelectedFill)).toBeGreaterThanOrEqual(3);
+    });
+
+    it('points each text role at the loaded Fira cut for that weight', () => {
+        expect(Typography.h1).toMatchObject({ fontFamily: FontFamily.bold, fontWeight: '700' });
+        expect(Typography.h2).toMatchObject({ fontFamily: FontFamily.semibold, fontWeight: '600' });
+        expect(Typography.h3).toMatchObject({ fontFamily: FontFamily.semibold, fontWeight: '600' });
+        expect(Typography.body).toMatchObject({ fontFamily: FontFamily.regular, fontSize: 16, lineHeight: 24 });
+        expect(Typography.body).not.toHaveProperty('fontWeight');
+        expect(Typography.caption).toMatchObject({ fontFamily: FontFamily.regular });
+        expect(Typography.label).toMatchObject({ fontFamily: FontFamily.medium, fontWeight: '500' });
     });
 
     it('does not use the retired tube-line colour set', () => {

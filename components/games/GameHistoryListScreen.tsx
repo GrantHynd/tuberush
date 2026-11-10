@@ -2,7 +2,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { GamePuzzleListItem } from '@/components/games/GamePuzzleListItem';
 import { GameHistoryStatsBar } from '@/components/games/GameHistoryStatsBar';
 import { HeaderBackButton } from '@/components/ui/HeaderBackButton';
-import { type Palette, Spacing, Typography } from '@/constants/theme';
+import { type Palette, FontFamily, Spacing, Typography } from '@/constants/theme';
 import type { GameHistoryListItem } from '@/types/game-history';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import React from 'react';
@@ -162,6 +162,7 @@ function makeStyles(colors: Palette) {
     },
     sectionHeaderText: {
         ...Typography.label,
+        fontFamily: FontFamily.semibold,
         fontSize: 13,
         fontWeight: '600', color: colors.text },
     separator: {

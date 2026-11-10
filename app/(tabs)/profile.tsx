@@ -556,7 +556,7 @@ function makeStyles(colors: Palette) {
         marginTop: Spacing.xl,
         marginHorizontal: Spacing.md,
         paddingVertical: Spacing.md,
-        borderRadius: Layout.borderRadius.md,
+        borderRadius: Radius.md,
         borderWidth: 2,
         borderColor: colors.error,
         alignItems: 'center',
@@ -610,7 +610,7 @@ function makeStyles(colors: Palette) {
         backgroundColor: colors.primary,
         paddingVertical: Spacing.md,
         paddingHorizontal: Spacing.xl,
-        borderRadius: Layout.borderRadius.md,
+        borderRadius: Radius.md,
     },
     primaryButtonText: {
         color: colors.onPrimary,

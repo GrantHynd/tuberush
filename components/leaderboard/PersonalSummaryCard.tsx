@@ -2,7 +2,7 @@ import { useTheme } from '@/hooks/useTheme';
 import React from 'react';
 import { Card } from '@/components/ui/Card';
 import { View, Text, StyleSheet } from 'react-native';
-import { type Palette, Spacing, Typography } from '@/constants/theme';
+import { type Palette, FontFamily, Spacing, Typography } from '@/constants/theme';
 import { formatScore } from '@/lib/display-utils';
 
 interface PersonalSummaryCardProps {
@@ -74,6 +74,7 @@ function makeStyles(colors: Palette) {
     },
     topPercent: {
         ...Typography.body,
+        fontFamily: FontFamily.semibold,
         fontWeight: '600',
         color: colors.primary,
         textAlign: 'center',

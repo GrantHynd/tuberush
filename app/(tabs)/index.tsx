@@ -13,7 +13,7 @@ import type {
     CrosswordCarouselItem,
 } from '@/hooks/usePuzzleCarousel';
 import { GAMES } from '@/constants/Games';
-import { type Palette, Layout, Spacing, Typography } from '@/constants/theme';
+import { type Palette, FontFamily, Layout, Spacing, Typography } from '@/constants/theme';
 import { useAuthStore } from '@/stores/auth-store';
 import { useLocationRank } from '@/hooks/useLocationRank';
 import { usePuzzleCarousel } from '@/hooks/usePuzzleCarousel';
@@ -299,6 +299,7 @@ function makeStyles(colors: Palette) {
     },
     boroughName: {
         ...Typography.body,
+        fontFamily: FontFamily.semibold,
         fontWeight: '600', color: colors.text },
     boroughRank: {
         ...Typography.caption,

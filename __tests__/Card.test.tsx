@@ -3,25 +3,38 @@ import { StyleSheet, Text } from 'react-native';
 import { fireEvent, render } from '@testing-library/react-native';
 
 import { Card, getCardStyle } from '@/components/ui/Card';
-import { CardSurface, Colors, Layout, Radius, Spacing } from '@/constants/theme';
+import { Layout, palette, Radius, Spacing } from '@/constants/theme';
 
 describe('design tokens (TUB-272)', () => {
-    it('exposes the 4/8/12/16/24 spacing scale and card tokens', () => {
+    it('exposes the 4/8/12/16/24 spacing scale and one radius scale', () => {
         expect([Spacing.xs, Spacing.sm, Spacing.s12, Spacing.md, Spacing.lg]).toEqual([4, 8, 12, 16, 24]);
-        expect(Radius).toMatchObject({ sm: 4, md: 8, lg: 12 });
+        expect(Radius).toEqual({ sm: 4, md: 8, lg: 12, xl: 24, pill: 999 });
         expect(Layout).toMatchObject({ screenPadding: 16, cardGap: 12, cardPadding: 16 });
-        expect(CardSurface).toEqual({ borderWidth: 1, borderColor: '#7A8B85' });
+        expect(Layout).not.toHaveProperty('borderRadius');
+        expect(Layout.shadow).not.toHaveProperty('sm');
     });
 });
 
 describe('Card', () => {
     it.each([
         ['filled', { backgroundColor: '#123456' }],
-        ['tinted', { backgroundColor: Colors.light.card }],
-        ['outlined', { backgroundColor: Colors.light.background, borderWidth: 1 }],
-        ['grouped', { backgroundColor: Colors.light.card, borderWidth: 1, overflow: 'hidden' }],
+        ['tinted', { backgroundColor: palette.light.elevated }],
+        ['outlined', { backgroundColor: palette.light.background, borderWidth: 1, borderColor: palette.light.border }],
+        ['grouped', { backgroundColor: palette.light.elevated, borderWidth: 1, borderColor: palette.light.border, overflow: 'hidden' }],
     ] as const)('%s variant surface', (variant, expected) => {
         expect(getCardStyle(variant, '#123456')).toMatchObject(expected);
+    });
+
+    it('takes the border from the active scheme', () => {
+        expect(getCardStyle('tinted', undefined, palette.light).borderColor).toBeUndefined();
+        const dark = getCardStyle('outlined', undefined, palette.dark);
+        expect(dark.borderColor).toBe(palette.dark.border);
+        expect(dark.borderColor).not.toBe(palette.light.border);
+        expect(dark.backgroundColor).toBe(palette.dark.background);
+        expect(getCardStyle('grouped', undefined, palette.dark)).toMatchObject({
+            backgroundColor: palette.dark.elevated,
+            borderColor: palette.dark.border,
+        });
     });
 
     it('uses radius lg, default padding and no shadow when static', async () => {
