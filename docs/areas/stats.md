@@ -12,13 +12,13 @@ Both numbers come from hooks. `useUserStats` loads the streak and best time. `us
 
 ## Streak
 
-`loadUserStreak` in `hooks/useUserStats.ts` looks at the last 60 published puzzles for each game. A Connections win is `status === 'won'`. A Crossword win is `completed === true`. The puzzle’s calendar date is what counts, not the moment the app was opened.
+`loadUserStreak` in `hooks/useUserStats.ts` looks at the last 60 published puzzles for each game. An Interchange win is `status === 'won'`. A Crossword win is `completed === true`. The puzzle’s calendar date is what counts, not the moment the app was opened.
 
 `calculateStreakFromDates` in `lib/user-stats.ts` counts consecutive local days. Today is still open: if today has no win yet, the streak is the run ending yesterday. A missed yesterday breaks it. The count stops at 365 days.
 
 ## Best time
 
-`selectBestTime` compares the best Connections time with the best Crossword time. The lower number wins. A tie stays on Connections. The label is `M:SS` via `formatScore`.
+`selectBestTime` compares the best Interchange time with the best Crossword time. The lower number wins. A tie stays on Interchange (stored id `connections`). The label is `M:SS` via `formatScore`.
 
 ## History list
 

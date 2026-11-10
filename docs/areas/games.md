@@ -4,7 +4,7 @@ TubeRush has two daily games, listed in `constants/Games.ts`.
 
 | Game | Access | Play screen |
 | --- | --- | --- |
-| Connections | Free | `app/games/play-connections.tsx` |
+| Interchange | Free | `app/games/play-connections.tsx` |
 | Crossword | TubeRush Pro | `app/games/play-crossword.tsx` |
 
 The home tab (`app/(tabs)/index.tsx`) shows a short carousel of recent puzzles. Archive lists live at `app/games/connections-list.tsx` and `app/games/crossword-list.tsx`.
@@ -17,18 +17,18 @@ A puzzle can also be loaded by id from `custom_puzzles` (`lib/custom-puzzles.ts`
 
 ## Play state
 
-`stores/game-store.ts` holds the current game. Creating a Connections game starts with four mistakes. Creating a Crossword game requires the puzzle and copies its grid and clues into the state.
+`stores/game-store.ts` holds the current game. Creating an Interchange game starts with four mistakes. Creating a Crossword game requires the puzzle and copies its grid and clues into the state.
 
-Every move is saved locally first through `lib/offline-sync-manager.ts`, then pushed to Supabase when the device is online. Coming back online flushes the queue. Conflicts use last write wins.
+Every move is saved locally first through `lib/offline-sync-manager.ts`, then pushed to Supabase when the device is online. Coming back online flushes the queue. Queued conflicts are merged by `mergeGameStates` (`lib/game-merge.ts`): Interchange unions solved groups and keeps a finished game finished, and Crossword keeps a completed grid, otherwise the later snapshot's letters win. An online save upserts the local snapshot without that merge.
 
 Game ids:
 
-- Connections: `connections_{userId}_{YYYY-MM-DD}`
+- Interchange: `connections_{userId}_{YYYY-MM-DD}`
 - Crossword: `crossword_{userId}_{puzzleId}`
 
 ## Finishing a daily game
 
-Connections is won when all four groups are found, and lost when mistakes run out. The time is `(endTime - startTime)` in seconds.
+Interchange is won when all four groups are found, and lost when mistakes run out. The time is `(endTime - startTime)` in seconds.
 
 Crossword is won when the grid is filled correctly. The timer in `hooks/useCrosswordTimer.ts` subtracts time spent in the background (`accumulatedPause`) so a locked phone does not count.
 
