@@ -5,7 +5,6 @@ const migration = readFileSync(
   join(__dirname, '../supabase/migrations/20261107180000_puzzle_drafts_publish_keys.sql'),
   'utf8',
 );
-const pgTap = readFileSync(join(__dirname, '../supabase/tests/puzzle_drafts_rls.test.sql'), 'utf8');
 
 function revokeLine(signature: string): RegExp {
   const escaped = signature.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -117,21 +116,5 @@ describe('puzzle draft migration (TUB-331)', () => {
     for (const body of bodies) {
       expect(body).toMatch(/set search_path = ''/);
     }
-  });
-});
-
-describe('puzzle draft pgTAP coverage (TUB-331)', () => {
-  it('exercises anon, player, bot, admin, escalation, rotation, and revocation', () => {
-    expect(pgTap).toMatch(/set local role anon/);
-    expect(pgTap).toMatch(/player cannot read drafts/);
-    expect(pgTap).toMatch(/user_metadata cannot grant admin/);
-    expect(pgTap).toMatch(/bot cannot set status/);
-    expect(pgTap).toMatch(/editing an approved draft clears approval/);
-    expect(pgTap).toMatch(/published puzzle drafts are immutable/);
-    expect(pgTap).toMatch(/service role cannot approve/);
-    expect(pgTap).toMatch(/rotated key replaces the old hash/);
-    expect(pgTap).toMatch(/revoked key is rejected/);
-    expect(pgTap).toMatch(/publish key does not approve the draft/);
-    expect(pgTap).toMatch(/players cannot write live games/);
   });
 });

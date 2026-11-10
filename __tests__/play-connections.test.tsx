@@ -3,11 +3,10 @@ import { leaderboard } from "@/lib/leaderboard";
 import { useAuthStore } from "@/stores/auth-store";
 import { useGameStore } from "@/stores/game-store";
 import { ConnectionsState } from "@/types/game";
-import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
+import { fireEvent, render, waitFor } from "@testing-library/react-native";
 import { useRouter } from "expo-router";
 import React from "react";
 
-// Mock dependencies
 jest.mock("@/stores/auth-store", () => ({
   useAuthStore: jest.fn(),
 }));
@@ -23,32 +22,54 @@ jest.mock("@/lib/leaderboard", () => ({
   },
 }));
 
+jest.mock("@/hooks/useUserStats", () => ({
+  useUserStats: jest.fn(() => ({
+    stats: { bestTime: null, bestTimeGameType: null, streak: 0 },
+    loading: false,
+    refresh: jest.fn(),
+  })),
+}));
+
+const BISCUITS = ["DIGESTIVE", "HOBNOB", "BOURBON", "SHORTBREAD"] as const;
+const CHARACTERS = ["PADDY", "CHARITY", "MARLON", "CAIN"] as const;
+const PARK = ["LINKIN", "JURASSIC", "SOUTH", "THEME"] as const;
+const LONG = ["JOHNS", "JUMP", "RANGE", "SUFFERING"] as const;
+const WRONG = ["DIGESTIVE", "PADDY", "LINKIN", "JOHNS"] as const;
+const WRONG_AFTER_BISCUITS = ["PADDY", "CHARITY", "LINKIN", "JOHNS"] as const;
+
+const GROUP = {
+  biscuits: "TYPES OF BRITISH BISCUIT",
+  characters: "EMMERDALE CHARACTERS",
+  park: "___ PARK",
+  long: "LONG ___",
+} as const;
+
 const mockPuzzle = {
   id: "1",
   date: "2024-03-14",
   groups: [
     {
-      category: "TUBE LINES",
-      items: ["BAKERLOO", "CENTRAL", "DISTRICT", "NORTHERN"],
+      category: GROUP.biscuits,
+      items: [...BISCUITS],
       color: "#DC241F",
       difficulty: 1,
     },
     {
-      category: "ROYAL PARKS",
-      items: ["HYDE", "REGENT", "GREEN", "ST JAMES"],
-      color: "#00A166",
+      category: GROUP.characters,
+      items: [...CHARACTERS],
+      color: "#007D32",
       difficulty: 2,
     },
     {
-      category: "LONDON AIRPORTS",
-      items: ["HEATHROW", "GATWICK", "STANSTED", "LUTON"],
+      category: GROUP.park,
+      items: [...PARK],
       color: "#0019A8",
       difficulty: 3,
     },
     {
-      category: "MONOPOLY STREETS",
-      items: ["VINE", "BOW", "FLEET", "STRAND"],
-      color: "#FFD300",
+      category: GROUP.long,
+      items: [...LONG],
+      color: "#FFD329",
       difficulty: 4,
     },
   ],
@@ -60,6 +81,27 @@ jest.mock("@/lib/daily-games", () => ({
     Promise.resolve(date === "2024-03-14" ? mockPuzzle : undefined),
   ),
 }));
+
+type PressTarget = Parameters<typeof fireEvent.press>[0];
+type HostNode = { type?: string; props?: Record<string, unknown>; children?: unknown };
+
+function hostNodes(node: unknown, type: string): HostNode[] {
+  if (!node || typeof node !== "object") return [];
+  const el = node as HostNode;
+  const here = el.type === type ? [el] : [];
+  const children = Array.isArray(el.children) ? el.children : [];
+  return [...here, ...children.flatMap((child) => hostNodes(child, type))];
+}
+
+async function submitGuess(getByTestId: (id: string) => PressTarget, items: readonly string[]) {
+  await waitFor(() => {
+    expect(getByTestId(`tile-${items[0]}`)).toBeTruthy();
+  });
+  for (const item of items) {
+    await fireEvent.press(getByTestId(`tile-${item}`));
+  }
+  await fireEvent.press(getByTestId("btn-submit"));
+}
 
 describe("PlayConnectionsScreen", () => {
   const mockRouter = {
@@ -98,31 +140,27 @@ describe("PlayConnectionsScreen", () => {
   const mockCreateNewGame = jest.fn();
   const mockSaveGame = jest.fn();
 
+  function setGame(state: ConnectionsState) {
+    (useGameStore as unknown as jest.Mock).mockReturnValue({
+      currentGame: { ...mockGame, state },
+      loadGame: mockLoadGame,
+      createNewGame: mockCreateNewGame,
+      saveGame: mockSaveGame,
+    });
+  }
+
   beforeEach(() => {
     jest.clearAllMocks();
-    jest.useFakeTimers();
 
     (useRouter as jest.Mock).mockReturnValue(mockRouter);
     (useAuthStore as unknown as jest.Mock).mockReturnValue({
       user: mockUser,
     });
-    (useGameStore as unknown as jest.Mock).mockReturnValue({
-      currentGame: mockGame,
-      loadGame: mockLoadGame,
-      createNewGame: mockCreateNewGame,
-      saveGame: mockSaveGame,
-    });
+    setGame(mockGameState);
 
     mockLoadGame.mockResolvedValue(mockGame);
     mockCreateNewGame.mockReturnValue(mockGame);
     mockSaveGame.mockResolvedValue(undefined);
-  });
-
-  afterEach(async () => {
-    await act(async () => {
-      jest.runOnlyPendingTimers();
-    });
-    jest.useRealTimers();
   });
 
   describe("Initialization", () => {
@@ -169,123 +207,54 @@ describe("PlayConnectionsScreen", () => {
         saveGame: mockSaveGame,
       });
 
-      const { getByAccessibilityHint } = await render(<PlayConnectionsScreen />);
+      const { toJSON } = await render(<PlayConnectionsScreen />);
 
-      // ActivityIndicator should be visible
-      expect(getByAccessibilityHint).toBeTruthy();
+      expect(hostNodes(toJSON(), "ActivityIndicator")).toHaveLength(1);
     });
   });
 
   describe("Game Logic - handleSubmitGuess", () => {
     it("marks group as completed on correct guess", async () => {
-      const { getByText } = await render(<PlayConnectionsScreen />);
+      const { getByTestId } = await render(<PlayConnectionsScreen />);
 
-      // Wait for component to render
-      await waitFor(() => {
-        expect(getByText("BAKERLOO")).toBeTruthy();
-      });
-
-      // Get the Connections component's props by finding it in the tree
-      // We'll simulate the guess by calling the handler directly
-      const correctGuess = ["BAKERLOO", "CENTRAL", "DISTRICT", "NORTHERN"];
-
-      // Find and trigger the onSubmitGuess callback
-      // Since we can't easily access the callback, we'll use findByProps
-      const connections = require("@/components/games/Connections");
-      const spy = jest.spyOn(connections, "Connections");
-
-      // Re-render to capture the spy
-      const { rerender } = await render(<PlayConnectionsScreen />);
-
-      await waitFor(() => {
-        expect(spy).toHaveBeenCalled();
-      });
-
-      const onSubmitGuess = (
-        spy.mock.calls[spy.mock.calls.length - 1][0] as any
-      ).onSubmitGuess;
-
-      // Call the handler directly
-      await act(async () => {
-        await onSubmitGuess(correctGuess);
-      });
+      await submitGuess(getByTestId, BISCUITS);
 
       await waitFor(() => {
         expect(mockSaveGame).toHaveBeenCalledWith(
           expect.objectContaining({
             state: expect.objectContaining({
-              completedGroups: ["TUBE LINES"],
+              completedGroups: [GROUP.biscuits],
               mistakesRemaining: 4,
             }),
           }),
         );
       });
-
-      spy.mockRestore();
     });
 
     it("adds guess to history", async () => {
-      const connections = require("@/components/games/Connections");
-      const spy = jest.spyOn(connections, "Connections");
+      const { getByTestId } = await render(<PlayConnectionsScreen />);
 
-      await render(<PlayConnectionsScreen />);
-
-      await waitFor(() => {
-        expect(spy).toHaveBeenCalled();
-      });
-
-      const onSubmitGuess = (
-        spy.mock.calls[spy.mock.calls.length - 1][0] as any
-      ).onSubmitGuess;
-      const correctGuess = ["BAKERLOO", "CENTRAL", "DISTRICT", "NORTHERN"];
-
-      await act(async () => {
-        await onSubmitGuess(correctGuess);
-      });
+      await submitGuess(getByTestId, BISCUITS);
 
       await waitFor(() => {
         expect(mockSaveGame).toHaveBeenCalledWith(
           expect.objectContaining({
             state: expect.objectContaining({
-              history: [correctGuess],
+              history: [[...BISCUITS]],
             }),
           }),
         );
       });
-
-      spy.mockRestore();
     });
 
     it("sets status to won when all 4 groups are completed", async () => {
-      const gameStateWithThreeGroups: ConnectionsState = {
+      setGame({
         ...mockGameState,
-        completedGroups: ["TUBE LINES", "ROYAL PARKS", "LONDON AIRPORTS"],
-      };
-
-      (useGameStore as unknown as jest.Mock).mockReturnValue({
-        currentGame: { ...mockGame, state: gameStateWithThreeGroups },
-        loadGame: mockLoadGame,
-        createNewGame: mockCreateNewGame,
-        saveGame: mockSaveGame,
+        completedGroups: [GROUP.biscuits, GROUP.characters, GROUP.park],
       });
 
-      const connections = require("@/components/games/Connections");
-      const spy = jest.spyOn(connections, "Connections");
-
-      await render(<PlayConnectionsScreen />);
-
-      await waitFor(() => {
-        expect(spy).toHaveBeenCalled();
-      });
-
-      const onSubmitGuess = (
-        spy.mock.calls[spy.mock.calls.length - 1][0] as any
-      ).onSubmitGuess;
-      const lastGroupGuess = ["VINE", "BOW", "FLEET", "STRAND"];
-
-      await act(async () => {
-        await onSubmitGuess(lastGroupGuess);
-      });
+      const { getByTestId } = await render(<PlayConnectionsScreen />);
+      await submitGuess(getByTestId, LONG);
 
       await waitFor(() => {
         expect(mockSaveGame).toHaveBeenCalledWith(
@@ -293,51 +262,28 @@ describe("PlayConnectionsScreen", () => {
             state: expect.objectContaining({
               status: "won",
               endTime: expect.any(Number),
-              completedGroups: expect.arrayContaining([
-                "TUBE LINES",
-                "ROYAL PARKS",
-                "LONDON AIRPORTS",
-                "MONOPOLY STREETS",
-              ]),
+              completedGroups: [
+                GROUP.biscuits,
+                GROUP.characters,
+                GROUP.park,
+                GROUP.long,
+              ],
             }),
           }),
         );
       });
-
-      spy.mockRestore();
     });
 
     it("submits score to leaderboard when winning", async () => {
       const startTime = Date.now();
-      const gameStateWithThreeGroups: ConnectionsState = {
+      setGame({
         ...mockGameState,
-        completedGroups: ["TUBE LINES", "ROYAL PARKS", "LONDON AIRPORTS"],
+        completedGroups: [GROUP.biscuits, GROUP.characters, GROUP.park],
         startTime,
-      };
-
-      (useGameStore as unknown as jest.Mock).mockReturnValue({
-        currentGame: { ...mockGame, state: gameStateWithThreeGroups },
-        loadGame: mockLoadGame,
-        createNewGame: mockCreateNewGame,
-        saveGame: mockSaveGame,
       });
 
-      const connections = require("@/components/games/Connections");
-      const spy = jest.spyOn(connections, "Connections");
-
-      await render(<PlayConnectionsScreen />);
-
-      await waitFor(() => {
-        expect(spy).toHaveBeenCalled();
-      });
-
-      const onSubmitGuess = (
-        spy.mock.calls[spy.mock.calls.length - 1][0] as any
-      ).onSubmitGuess;
-
-      await act(async () => {
-        await onSubmitGuess(["VINE", "BOW", "FLEET", "STRAND"]);
-      });
+      const { getByTestId } = await render(<PlayConnectionsScreen />);
+      await submitGuess(getByTestId, LONG);
 
       await waitFor(() => {
         expect(leaderboard.submitScore).toHaveBeenCalledWith(
@@ -349,71 +295,30 @@ describe("PlayConnectionsScreen", () => {
           { result: "won", mistakes: expect.any(Number), gameDate: expect.any(String) },
         );
       });
-
-      spy.mockRestore();
     });
 
     it("does not submit score when user has no city", async () => {
-      const userWithoutCity = { ...mockUser, city: undefined, borough: undefined };
       (useAuthStore as unknown as jest.Mock).mockReturnValue({
-        user: userWithoutCity,
+        user: { ...mockUser, city: undefined, borough: undefined },
       });
-
-      const gameStateWithThreeGroups: ConnectionsState = {
+      setGame({
         ...mockGameState,
-        completedGroups: ["TUBE LINES", "ROYAL PARKS", "LONDON AIRPORTS"],
-      };
-
-      (useGameStore as unknown as jest.Mock).mockReturnValue({
-        currentGame: { ...mockGame, state: gameStateWithThreeGroups },
-        loadGame: mockLoadGame,
-        createNewGame: mockCreateNewGame,
-        saveGame: mockSaveGame,
+        completedGroups: [GROUP.biscuits, GROUP.characters, GROUP.park],
       });
 
-      const connections = require("@/components/games/Connections");
-      const spy = jest.spyOn(connections, "Connections");
-
-      await render(<PlayConnectionsScreen />);
-
-      await waitFor(() => {
-        expect(spy).toHaveBeenCalled();
-      });
-
-      const onSubmitGuess = (
-        spy.mock.calls[spy.mock.calls.length - 1][0] as any
-      ).onSubmitGuess;
-
-      await act(async () => {
-        await onSubmitGuess(["VINE", "BOW", "FLEET", "STRAND"]);
-      });
+      const { getByTestId } = await render(<PlayConnectionsScreen />);
+      await submitGuess(getByTestId, LONG);
 
       await waitFor(() => {
         expect(mockSaveGame).toHaveBeenCalled();
       });
 
       expect(leaderboard.submitScore).not.toHaveBeenCalled();
-
-      spy.mockRestore();
     });
 
     it("decreases mistakes remaining on incorrect guess", async () => {
-      const connections = require("@/components/games/Connections");
-      const spy = jest.spyOn(connections, "Connections");
-
-      await render(<PlayConnectionsScreen />);
-
-      await waitFor(() => {
-        expect(spy).toHaveBeenCalled();
-      });
-
-      const onSubmitGuess = (
-        spy.mock.calls[spy.mock.calls.length - 1][0] as any
-      ).onSubmitGuess;
-
-      await act(async () => {
-        await onSubmitGuess(["BAKERLOO", "HYDE", "HEATHROW", "VINE"]);
-      });
+      const { getByTestId } = await render(<PlayConnectionsScreen />);
+      await submitGuess(getByTestId, WRONG);
 
       await waitFor(() => {
         expect(mockSaveGame).toHaveBeenCalledWith(
@@ -425,39 +330,13 @@ describe("PlayConnectionsScreen", () => {
           }),
         );
       });
-
-      spy.mockRestore();
     });
 
     it("sets status to lost when mistakes reach 0", async () => {
-      const gameStateOneLifeLeft: ConnectionsState = {
-        ...mockGameState,
-        mistakesRemaining: 1,
-      };
+      setGame({ ...mockGameState, mistakesRemaining: 1 });
 
-      (useGameStore as unknown as jest.Mock).mockReturnValue({
-        currentGame: { ...mockGame, state: gameStateOneLifeLeft },
-        loadGame: mockLoadGame,
-        createNewGame: mockCreateNewGame,
-        saveGame: mockSaveGame,
-      });
-
-      const connections = require("@/components/games/Connections");
-      const spy = jest.spyOn(connections, "Connections");
-
-      await render(<PlayConnectionsScreen />);
-
-      await waitFor(() => {
-        expect(spy).toHaveBeenCalled();
-      });
-
-      const onSubmitGuess = (
-        spy.mock.calls[spy.mock.calls.length - 1][0] as any
-      ).onSubmitGuess;
-
-      await act(async () => {
-        await onSubmitGuess(["BAKERLOO", "HYDE", "HEATHROW", "VINE"]);
-      });
+      const { getByTestId } = await render(<PlayConnectionsScreen />);
+      await submitGuess(getByTestId, WRONG);
 
       await waitFor(() => {
         expect(mockSaveGame).toHaveBeenCalledWith(
@@ -470,31 +349,21 @@ describe("PlayConnectionsScreen", () => {
           }),
         );
       });
-
-      spy.mockRestore();
     });
   });
 
   describe("Game Over UI", () => {
-    it("shows game over banner when won", async () => {
-      const wonGameState: ConnectionsState = {
+    function wonGame(): ConnectionsState {
+      return {
         ...mockGameState,
         status: "won",
-        completedGroups: [
-          "TUBE LINES",
-          "ROYAL PARKS",
-          "LONDON AIRPORTS",
-          "MONOPOLY STREETS",
-        ],
+        completedGroups: [GROUP.biscuits, GROUP.characters, GROUP.park, GROUP.long],
         endTime: Date.now(),
       };
+    }
 
-      (useGameStore as unknown as jest.Mock).mockReturnValue({
-        currentGame: { ...mockGame, state: wonGameState },
-        loadGame: mockLoadGame,
-        createNewGame: mockCreateNewGame,
-        saveGame: mockSaveGame,
-      });
+    it("shows game over banner when won", async () => {
+      setGame(wonGame());
 
       const { getByText } = await render(<PlayConnectionsScreen />);
 
@@ -507,18 +376,11 @@ describe("PlayConnectionsScreen", () => {
     });
 
     it("shows game over banner when lost", async () => {
-      const lostGameState: ConnectionsState = {
+      setGame({
         ...mockGameState,
         status: "lost",
         mistakesRemaining: 0,
         endTime: Date.now(),
-      };
-
-      (useGameStore as unknown as jest.Mock).mockReturnValue({
-        currentGame: { ...mockGame, state: lostGameState },
-        loadGame: mockLoadGame,
-        createNewGame: mockCreateNewGame,
-        saveGame: mockSaveGame,
       });
 
       const { getByText } = await render(<PlayConnectionsScreen />);
@@ -531,56 +393,24 @@ describe("PlayConnectionsScreen", () => {
     });
 
     it("opens leaderboard modal when button pressed", async () => {
-      const wonGameState: ConnectionsState = {
-        ...mockGameState,
-        status: "won",
-        completedGroups: [
-          "TUBE LINES",
-          "ROYAL PARKS",
-          "LONDON AIRPORTS",
-          "MONOPOLY STREETS",
-        ],
-        endTime: Date.now(),
-      };
+      setGame(wonGame());
 
-      (useGameStore as unknown as jest.Mock).mockReturnValue({
-        currentGame: { ...mockGame, state: wonGameState },
-        loadGame: mockLoadGame,
-        createNewGame: mockCreateNewGame,
-        saveGame: mockSaveGame,
-      });
-
-      const { getByText, getByLabelText } = await render(<PlayConnectionsScreen />);
+      const { getByText, getByLabelText, queryByText } = await render(
+        <PlayConnectionsScreen />,
+      );
 
       await waitFor(() => {
         expect(getByText("Journey complete")).toBeTruthy();
       });
 
+      expect(queryByText("All UK")).toBeNull();
       await fireEvent.press(getByLabelText("Leaderboard"));
-
-      // Modal should be visible (we can't test Modal content easily, but we can verify button works)
-      expect(getByLabelText("Leaderboard")).toBeTruthy();
+      expect(getByText("All UK")).toBeTruthy();
+      expect(getByText("Close")).toBeTruthy();
     });
 
     it("navigates back from the finished page via the header", async () => {
-      const wonGameState: ConnectionsState = {
-        ...mockGameState,
-        status: "won",
-        completedGroups: [
-          "TUBE LINES",
-          "ROYAL PARKS",
-          "LONDON AIRPORTS",
-          "MONOPOLY STREETS",
-        ],
-        endTime: Date.now(),
-      };
-
-      (useGameStore as unknown as jest.Mock).mockReturnValue({
-        currentGame: { ...mockGame, state: wonGameState },
-        loadGame: mockLoadGame,
-        createNewGame: mockCreateNewGame,
-        saveGame: mockSaveGame,
-      });
+      setGame(wonGame());
 
       const { getByText, getByLabelText } = await render(<PlayConnectionsScreen />);
 
@@ -588,38 +418,31 @@ describe("PlayConnectionsScreen", () => {
         expect(getByText("Journey complete")).toBeTruthy();
       });
 
-      // TUB-297: no gameplay/Home buttons on the finished page; the header back leaves.
+      // TUB-297: the finished page has no Home button; the header back leaves.
       await fireEvent.press(getByLabelText("Go back"));
 
       expect(mockRouter.back.mock.calls.length + mockRouter.replace.mock.calls.length).toBeGreaterThan(0);
     });
 
     it("does not show solve time when game is lost", async () => {
-      const lostGameState: ConnectionsState = {
+      setGame({
         ...mockGameState,
         status: "lost",
         mistakesRemaining: 0,
         endTime: Date.now(),
-      };
-
-      (useGameStore as unknown as jest.Mock).mockReturnValue({
-        currentGame: { ...mockGame, state: lostGameState },
-        loadGame: mockLoadGame,
-        createNewGame: mockCreateNewGame,
-        saveGame: mockSaveGame,
       });
 
-      const { queryByText } = await render(<PlayConnectionsScreen />);
+      const { queryByText, getByText } = await render(<PlayConnectionsScreen />);
 
       await waitFor(() => {
-        expect(queryByText(/Solved in/)).toBeNull();
+        expect(getByText("Part suspended")).toBeTruthy();
       });
+      expect(queryByText("Time")).toBeNull();
     });
   });
 
   describe("Edge Cases", () => {
     it("handles game load error gracefully", async () => {
-      jest.useRealTimers();
       const consoleSpy = jest.spyOn(console, "error").mockImplementation();
       mockLoadGame.mockRejectedValue(new Error("Network error"));
 
@@ -637,242 +460,90 @@ describe("PlayConnectionsScreen", () => {
       );
 
       consoleSpy.mockRestore();
-      jest.useFakeTimers();
     });
 
     it("does not process guess when game is already won", async () => {
-      const wonGameState: ConnectionsState = {
+      setGame({
         ...mockGameState,
         status: "won",
-        completedGroups: [
-          "TUBE LINES",
-          "ROYAL PARKS",
-          "LONDON AIRPORTS",
-          "MONOPOLY STREETS",
-        ],
-      };
-
-      (useGameStore as unknown as jest.Mock).mockReturnValue({
-        currentGame: { ...mockGame, state: wonGameState },
-        loadGame: mockLoadGame,
-        createNewGame: mockCreateNewGame,
-        saveGame: mockSaveGame,
+        completedGroups: [GROUP.biscuits, GROUP.characters, GROUP.park, GROUP.long],
       });
 
-      const connections = require("@/components/games/Connections");
-      const spy = jest.spyOn(connections, "Connections");
-
-      await render(<PlayConnectionsScreen />);
+      const { getByText, queryByLabelText } = await render(<PlayConnectionsScreen />);
 
       await waitFor(() => {
-        expect(spy).toHaveBeenCalled();
+        expect(getByText("Journey complete")).toBeTruthy();
       });
 
-      const onSubmitGuess = (
-        spy.mock.calls[spy.mock.calls.length - 1][0] as any
-      ).onSubmitGuess;
-
-      const callCountBefore = mockSaveGame.mock.calls.length;
-
-      // Try to make a guess - handleSubmitGuess should check status and not process
-      await act(async () => {
-        await onSubmitGuess(["BAKERLOO", "CENTRAL", "DISTRICT", "NORTHERN"]);
-      });
-
-      // SaveGame should not be called since game is won
-      expect(mockSaveGame.mock.calls.length).toBe(callCountBefore);
-
-      spy.mockRestore();
+      expect(queryByLabelText("Submit guess")).toBeNull();
+      expect(mockSaveGame).not.toHaveBeenCalled();
     });
 
     it("does not duplicate completed groups", async () => {
-      const connections = require("@/components/games/Connections");
-      const spy = jest.spyOn(connections, "Connections");
-
-      await render(<PlayConnectionsScreen />);
+      const { getByTestId } = await render(<PlayConnectionsScreen />);
+      await submitGuess(getByTestId, BISCUITS);
 
       await waitFor(() => {
-        expect(spy).toHaveBeenCalled();
+        expect(mockSaveGame.mock.calls[0][0].state.completedGroups).toEqual([GROUP.biscuits]);
       });
 
-      const onSubmitGuess = (
-        spy.mock.calls[spy.mock.calls.length - 1][0] as any
-      ).onSubmitGuess;
-
-      // Make correct guess twice
-      await act(async () => {
-        await onSubmitGuess(["BAKERLOO", "CENTRAL", "DISTRICT", "NORTHERN"]);
-      });
-
-      await waitFor(() => {
-        const savedState = mockSaveGame.mock.calls[0][0].state;
-        expect(savedState.completedGroups).toEqual(["TUBE LINES"]);
-      });
-
-      // Try to complete the same group again
       mockSaveGame.mockClear();
+      await fireEvent.press(getByTestId("btn-submit"));
 
-      // Update the store to reflect completed group
-      const updatedGameState = {
-        ...mockGameState,
-        completedGroups: ["TUBE LINES"],
-      };
-
-      (useGameStore as unknown as jest.Mock).mockReturnValue({
-        currentGame: { ...mockGame, state: updatedGameState },
-        loadGame: mockLoadGame,
-        createNewGame: mockCreateNewGame,
-        saveGame: mockSaveGame,
-      });
-
-      await act(async () => {
-        await onSubmitGuess(["BAKERLOO", "CENTRAL", "DISTRICT", "NORTHERN"]);
-      });
-
-      // Should still save but not duplicate
       await waitFor(() => {
-        if (mockSaveGame.mock.calls.length > 0) {
-          const savedState = mockSaveGame.mock.calls[0][0].state;
-          expect(savedState.completedGroups).toEqual(["TUBE LINES"]);
-        }
+        expect(mockSaveGame).toHaveBeenCalled();
       });
-
-      spy.mockRestore();
+      expect(mockSaveGame.mock.calls[0][0].state.completedGroups).toEqual([GROUP.biscuits]);
     });
   });
 
   describe("Loss Reveal Flow", () => {
     it("shows the finished page at once on loss and reveals answers 400ms apart", async () => {
-      const gameStateOneLifeLeft: ConnectionsState = {
+      setGame({
         ...mockGameState,
         mistakesRemaining: 1,
-        completedGroups: ["TUBE LINES"],
-      };
-
-      (useGameStore as unknown as jest.Mock).mockReturnValue({
-        currentGame: { ...mockGame, state: gameStateOneLifeLeft },
-        loadGame: mockLoadGame,
-        createNewGame: mockCreateNewGame,
-        saveGame: mockSaveGame,
+        completedGroups: [GROUP.biscuits],
       });
 
-      const connections = require("@/components/games/Connections");
-      const spy = jest.spyOn(connections, "Connections");
+      const screen = await render(<PlayConnectionsScreen />);
+      await submitGuess(screen.getByTestId, WRONG_AFTER_BISCUITS);
 
-      const { queryByText, queryAllByText, rerender } = await render(<PlayConnectionsScreen />);
-
-      await waitFor(() => {
-        expect(spy).toHaveBeenCalled();
-      });
-
-      const onSubmitGuess = (
-        spy.mock.calls[spy.mock.calls.length - 1][0] as any
-      ).onSubmitGuess;
-
-      // Losing guess
-      await act(async () => {
-        await onSubmitGuess(["BAKERLOO", "HYDE", "HEATHROW", "VINE"]);
-      });
-
-      // Store now reflects the lost game
-      const lostGameState: ConnectionsState = {
-        ...gameStateOneLifeLeft,
+      setGame({
+        ...mockGameState,
         status: "lost",
         mistakesRemaining: 0,
+        completedGroups: [GROUP.biscuits],
         endTime: Date.now(),
-      };
-      (useGameStore as unknown as jest.Mock).mockReturnValue({
-        currentGame: { ...mockGame, state: lostGameState },
-        loadGame: mockLoadGame,
-        createNewGame: mockCreateNewGame,
-        saveGame: mockSaveGame,
       });
-      await rerender(<PlayConnectionsScreen />);
+      await screen.rerender(<PlayConnectionsScreen />);
 
-      // TUB-297: the sign appears immediately; unfound lines reveal one by one.
-      expect(queryByText("Part suspended")).toBeTruthy();
-      expect(queryByText("REVEALED")).toBeNull();
+      expect(screen.queryByText("Part suspended")).toBeTruthy();
+      expect(screen.queryByText("REVEALED")).toBeNull();
 
       await waitFor(
         () => {
-          expect(queryAllByText("REVEALED").length).toBe(3);
+          expect(screen.queryAllByText("REVEALED").length).toBe(3);
         },
         { timeout: 3000 },
       );
-
-      spy.mockRestore();
     });
 
     it("shows game over banner immediately for already-lost game on reload", async () => {
-      const lostGameState: ConnectionsState = {
+      setGame({
         ...mockGameState,
         status: "lost",
         mistakesRemaining: 0,
-        completedGroups: ["TUBE LINES"],
+        completedGroups: [GROUP.biscuits],
         endTime: Date.now(),
-      };
-
-      (useGameStore as unknown as jest.Mock).mockReturnValue({
-        currentGame: { ...mockGame, state: lostGameState },
-        loadGame: mockLoadGame,
-        createNewGame: mockCreateNewGame,
-        saveGame: mockSaveGame,
       });
 
       const { getByText, getAllByText } = await render(<PlayConnectionsScreen />);
 
-      // Reopen: same finished page, all answers at once (no staggered reveal).
       await waitFor(() => {
         expect(getByText("Part suspended")).toBeTruthy();
         expect(getAllByText("REVEALED").length).toBe(3);
         expect(getByText("✓ FOUND")).toBeTruthy();
       });
-    });
-
-    it("resets reveal state when player loses", async () => {
-      // Start with a game state that has 1 mistake left
-      const gameStateOneLifeLeft: ConnectionsState = {
-        ...mockGameState,
-        mistakesRemaining: 1,
-      };
-
-      (useGameStore as unknown as jest.Mock).mockReturnValue({
-        currentGame: { ...mockGame, state: gameStateOneLifeLeft },
-        loadGame: mockLoadGame,
-        createNewGame: mockCreateNewGame,
-        saveGame: mockSaveGame,
-      });
-
-      const connections = require("@/components/games/Connections");
-      const spy = jest.spyOn(connections, "Connections");
-
-      await render(<PlayConnectionsScreen />);
-
-      await waitFor(() => {
-        expect(spy).toHaveBeenCalled();
-      });
-
-      const onSubmitGuess = (
-        spy.mock.calls[spy.mock.calls.length - 1][0] as any
-      ).onSubmitGuess;
-
-      // Make incorrect guess to lose
-      await act(async () => {
-        await onSubmitGuess(["BAKERLOO", "HYDE", "HEATHROW", "VINE"]);
-      });
-
-      await waitFor(() => {
-        expect(mockSaveGame).toHaveBeenCalledWith(
-          expect.objectContaining({
-            state: expect.objectContaining({
-              status: "lost",
-              mistakesRemaining: 0,
-            }),
-          }),
-        );
-      });
-
-      spy.mockRestore();
     });
   });
 });
