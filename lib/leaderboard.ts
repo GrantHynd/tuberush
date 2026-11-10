@@ -165,7 +165,7 @@ export const leaderboard = {
         filter?: LeaderboardFilter,
         user?: User | null
     ) {
-        const queryDate = date || new Date().toISOString().split('T')[0];
+        const queryDate = date || toLocalDateString(new Date());
 
         const build = (excludeLost: boolean) => {
         let query = supabase

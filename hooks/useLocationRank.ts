@@ -1,6 +1,7 @@
 import { leaderboard } from '@/lib/leaderboard';
 import { useAuthStore } from '@/stores/auth-store';
 import { useCallback, useEffect, useState } from 'react';
+import { toLocalDateString } from '@/lib/week-utils';
 
 export interface LocationRank {
     location: string;
@@ -26,7 +27,7 @@ export function useLocationRank() {
         }
         setLoading(true);
         try {
-            const today = new Date().toISOString().split('T')[0];
+            const today = toLocalDateString(new Date());
             const userRank = await leaderboard.getUserRank(
                 user.id,
                 'connections',

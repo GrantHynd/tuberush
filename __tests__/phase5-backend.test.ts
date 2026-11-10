@@ -1,7 +1,10 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
+import { renderHook } from '@testing-library/react-native';
+import { useLocationRank } from '@/hooks/useLocationRank';
 import { supabase } from '@/lib/supabase-client';
 import { filterAndRerank, isMissingOnConflictIndexError, isMissingSchemaError, leaderboard, shouldReplaceScore } from '@/lib/leaderboard';
+import { useAuthStore } from '@/stores/auth-store';
 
 const mockRpc = supabase.rpc as jest.Mock;
 const mockFrom = supabase.from as jest.Mock;
@@ -30,6 +33,22 @@ function mockLeaderboardTable(existing: object | null, writes: { error: object |
     chain.upsert = jest.fn((body: object, opts: object) => { calls.push({ op: 'upsert', body, opts } as any); return Promise.resolve(writes.shift() ?? { error: null }); });
     mockFrom.mockReturnValue(chain);
     return calls;
+}
+
+function mockLeaderboardRead() {
+    const eqs: [string, unknown][] = [];
+    const chain: Record<string, jest.Mock> = {};
+    const result = Promise.resolve({ data: [] as unknown[], error: null });
+    chain.select = jest.fn(() => chain);
+    chain.eq = jest.fn((col: string, val: unknown) => {
+        eqs.push([col, val]);
+        return chain;
+    });
+    chain.order = jest.fn(() => chain);
+    chain.limit = jest.fn(() => chain);
+    chain.or = jest.fn(() => result);
+    mockFrom.mockReturnValue(chain);
+    return eqs;
 }
 
 beforeEach(() => jest.clearAllMocks());
@@ -84,6 +103,64 @@ describe('submitScore', () => {
         const calls = mockLeaderboardTable({ id: 'r', score: 80, result: 'won' }, []);
         await leaderboard.submitScore('u', 'London', null, 20, 'connections', { result: 'lost', mistakes: 4 });
         expect(calls).toHaveLength(0);
+    });
+});
+
+/** `new Date()` reports 00:30 on 15 Jul while `toISOString` is still 14 Jul (UTC+1). */
+function installUtcPlusOneMidnight(): () => void {
+    const RealDate = Date;
+    const instant = new RealDate('2026-07-14T23:30:00.000Z');
+    function MockDate(this: Date, ...args: unknown[]) {
+        if (args.length === 0) {
+            const d = new RealDate(instant.getTime());
+            d.getFullYear = () => 2026;
+            d.getMonth = () => 6;
+            d.getDate = () => 15;
+            return d;
+        }
+        return new (RealDate as unknown as new (...a: unknown[]) => Date)(...args);
+    }
+    MockDate.prototype = RealDate.prototype;
+    MockDate.now = () => instant.getTime();
+    MockDate.parse = RealDate.parse;
+    MockDate.UTC = RealDate.UTC;
+    global.Date = MockDate as unknown as DateConstructor;
+    return () => {
+        global.Date = RealDate;
+    };
+}
+
+describe('leaderboard date matches score submission near local midnight', () => {
+    afterEach(() => {
+        useAuthStore.setState({ user: null, loading: true });
+    });
+
+    it('uses the local date at 00:30 in a UTC+1 zone, not the previous UTC date', async () => {
+        const restore = installUtcPlusOneMidnight();
+        try {
+            expect(new Date().toISOString().split('T')[0]).toBe('2026-07-14');
+
+            const calls = mockLeaderboardTable(null, [{ error: null }]);
+            await leaderboard.submitScore('u', 'London', null, 70, 'connections');
+            const submitted = (calls[0].body as { game_date: string }).game_date;
+            expect(submitted).toBe('2026-07-15');
+
+            const eqs = mockLeaderboardRead();
+            await leaderboard.getLeaderboard('connections');
+
+            useAuthStore.setState({
+                user: { id: 'u', email: 'a@b.c', isPremium: false, city: 'London', borough: 'Camden' },
+                loading: false,
+            });
+            const { result, unmount } = await renderHook(() => useLocationRank());
+            unmount();
+
+            const queried = eqs.filter(([col]) => col === 'game_date').map(([, value]) => value);
+            expect(queried).toEqual([submitted, submitted]);
+            expect(result.current.loading).toBe(false);
+        } finally {
+            restore();
+        }
     });
 });
 
