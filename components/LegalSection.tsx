@@ -1,6 +1,6 @@
 import { useTheme } from '@/hooks/useTheme';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { type Palette, Layout, Spacing } from '@/constants/theme';
+import { type Palette, Radius, Spacing } from '@/constants/theme';
 import { PRIVACY_POLICY_ROUTE, TERMS_OF_USE_ROUTE } from '@/lib/legal';
 import { useRouter } from 'expo-router';
 import React from 'react';
@@ -74,7 +74,7 @@ function makeStyles(colors: Palette) {
     },
     card: {
         backgroundColor: colors.elevated,
-        borderRadius: Layout.borderRadius.lg,
+        borderRadius: Radius.lg,
         borderWidth: 1,
         borderColor: colors.border,
         overflow: 'hidden',

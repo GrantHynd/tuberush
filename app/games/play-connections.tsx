@@ -7,7 +7,7 @@ import { getDailyGame, getGameByDate } from "@/lib/daily-games";
 import { scoreOutbox } from "@/lib/score-outbox";
 import { FinishedGameView, type FinishedStat } from "@/components/game-ui/FinishedGameView";
 import { GameHeader } from "@/components/game-ui/GameHeader";
-import { type Palette, Spacing, Typography } from '@/constants/theme';
+import { type Palette, FontFamily, Spacing, Typography } from '@/constants/theme';
 import { decorativeIconProps } from '@/lib/a11y';
 import { GAMES } from "@/constants/Games";
 import { useUserStats } from "@/hooks/useUserStats";
@@ -462,6 +462,7 @@ function makeStyles(colors: Palette) {
   },
   secondaryBtnText: {
     ...Typography.body,
+    fontFamily: FontFamily.semibold,
     fontWeight: "600",
     color: colors.text,
   },

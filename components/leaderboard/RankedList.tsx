@@ -1,7 +1,7 @@
 import { useTheme } from '@/hooks/useTheme';
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { type Palette, Spacing, Layout } from '@/constants/theme';
+import { type Palette, Radius, Spacing } from '@/constants/theme';
 import { WeeklyLeaderboardEntry } from '@/types/game';
 import {
     getDisplayName,
@@ -167,7 +167,7 @@ function makeStyles(colors: Palette) {
     return StyleSheet.create({
     card: {
         backgroundColor: colors.background,
-        borderRadius: Layout.borderRadius.lg,
+        borderRadius: Radius.lg,
         overflow: 'hidden',
         borderWidth: 1,
         borderColor: colors.border,
@@ -193,8 +193,8 @@ function makeStyles(colors: Palette) {
         bottom: 0,
         width: 3,
         backgroundColor: colors.primary,
-        borderTopLeftRadius: Layout.borderRadius.lg,
-        borderBottomLeftRadius: Layout.borderRadius.lg,
+        borderTopLeftRadius: Radius.lg,
+        borderBottomLeftRadius: Radius.lg,
     },
     rank: {
         width: 28,

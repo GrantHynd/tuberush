@@ -1,5 +1,5 @@
 import { useTheme } from '@/hooks/useTheme';
-import { type Palette, Spacing, Typography } from '@/constants/theme';
+import { type Palette, FontFamily, Spacing, Typography } from '@/constants/theme';
 import { GameType } from '@/types/game';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -34,6 +34,7 @@ function makeStyles(colors: Palette) {
     },
     label: {
         ...Typography.label,
+        fontFamily: FontFamily.bold,
         fontSize: 11,
         fontWeight: '700',
         color: colors.onPrimary,

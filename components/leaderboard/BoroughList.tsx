@@ -1,7 +1,7 @@
 import { useTheme } from '@/hooks/useTheme';
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { type Palette, Spacing, Layout } from '@/constants/theme';
+import { type Palette, Radius, Spacing } from '@/constants/theme';
 import { BoroughBreakdownEntry } from '@/types/game';
 import { getDisplayName, formatScore } from '@/lib/display-utils';
 
@@ -81,7 +81,7 @@ function makeStyles(colors: Palette) {
     },
     card: {
         backgroundColor: colors.background,
-        borderRadius: Layout.borderRadius.lg,
+        borderRadius: Radius.lg,
         borderWidth: 1,
         borderColor: colors.border,
         overflow: 'hidden',

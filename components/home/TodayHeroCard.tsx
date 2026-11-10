@@ -1,7 +1,7 @@
 import { useTheme } from '@/hooks/useTheme';
 import { decorativeIconProps } from '@/lib/a11y';
 import { Card } from '@/components/ui/Card';
-import { type Palette, Radius, Spacing, Typography } from '@/constants/theme';
+import { type Palette, FontFamily, Radius, Spacing, Typography } from '@/constants/theme';
 import { formatCountdown, type TodayGameRow, type TodayRowState } from '@/lib/today-puzzles';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import React, { useEffect, useState } from 'react';
@@ -142,7 +142,7 @@ function makeStyles(colors: Palette) {
     divider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
     swatch: { width: 40, height: 40, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },
     rowText: { flex: 1, minWidth: 0 },
-    gameName: { ...Typography.body, fontWeight: '600', color: colors.text },
+    gameName: { ...Typography.body, fontFamily: FontFamily.semibold, fontWeight: '600', color: colors.text },
     cta: {
         minWidth: 88,
         minHeight: 44,

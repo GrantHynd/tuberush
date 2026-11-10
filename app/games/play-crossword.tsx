@@ -11,7 +11,7 @@ import { FeedbackToast } from '@/components/game-ui/FeedbackToast';
 import { announce, decorativeIconProps } from '@/lib/a11y';
 import { wrongLettersMessage } from '@/lib/crossword-feedback';
 import { Leaderboard } from '@/components/ui/Leaderboard';
-import { type Palette, FontScaleCap, Layout, Spacing, Typography } from '@/constants/theme';
+import { type Palette, FontScaleCap, Radius, Spacing, Typography } from '@/constants/theme';
 import { getCustomPuzzle, saveCustomPuzzleScore } from '@/lib/custom-puzzles';
 import { formatScore } from '@/lib/display-utils';
 import { capture } from '@/lib/posthog';
@@ -581,7 +581,7 @@ function makeStyles(colors: Palette) {
         backgroundColor: colors.premium,
         paddingHorizontal: Spacing.sm,
         paddingVertical: 2,
-        borderRadius: Layout.borderRadius.xl,
+        borderRadius: Radius.xl,
         marginLeft: Spacing.sm,
     },
     badgeText: {

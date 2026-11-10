@@ -1,6 +1,4 @@
 /**
- * Platform design tokens (TUB-293, rebranded in TUB-325).
- *
  * Light chrome is the Deep Teal foundation. Dark chrome is Option A tonal teal.
  * Dark crossword cells stay on V3. Light cells are the approved light-tuned V3
  * (option C). Token names are internal only.
@@ -141,47 +139,6 @@ export const palette = {
 type AsStrings<T> = { [K in keyof T]: string };
 export type Palette = AsStrings<typeof lightChrome> & AsStrings<typeof crosswordCells>;
 
-export const GameColors = {
-    interchange: palette.light.gameInterchange,
-    crossword: palette.light.gameCrossword,
-} as const;
-
-export function gameColors(scheme: Scheme) {
-    const p = palette[scheme];
-    return {
-        interchange: p.gameInterchange,
-        crossword: p.gameCrossword,
-        onInterchange: p.onGameInterchange,
-        onCrossword: p.onGameCrossword,
-    };
-}
-
-function chromeColors(p: Palette) {
-    return {
-        text: p.text,
-        background: p.background,
-        tint: p.primary,
-        icon: p.textSecondary,
-        tabIconDefault: p.tabInactive,
-        tabIconSelected: p.tabActive,
-        tabBarBackground: p.surface,
-        card: p.elevated,
-        border: p.border,
-        error: p.error,
-        success: p.success,
-        warning: p.warning,
-        surface: {
-            gameBase: p.background,
-            gameOverlay: 'rgba(12, 22, 20, 0.92)',
-        },
-    };
-}
-
-export const Colors = {
-    light: chromeColors(palette.light),
-    dark: chromeColors(palette.dark),
-} as const;
-
 export const Fonts = {
     rounded: 'System',
     mono: 'System',
@@ -226,27 +183,33 @@ export const Size = {
 
 export const Typography = {
     h1: {
+        fontFamily: FontFamily.bold,
         fontSize: 32,
         fontWeight: '700' as const,
         letterSpacing: -0.5,
     },
     h2: {
+        fontFamily: FontFamily.semibold,
         fontSize: 24,
         fontWeight: '600' as const,
         letterSpacing: -0.5,
     },
     h3: {
+        fontFamily: FontFamily.semibold,
         fontSize: 20,
         fontWeight: '600' as const,
     },
     body: {
+        fontFamily: FontFamily.regular,
         fontSize: 16,
         lineHeight: 24,
     },
     caption: {
+        fontFamily: FontFamily.regular,
         fontSize: 14,
     },
     label: {
+        fontFamily: FontFamily.medium,
         fontSize: 12,
         fontWeight: '500' as const,
         textTransform: 'uppercase' as const,
@@ -269,13 +232,8 @@ export const Radius = {
     sm: 4,
     md: 8,
     lg: 12,
+    xl: 24,
     pill: 999,
-};
-
-/** The single card elevation style: a 1px border, no shadow. Color comes from the palette. */
-export const CardSurface = {
-    borderWidth: 1,
-    borderColor: palette.light.border,
 };
 
 export const Layout = {
@@ -285,20 +243,7 @@ export const Layout = {
     cardGap: 12,
     /** Inner padding of a card. */
     cardPadding: 16,
-    borderRadius: {
-        sm: 4,
-        md: 8,
-        lg: 12,
-        xl: 24,
-    },
     shadow: {
-        sm: {
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 1 },
-            shadowOpacity: 0.05,
-            shadowRadius: 2,
-            elevation: 2,
-        },
         md: {
             shadowColor: '#000',
             shadowOffset: { width: 0, height: 4 },

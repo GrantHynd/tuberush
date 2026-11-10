@@ -1,5 +1,5 @@
 import { useTheme } from '@/hooks/useTheme';
-import { type Palette, Layout, Spacing, Typography } from '@/constants/theme';
+import { type Palette, Radius, Spacing, Typography } from '@/constants/theme';
 import { DISPLAY_NAME_SAVE_ERROR, validateDisplayName } from '@/lib/display-name';
 import React, { useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, StyleSheet, Text, TouchableOpacity } from 'react-native';
@@ -105,7 +105,7 @@ function makeStyles(colors: Palette) {
     primary: {
         backgroundColor: colors.primary,
         minHeight: 48,
-        borderRadius: Layout.borderRadius.md,
+        borderRadius: Radius.md,
         alignItems: 'center',
         justifyContent: 'center',
         marginTop: Spacing.sm,

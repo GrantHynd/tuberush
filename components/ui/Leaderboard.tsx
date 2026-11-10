@@ -1,7 +1,7 @@
 import { useTheme } from '@/hooks/useTheme';
 import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
-import { type Palette, Typography, Spacing, Layout } from '@/constants/theme';
+import { type Palette, Radius, Typography, Spacing } from '@/constants/theme';
 import { formatScore, getDisplayName } from '@/lib/display-utils';
 import { leaderboard, getLocationDisplay, LeaderboardFilter } from '@/lib/leaderboard';
 import { useAuthStore } from '@/stores/auth-store';
@@ -138,7 +138,7 @@ function makeStyles(colors: Palette) {
     return StyleSheet.create({
     container: {
         backgroundColor: colors.background,
-        borderRadius: Layout.borderRadius.lg,
+        borderRadius: Radius.lg,
         padding: Spacing.md,
         flex: 1,
     },
@@ -158,14 +158,14 @@ function makeStyles(colors: Palette) {
         flexDirection: 'row',
         marginBottom: Spacing.md,
         backgroundColor: colors.elevated,
-        borderRadius: Layout.borderRadius.md,
+        borderRadius: Radius.md,
         padding: 4,
     },
     filterButton: {
         flex: 1,
         paddingVertical: Spacing.sm,
         alignItems: 'center',
-        borderRadius: Layout.borderRadius.sm,
+        borderRadius: Radius.sm,
         borderWidth: 1,
         borderColor: 'transparent',
     },
@@ -175,7 +175,6 @@ function makeStyles(colors: Palette) {
     },
     filterActive: {
         backgroundColor: colors.background,
-        ...Layout.shadow.sm,
     },
     filterText: {
         ...Typography.label,
@@ -196,7 +195,7 @@ function makeStyles(colors: Palette) {
         borderBottomColor: colors.border,
     },
     entryHighlight: {
-        backgroundColor: colors.warning + '20', // transparent yellow
+        backgroundColor: colors.warning + '20',
     },
     rank: {
         width: 30,

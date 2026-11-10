@@ -1,7 +1,5 @@
 import type MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
-import { palette } from './theme';
-
 type MaterialIconName = keyof typeof MaterialIcons.glyphMap;
 
 /** Deep-link scheme as defined in app.config.ts → expo.scheme */
@@ -16,7 +14,6 @@ export const GAMES = {
         isPremium: false,
         /** MaterialIcons glyph, shared by Home section headers and leaderboards. */
         icon: 'hub' as MaterialIconName,
-        color: palette.light.gameInterchange,
     },
     crossword: {
         id: 'crossword',
@@ -24,7 +21,6 @@ export const GAMES = {
         description: 'Daily premium crossword',
         isPremium: true,
         icon: 'grid-on' as MaterialIconName,
-        color: palette.light.gameCrossword,
     },
 } as const;
 

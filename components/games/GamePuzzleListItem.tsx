@@ -1,5 +1,5 @@
 import { useTheme } from '@/hooks/useTheme';
-import { type Palette, Layout, Spacing } from '@/constants/theme';
+import { type Palette, Radius, Spacing } from '@/constants/theme';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { formatMaybe } from '@/lib/display-utils';
 import React from 'react';
@@ -150,7 +150,7 @@ function makeStyles(colors: Palette) {
     dateBadge: {
         width: 48,
         height: 48,
-        borderRadius: Layout.borderRadius.md,
+        borderRadius: Radius.md,
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: Spacing.md,

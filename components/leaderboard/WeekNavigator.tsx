@@ -1,7 +1,7 @@
 import { useTheme } from '@/hooks/useTheme';
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { type Palette, Spacing, Typography } from '@/constants/theme';
+import { type Palette, FontFamily, Spacing, Typography } from '@/constants/theme';
 import { LiveBadge } from './LiveBadge';
 import { getWeekLabel, isCurrentWeek } from '@/lib/week-utils';
 
@@ -83,6 +83,7 @@ function makeStyles(colors: Palette) {
     },
     label: {
         ...Typography.caption,
+        fontFamily: FontFamily.semibold,
         fontWeight: '600',
         color: colors.text,
     },
