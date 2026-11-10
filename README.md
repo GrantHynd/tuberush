@@ -5,11 +5,11 @@ A daily word game app for British commuters, built with React Native/Expo, offli
 ## Features
 
 ✅ **Two Games**
-- Connections (Free) — find groups of 4 related items
+- Interchange (Free) — find groups of 4 related items
 - Crossword Puzzles (Premium) — daily 9x9 crossword
 
 ✅ **Custom Puzzles**
-- Play Connections/Crossword puzzles loaded from a `custom_puzzles` table outside the daily flow
+- Play Interchange/Crossword puzzles loaded from a `custom_puzzles` table outside the daily flow
 - Score saved separately from the daily leaderboard; leaderboard UI hidden for these sessions
 
 ✅ **Leaderboards**
@@ -151,7 +151,7 @@ How the main product areas fit together:
 2. **Sync Queue**: Offline operations are queued for later sync
 3. **Network Detection**: NetInfo monitors connection status
 4. **Automatic Sync**: When online, pending operations sync to Supabase
-5. **Conflict Resolution**: Last-write-wins strategy for conflicts
+5. **Conflict Resolution**: Queued sync merges with `mergeGameStates`; an online save upserts the local snapshot
 
 ### Game State Management
 
@@ -188,7 +188,7 @@ if (game.isPremium && !user?.isPremium) {
 - Profile auto-creation on signup
 
 ### Games
-- **Connections**: Find groups of 4 related items (free)
+- **Interchange**: Find groups of 4 related items (free)
 - **Crossword**: Premium 9x9 puzzle game with clue display and timer
 - **Custom Puzzles**: Either game type can also be loaded by ID from the `custom_puzzles` table (e.g. shared or AI-generated puzzles), scored separately from the daily leaderboard
 

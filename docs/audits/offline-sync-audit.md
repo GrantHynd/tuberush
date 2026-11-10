@@ -5,42 +5,11 @@ Every claim below cites code on `main`. Line numbers refer to that commit.
 
 ## 1. How it works today
 
-### 1.1 Puzzle download (prefetch)
-- On launch, `app/_layout.tsx:78-79` calls `prefetchDailyGames('connections', 7)` and `prefetchDailyGames('crossword', 7)` without awaiting them. They run after RevenueCat and PostHog init (`:61-72`) and `checkSession()` (`:75`).
-- `lib/daily-games.ts:63-87` fetches published `games` rows for **today..today+7** (local date via `toLocalDateString`) and writes them to one AsyncStorage key per game type, `games_cache_v3_<type>` (`:20`, `:46-53`). The write **replaces** the whole entry.
-- The cache TTL is 6 h (`:21`). The TTL only triggers a background refetch (`:170-172`). Stale data is still served.
-- Premium crosswords use the same cache as Connections. Download is not gated on entitlement. The gate is applied at play time (`app/games/play-crossword.tsx:80-91`).
-- Custom puzzles (`getCustomPuzzle`) are not cached at all.
-- Nothing refreshes the cache except a cold start or a puzzle open. There is no AppState/foreground, background-fetch or NetInfo-driven prefetch.
+`app/_layout.tsx` calls `startDailyGamesPrefetch()` (`lib/daily-games.ts`). That prefetches stored ids `connections` and `crossword` for the past 7 days and the next 7, merges rows into `games_cache_v3_<type>` by `game_date`, and runs again on foreground and when the network returns.
 
-### 1.2 Loading a puzzle
-- Every reader tries the network first and falls back to the cache second: `getDailyGame` (`daily-games.ts:154-178`), `getGameByDate` (`:183-210`), `getCrosswordByPuzzleId` (`:215-244`) and `getRecentAndUpcomingGames` (`:254-278`).
-- None of these calls has a timeout. On a weak or captive connection, the screen waits as long as the fetch takes before it falls back.
-- Connections offline miss: the alert "Puzzle unavailable… isn't available offline" (`app/games/play-connections.tsx:86-95`).
+Queued replay merges with `mergeGameStates` (`lib/game-merge.ts`), called from `processSyncOperation` in `lib/offline-sync-manager.ts`. The queued snapshot is merged with the server row, that merge is upserted, then it is merged into the current local state. For `connections`, solved groups are unioned and a finished game stays finished (a solved win beats a loss). For `crossword`, a completed grid is kept; otherwise the later snapshot's letters win. An online `saveGameState` upserts the local snapshot and does not run that merge.
 
-### 1.3 Game state persistence
-- There is no Zustand `persist` middleware anywhere. `stores/game-store.ts:17` is a plain `create`. Durable state lives in AsyncStorage under `game_state_<id>`, managed by `lib/storage-manager.ts:14-22`.
-- Game ids: Connections uses `connections_<uid>_<puzzleDate>` (`play-connections.tsx:97-99`, `config/gameHistoryConfigs.ts:72`). Crossword uses `crossword_<uid>_<puzzleId>` (`play-crossword.tsx:96-98`, `gameHistoryConfigs.ts:124`). Ids are deterministic, so `game_states` rows are idempotent per puzzle.
-- Every guess (Connections, `play-connections.tsx:213-217`) and every cell keystroke (Crossword, `play-crossword.tsx:126-145`) calls `saveGame` → `offlineSyncManager.saveGameState`. That call writes locally first (`lib/offline-sync-manager.ts:76`), then upserts to `game_states` if online (`:78-102`), or else enqueues (`:103-106`).
-
-### 1.4 Sync queue
-- The queue is one JSON array under `sync_queue` (`storage-manager.ts:98-155`). Each save appends a full snapshot. Operation id = `<gameId>_<Date.now()>` (`offline-sync-manager.ts:113-120`).
-- Trigger: only a NetInfo transition from offline to online (`:27-40`). `isOnline` starts as `false` (`:7`), so the first NetInfo event at launch also triggers a sync. The other trigger is the manual "retry" in Profile, via `SyncStatusRow` (`app/(tabs)/profile.tsx:55,301`) → `forceSync` (`:322-326`).
-- Replay: ops run sequentially. For each one, the client SELECTs the server row, then either upserts with `version+1` or runs `handleConflict` (last-write-wins on `last_updated`) (`:194-270`).
-- There is no backoff, no timer, and no AppState trigger.
-
-### 1.5 Leaderboard / scores
-- `leaderboard.submitScore` (`lib/leaderboard.ts:73-115`) is called fire-and-forget on win or loss (`play-connections.tsx:165-176, 199-208`; `play-crossword.tsx:234-`).
-- It is **not** queued. A failure is only `console.error`'d.
-- It stamps `game_date` with the **UTC** date of submission (`leaderboard.ts:83`, `new Date().toISOString().split('T')[0]`), not the puzzle's date.
-- It uses read-then-insert/update (`:85-106`), with a fallback for the undeployed `result`/`mistakes` columns from migration `20261024000002` (`:108-113`). Losses are dropped while that migration is missing (`:111`).
-
-### 1.6 Auth, entitlements, stats
-- The Supabase client persists the session in AsyncStorage with `autoRefreshToken` (`lib/supabase-client.ts:20-27`).
-- `checkSession` (`stores/auth-store.ts:222-256`) awaits `getSession`, RevenueCat login, a `profiles` fetch and `hasActiveEntitlement()`. It ignores the `error` from `getSession` and has no try/finally.
-- Premium comes from RevenueCat only. Any error is treated as **not premium** (`auth-store.ts:18-27`).
-- Home streak (`hooks/useUserStats.ts:71-119`) and history lists (`hooks/useGameHistoryList.ts:111`) get the puzzle list from the network only (`config/gameHistoryConfigs.ts:7-29`). On failure, they return `[]`.
-- Best time comes from the `leaderboard` table (`lib/leaderboard.ts:183-195`). That read is network-only.
+Scores are queued. Finish handlers call `scoreOutbox.submit` (`lib/score-outbox.ts`). `startScoreOutbox()` drains the outbox at launch, on reconnect, and on foreground. The stored date is the puzzle date: Interchange passes `dateParam` or `puzzle.date`, and crossword passes the date from `usePuzzle` (the row's `game_date`, or the device-local date for today's puzzle). `submitScore` writes that `gameDate`. If `gameDate` is omitted, the fallback is `toLocalDateString` (the device's local date).
 
 ## 2. Risks (ranked)
 

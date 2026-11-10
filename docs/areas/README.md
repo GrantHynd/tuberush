@@ -5,7 +5,7 @@ Short maps of the main product areas. Each page says what the area does, where t
 | Area | What it covers |
 | --- | --- |
 | [Auth](auth.md) | Sign-in, session restore, premium, account deletion |
-| [Games](games.md) | Daily Connections and Crossword, custom puzzles, offline play |
+| [Games](games.md) | Daily Interchange and Crossword, custom puzzles, offline play |
 | [Leaderboard](leaderboard.md) | Weekly ranks, location filters, score submission |
 | [Stats](stats.md) | Streak, best time, and the history list |
 | [Settings](settings.md) | Profile, location, sync, and account actions |
